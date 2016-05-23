@@ -23,5 +23,7 @@ distutils.core.setup(
     packages    = [
         "kernelconfig",
         "kernelconfig.abc",
+        "kernelconfig.kconfig",
+        "kernelconfig.kconfig.abc"
     ]
 )
