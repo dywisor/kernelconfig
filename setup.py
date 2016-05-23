@@ -22,5 +22,6 @@ distutils.core.setup(
     ext_modules = [kernelconfig_lkconfig_pyext],
     packages    = [
         "kernelconfig",
+        "kernelconfig.abc",
     ]
 )
