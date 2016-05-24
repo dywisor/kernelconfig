@@ -8,6 +8,7 @@ _PRJROOT := $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
 
 S := $(_PRJROOT)
 _PYMOD_DIRS := $(addprefix $(S:/=)/,$(_PRJNAME))
+_SETUP_PY := $(S:/=)/setup.py
 
 X_PEP8 = pep8
 X_PYFLAKES = pyflakes
@@ -47,8 +48,9 @@ check:
 # name it Kconfig, or kconfig where lowercase is appropriate
 	$(call f_grep_check_recursive,[kK]C[oO][nN][fF][iI][gG])
 # and the usual suspects
+# setup.py does not need to be pep8-compliant
 	$(X_PEP8) $(_PYMOD_DIRS)
-	$(X_PYFLAKES) $(_PYMOD_DIRS)
+	$(X_PYFLAKES) $(_SETUP_PY) $(_PYMOD_DIRS)
 
 
 FORCE:
