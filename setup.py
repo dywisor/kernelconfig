@@ -6,13 +6,14 @@ import distutils.core
 
 
 kernelconfig_lkconfig_pyext = distutils.core.Extension(
-    "kernelconfig.lkconfig",
+    "kernelconfig.kconfig.lkconfig",
     sources = (
         [
             "src/lkconfig.c",
-            #"src/lkc/zconf.tab.c",
+            "src/lkc/zconf.tab.c",
         ]
-    )
+    ),
+    extra_compile_args = ["-Wall"]
 )
 
 
