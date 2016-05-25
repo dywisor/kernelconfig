@@ -3,9 +3,105 @@
 
 from ..abc import loggable
 from . import symbol
+from . import symbolexpr
 from . import lkconfig
 
 __all__ = ["KconfigSymbolGenerator"]
+
+
+class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
+
+    def create(self, top_expr_view):
+        logger = self.logger
+
+        def expand_expr(eview):
+            nonlocal logger
+
+            def expand_sym(sym):
+                if not sym.name:
+                    # meta symbols
+                    return None
+                else:
+                    return symbolexpr.Expr_Symbol(sym.name)
+            # ---
+
+            def expand_sym_cmp(sym_cmp_cls, lsym, rsym):
+                nonlocal logger
+
+                lsym_expr = expand_sym(lsym)
+                rsym_expr = expand_sym(rsym)
+                logger.debug("dropping %r expr" % sym_cmp_cls)
+
+                if lsym_expr is None or rsym_expr is None:
+                    logger.debug("dropping %r expr" % sym_cmp_cls)
+                    return None
+                else:
+                    return sym_cmp_cls(lsym_expr, rsym_expr)
+            # ---
+
+            def expand_expr_or_sym(subeview, sym):
+                if sym is not None:
+                    return expand_sym(sym)
+                elif subeview is not None:
+                    return expand_expr(subeview)
+                else:
+                    return None
+            # ---
+
+            if eview is None:
+                raise AssertionError()
+            # --
+
+            etype, lexpr, lsym, rexpr, rsym = eview.get_expr()
+
+            if etype == eview.E_OR:
+                expr = symbolexpr.Expr_Or()
+                expr.add_expr(expand_expr_or_sym(lexpr, lsym))
+                expr.add_expr(expand_expr_or_sym(rexpr, rsym))
+
+            elif etype == eview.E_AND:
+                expr = symbolexpr.Expr_And()
+                expr.add_expr(expand_expr_or_sym(lexpr, lsym))
+                expr.add_expr(expand_expr_or_sym(rexpr, rsym))
+
+            elif etype == eview.E_NOT:
+                subexpr = expand_expr_or_sym(lexpr, lsym)
+                # subexpr may be None if the not-expr references
+                # unknown symbols
+                if subexpr is not None:
+                    expr = symbolexpr.Expr_Not(subexpr)
+                else:
+                    logger.debug("dropping empty NOT expr")
+                    expr = None
+
+            elif etype == eview.E_EQUAL:
+                expr = symbolexpr.Expr_SymbolEQ(
+                    expand_sym(lsym), expand_sym(rsym)
+                )
+
+            elif etype == eview.E_UNEQUAL:
+                expr = symbolexpr.Expr_SymbolNEQ(
+                    expand_sym(lsym), expand_sym(rsym)
+                )
+
+            elif etype == eview.E_SYMBOL:
+                expr = symbolexpr.Expr_Symbol(
+                    expand_sym(lsym)
+                )
+
+            else:
+                raise NotImplementedError(etype)
+            # --
+
+            return expr
+        # ---
+
+        if top_expr_view.e_type == top_expr_view.E_NONE:
+            return None
+        else:
+            return expand_expr(top_expr_view)
+    # ---
+# ---
 
 
 class KconfigSymbolGenerator(loggable.AbstractLoggable):
