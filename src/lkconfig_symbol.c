@@ -1,16 +1,3 @@
-#define lkconfig_SymbolViewName  "SymbolView"
-
-typedef struct {
-    PyObject_HEAD
-
-    /* make a few fields available as PyObjects */
-    PyObject* name;
-    int s_type;
-
-    const struct symbol* kconfig_sym;
-} lkconfig_SymbolViewObject;
-
-
 /** is_choice :: SymbolViewObject -> bool */
 static PyObject* lkconfig_SymbolViewObject_is_choice (
     lkconfig_SymbolViewObject* const self, PyObject* const args
@@ -75,6 +62,29 @@ static PyObject* lkconfig_SymbolViewObject_is_other (
 
 #undef lkconfig_SymbolViewObject__is_of_type_func_body
 
+static PyObject* lkconfig_SymbolViewObject_get_dir_dep (
+    lkconfig_SymbolViewObject* const self, PyObject* const args
+) {
+    if ( self->kconfig_sym == NULL ) {
+        Py_RETURN_NONE;
+    } else {
+        return lkconfig_ExprViewObject_new_from_struct (
+            (self->kconfig_sym->dir_dep).expr
+        );
+    }
+}
+
+static PyObject* lkconfig_SymbolViewObject_get_rev_dep (
+    lkconfig_SymbolViewObject* const self, PyObject* const args
+) {
+    if ( self->kconfig_sym == NULL ) {
+        Py_RETURN_NONE;
+    } else {
+        return lkconfig_ExprViewObject_new_from_struct (
+            (self->kconfig_sym->rev_dep).expr
+        );
+    }
+}
 
 static PyObject* lkconfig_SymbolViewObject_get_prompt (
     lkconfig_SymbolViewObject* const self, PyObject* const args
@@ -173,6 +183,22 @@ static PyMethodDef lkconfig_SymbolViewObject_methods[] = {
         METH_NOARGS,
         PyDoc_STR (
             "is_other() -- checks whether the symbol is of 'other' type (S_OTHER)"
+        )
+    },
+    {
+        "get_dir_dep",
+        (PyCFunction) lkconfig_SymbolViewObject_get_dir_dep,
+        METH_NOARGS,
+        PyDoc_STR (
+            "get_dir_dep() -- returns an ExpressionView object"
+        )
+    },
+    {
+        "get_rev_dep",
+        (PyCFunction) lkconfig_SymbolViewObject_get_rev_dep,
+        METH_NOARGS,
+        PyDoc_STR (
+            "get_rev_dep() -- returns an ExpressionView object"
         )
     },
     {

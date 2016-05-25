@@ -2,9 +2,13 @@
 #include "structmember.h"
 #include "lkc/lkc.h"
 
-#define LKCONFIG_PYMOD_NAME  "kernelconfig.kconfig.lkconfig"
 
+
+#include "lkconfig_objdef.h"
+
+#include "lkconfig_utilfuncs.c"
 #include "lkconfig_symbol.c"
+#include "lkconfig_expr.c"
 
 /* exceptions */
 static PyObject* lkconfigKconfigParseError;
@@ -131,6 +135,10 @@ PyMODINIT_FUNC PyInit_lkconfig (void) {
         return NULL;
     }
 
+    if ( lkconfig_ExprViewObject_cls_init ( &lkconfig_ExprViewType ) < 0 ) {
+        return NULL;
+    }
+
     m = PyModule_Create ( &lkconfig_Module );
     if ( m == NULL ) { return NULL; }
 
@@ -140,6 +148,11 @@ PyMODINIT_FUNC PyInit_lkconfig (void) {
     Py_INCREF ( &lkconfig_SymbolViewType );
     PyModule_AddObject (
         m, lkconfig_SymbolViewName, (PyObject*) &lkconfig_SymbolViewType
+    );
+
+    Py_INCREF ( &lkconfig_ExprViewType );
+    PyModule_AddObject (
+        m, lkconfig_ExprViewName, (PyObject*) &lkconfig_ExprViewType
     );
 
     return m;
