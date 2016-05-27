@@ -260,6 +260,8 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
                 cfg_dict[symbol_name] = value
             # --
         # --
+
+        return cfg_dict
     # ---
 
     def read_config_file(self, infile, filename=None, update=False):
