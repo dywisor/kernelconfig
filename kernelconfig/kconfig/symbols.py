@@ -55,6 +55,8 @@ class KconfigSymbols(collections.abc.Mapping):
             self.name_map[sym_name_key] = sym
 
         self._symbols.add(sym)
+
+        return sym
     # ---
 
     def add_symbol(self, sym):
