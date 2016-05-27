@@ -132,3 +132,14 @@ class UndefKconfigSymbol(StringKconfigSymbol):
         raise ValueError(value)
     # --- end of normalize_and_validate (...) ---
 # --- end of UndefKconfigSymbol ---
+
+
+@enum.unique
+class KconfigSymbolValueType(enum.Enum):
+    # to avoid name collisions, prefix value types with "v_"
+    v_unknown = UndefKconfigSymbol
+    v_tristate = TristateKconfigSymbol
+    v_boolean = BooleanKconfigSymbol
+    v_string = StringKconfigSymbol
+    v_int = IntKconfigSymbol
+    v_hex = HexKconfigSymbol
