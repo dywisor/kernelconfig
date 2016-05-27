@@ -68,7 +68,6 @@ static PyObject* lkconfig_ExprViewObject_get_expr (
 
     switch ( self->e_type ) {   /* or kconfig_expr->type, equiv. */
         case E_SYMBOL:
-        case E_NOT:
             /* left is a symbol, right forced to None */
             if (
                 lkconfig_ExprViewObject_get_expr__expand_sym (
@@ -78,6 +77,21 @@ static PyObject* lkconfig_ExprViewObject_get_expr (
                 return NULL;
             }
 
+
+            lkconfig_ExprViewObject_get_expr__expand_none (
+                &right_expr, &right_sym
+            );
+            break;
+
+        case E_NOT:
+            /* left is expr, right forced to None */
+            if (
+                lkconfig_ExprViewObject_get_expr__expand_expr (
+                    (self->kconfig_expr->left).expr, &left_expr, &left_sym
+                ) != 0
+            ) {
+                return NULL;
+            }
 
             lkconfig_ExprViewObject_get_expr__expand_none (
                 &right_expr, &right_sym
