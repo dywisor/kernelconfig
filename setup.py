@@ -19,6 +19,7 @@ kernelconfig_lkconfig_pyext = distutils.core.Extension(
 distutils.core.setup(
     name        = "kernelconfig",
     version     = "0.1",
+    license     = "GPLv2",
     ext_modules = [kernelconfig_lkconfig_pyext],
     packages    = [
         "kernelconfig",
