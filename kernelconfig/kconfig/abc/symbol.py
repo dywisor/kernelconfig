@@ -20,13 +20,22 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
     @cvar type_name: short word describing the type. no spaces allowed
     @type type_name: C{str}
 
+    optionally dependencies on other symbols,
+    @cvar dir_dep:  the symbol's dependencies ("depends on"). May be None.
+    @type dir_dep:  C{None} or undef
+
+    and optionally reverse dependencies
+    @cvar rev_dep:  the symbol's reverse dependencies ("selected by").
+                    May be None.
+    @type rev_dep:  C{None} or undef
+
     Additionally, a class-wide variables exists for str-formatting the
     option in case of "is not set" values:
     @cvar VALUE_NOT_SET_FMT_STR: used for formatting "not set" values
     @type VALUE_NOT_SET_FMT_STR: C{str}
     """
 
-    __slots__ = ["__weakref__", "name"]
+    __slots__ = ["__weakref__", "name", "dir_dep", "rev_dep"]
 
     VALUE_NOT_SET_FMT_STR = "# {name} is not set"
 
@@ -64,9 +73,11 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
         raise NotImplementedError()
     # ---
 
-    def __init__(self, name):
+    def __init__(self, name, dir_dep=None, rev_dep=None):
         super().__init__()
         self.name = name
+        self.dir_dep = dir_dep
+        self.rev_dep = rev_dep
 
     def __hash__(self):
         return hash((self.__class__, self.name))
