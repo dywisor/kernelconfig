@@ -256,6 +256,9 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         get_symbol_name = self.convert_option_to_symbol_name
 
         reader = self._get_config_file_reader()
+        # FIXME: modifying kconfig_syms, but not cfg_dict?
+        #         should revert changes to kconfig_syms on error
+        kconfig_syms = self._kconfig_symbols
 
         for infile_item in infiles:
             if isinstance(infile_item, tuple):
@@ -270,7 +273,29 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
                 infile_path, filename=infile_name
             ):
                 symbol_name = get_symbol_name(option, lenient=False)
-                cfg_dict[symbol_name] = value
+                try:
+                    sym = kconfig_syms[symbol_name]
+                except KeyError:
+                    self.logger.warning("Read unknown symbol %s", symbol_name)
+                    if value is None:
+                        self.logger.info(
+                            "Cannot infer type, ignoring %s (not set)",
+                            symbol_name
+                        )
+                    else:
+                        self.logger.info(
+                            "Adding unknown symbol %s as new %s",
+                            symbol_name, value[0].value.__name__
+                        )
+
+                        sym = kconfig_syms.add_unknown_symbol(
+                            value[0].value, symbol_name
+                        )
+                        cfg_dict[sym] = value[-1]
+
+                else:
+                    # FIXME: check if value type suitable
+                    cfg_dict[sym] = None if value is None else value[-1]
             # --
         # --
 
