@@ -120,6 +120,8 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
         super().__init__(**kwargs)
         self.kernel_info = kernel_info
         self._symbols = symbols.KconfigSymbols()
+        self._dir_deps = {}
+        self._rev_deps = {}
     # --- end of __init__ (...) ---
 
     def read_lkc_symbols(self):
@@ -136,7 +138,13 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
     def _prepare_symbols(self):
         get_symbol_cls = self.SYMBOL_TYPE_TO_CLS_MAP.__getitem__
 
+        expr_builder = self.create_loggable(
+            KconfigSymbolExpressionBuilder, logger_name="ExpressionBuilder"
+        )
+
         kconfig_symbols = self._symbols
+        dir_deps = self._dir_deps
+        rev_deps = self._rev_deps
 
         for sym_view in self.get_lkc_symbols():
             sym_cls = get_symbol_cls(sym_view.s_type)
@@ -146,12 +154,42 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
                 sym = sym_cls(sym_view.name)
 
                 kconfig_symbols.add_symbol(sym)
+                dir_deps[sym] = expr_builder.create(sym_view.get_dir_dep())
+                rev_deps[sym] = expr_builder.create(sym_view.get_rev_dep())
             # --
         # --
     # --- end of _prepare_symbols (...) ---
 
+    def _link_deps(self):
+        symbol_names_missing = set()
+
+        for sym, dep_expr in self._dir_deps.items():
+            if dep_expr is not None and sym.dir_dep is None:
+                dep_expr.expand_symbols_shared(
+                    self._symbols, symbol_names_missing
+                )
+                sym.dir_dep = dep_expr
+        # --
+
+        for sym, dep_expr in self._rev_deps.items():
+            if dep_expr is not None and sym.rev_dep is None:
+                dep_expr.expand_symbols_shared(
+                    self._symbols, symbol_names_missing
+                )
+                sym.rev_dep = dep_expr
+        # --
+
+        if symbol_names_missing:
+            # FIXME: reduce log level,
+            #        sym-names-missing includes constant values (n,m,y,0,1)
+            self.logger.error(
+                "missing symbols: %s", ", ".join(sorted(symbol_names_missing))
+            )
+    # --- end of _link_deps (...) ---
+
     def get_symbols(self):
         self._prepare_symbols()
+        self._link_deps()
         return self._symbols
     # --- end of get_symbols (...) ---
 
