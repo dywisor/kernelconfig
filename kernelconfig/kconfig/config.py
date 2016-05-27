@@ -240,6 +240,19 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         return iter(self._config)
 
     def _read_config_files(self, cfg_dict, infiles):
+        """Reads a zero or (preferably) more config files and stores
+        a mapping :: <kconfig symbol> => <value> in the given config dict.
+
+        @raises ValueError: bad option name
+                            (propagated from convert_option_to_symbol_name)
+
+        @param cfg_dict:  dict for storing config options (symbol => value)
+        @type  cfg_dict:  C{dict}:: L{AbstractKconfigSymbol} => _
+        @param infiles:   a list containg input files
+                          or 2-tuples input file X input file name
+        @type  infiles:   C{list} of C{str}|2-tuple(C{str}, C{str}|C{None})
+        @return:          cfg_dict
+        """
         get_symbol_name = self.convert_option_to_symbol_name
 
         reader = self._get_config_file_reader()
