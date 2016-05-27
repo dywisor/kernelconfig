@@ -18,6 +18,11 @@ class AbstractLoggable(object, metaclass=abc.ABCMeta):
         )
     # --- end of __init__ (...) ---
 
+    def create_loggable(self, loggable_cls, *args, **kwargs):
+        kwargs.setdefault("parent_logger", self.logger)
+        return loggable_cls(*args, **kwargs)
+    # --- end of create_loggable (...) ---
+
     def set_logger(self, logger=None, logger_name=None, parent_logger=None):
         if logger is not None:
             self.logger = logger
