@@ -3,6 +3,7 @@
 
 from ..abc import loggable
 from . import symbol
+from . import symbols
 from . import symbolexpr
 from . import lkconfig
 
@@ -113,37 +114,56 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
         lkconfig.S_OTHER:       None
     }
 
-    _did_read_symbols = False
+    _did_read_lkc_symbols = False
 
     def __init__(self, kernel_info, **kwargs):
         super().__init__(**kwargs)
         self.kernel_info = kernel_info
+        self._symbols = symbols.KconfigSymbols()
     # --- end of __init__ (...) ---
 
-    def gen_symbols(self):
-        if not self._did_read_symbols:
-            self._did_read_symbols = True
-            self._read_symbols()
+    def read_lkc_symbols(self):
+        if not self.__class__._did_read_lkc_symbols:
+            self.__class__._did_read_lkc_symbols = True
+            self._read_lkc_symbols()
+    # --- end of read_lkc_symbols (...) ---
 
-        return self._gen_symbols()
-    # --- end of gen_symbols (...) ---
+    def get_lkc_symbols(self):
+        self.read_lkc_symbols()
+        return self._get_lkc_symbols()
+    # --- end of get_lkc_symbols (...) ---
 
-    __iter__ = gen_symbols
-
-    def _gen_symbols(self):
+    def _prepare_symbols(self):
         get_symbol_cls = self.SYMBOL_TYPE_TO_CLS_MAP.__getitem__
 
-        for sym_view in lkconfig.get_symbols():
+        kconfig_symbols = self._symbols
+
+        for sym_view in self.get_lkc_symbols():
             sym_cls = get_symbol_cls(sym_view.s_type)
 
-            yield sym_cls(sym_view.name)
-    # --- end of _gen_symbols (...) ---
+            if sym_view.name:
+                # do not create nameless symbols
+                sym = sym_cls(sym_view.name)
 
-    def _read_symbols(self):
+                kconfig_symbols.add_symbol(sym)
+            # --
+        # --
+    # --- end of _prepare_symbols (...) ---
+
+    def get_symbols(self):
+        self._prepare_symbols()
+        return self._symbols
+    # --- end of get_symbols (...) ---
+
+    def _read_lkc_symbols(self):
         self.kernel_info.setenv()  # FIXME: not here
-        self._symbols = lkconfig.read_symbols(
+        lkconfig.read_symbols(
             self.kernel_info.get_filepath("Kconfig")
         )
-    # --- end of _read_symbols (...) ---
+    # --- end of _read_lkc_symbols (...) ---
+
+    def _get_lkc_symbols(self):
+        return lkconfig.get_symbols()
+    # --- end of _get_lkc_symbols (...) ---
 
 # --- end of KconfigSymbolGenerator ---
