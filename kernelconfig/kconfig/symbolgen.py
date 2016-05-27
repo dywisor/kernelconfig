@@ -30,7 +30,6 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
 
                 lsym_expr = expand_sym(lsym)
                 rsym_expr = expand_sym(rsym)
-                logger.debug("dropping %r expr" % sym_cmp_cls)
 
                 if lsym_expr is None or rsym_expr is None:
                     logger.debug("dropping %r expr" % sym_cmp_cls)
