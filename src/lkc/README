@@ -1,1 +1,6 @@
-copy scripts/kconfig/* to this directory
+this directory can be populated with the Makefile
+from the project root directory with the following command:
+
+   make import-lkc LK_SRC=/usr/src/linux
+
+assuming that a linux kernel source tree exists at /usr/src/linux.
