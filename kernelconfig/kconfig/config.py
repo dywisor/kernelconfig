@@ -116,14 +116,6 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
     @cvar CFG_DICT_CLS:  dict type or constructor, for storing config options
     @type CFG_DICT_CLS:  C{type}
 
-    @cvar CFG_OPTNAME_PREFIX:  config option name prefix
-                               that gets stripped off/added to option names
-                               when reading/writing config files.
-                               Derived classes may set this to a non-empty
-                               value, which should contain all prefix chars
-                               (e.g. including a terminating "_").
-    @type CFG_OPTNAME_PREFIX:  C{str} or C{None} (or anything False)
-
     @ivar _kconfig_symbols:  kconfig symbol descriptors
     @type _kconfig_symbols:  L{KconfigSymbols}
                              (kind of
@@ -139,12 +131,6 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
     """
 
     CFG_DICT_CLS = collections.OrderedDict
-    # FIXME: let subclasses implement methods for unprefixing/prefixing,
-    #        and ditch this var
-    #        unprefix_lenient - remove prefix if exists
-    #        unprefix_strict  - remove prefix, must exist
-    #        prefix           - add prefix
-    CFG_OPTNAME_PREFIX = None
 
     def _get_config_file_reader(self):
         return self.create_loggable(ConfigFileReader, logger_name="Reader")
@@ -171,6 +157,50 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         self._config = self.CFG_DICT_CLS()
     # ---
 
+    def convert_option_to_symbol_name(self, option_name, lenient=True):
+        """Converts an option name to a symbol name.
+
+        This is mostly a no-op. Derived classes may override this method.
+
+        Note: the option name cannot be assumed to be correct,
+              and must be checked by this method (but not whether a
+              kconfig symbol exists for it).
+              In lenient mode, minor issues should be fixed silently,
+              whereas in strict mode, a ValueError should always be raised.
+
+        @raises: ValueError if no symbol name can be determined
+
+        @param   option_name:  option name
+        @type    option_name:  C{str}
+        @keyword lenient:      be less strict. Defaults to False.
+        @type    lenient:      C{bool}
+        @return:               symbol name
+        @rtype:                C{str}
+        """
+        if not option_name:
+            raise ValueError(option_name)
+
+        return option_name
+    # --- end of unprefix_option_name (...) ---
+
+    def convert_symbol_name_to_option(self, symbol_name):
+        """Converts a symbol name to an option name.
+
+        This is a no-op. Derived classes may override this method.
+
+        Note: the symbol name is assumed to be correct,
+              and is not checked by this method.
+
+        @raises: ValueError if no option name can be determined
+
+        @param symbol_name:  symbol name
+        @type  symbol_name:  C{str}
+        @return:             option name
+        @rtype:              C{str}
+        """
+        return symbol_name
+    # --- end of prefix_symbol_name (...) ---
+
     def normalize_key_str(self, key):
         """Normalizes a str key so that it can be used
         for accessing kconfig symbols.
@@ -185,9 +215,7 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         @return:     normalized key
         @rtype:      C{str}
         """
-        pfx = self.CFG_OPTNAME_PREFIX
-        upkey = key.upper()  # FIXME bad assumption
-        return upkey[len(pfx):] if (pfx and upkey.startswith(pfx)) else upkey
+        return self.unprefix_option_name(key, lenient=True)
     # --- end of normalize_key_str (...) ---
 
     def normalize_key(self, key):
@@ -212,8 +240,7 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         return iter(self._config)
 
     def _read_config_files(self, cfg_dict, infiles):
-        optname_prefix = self.CFG_OPTNAME_PREFIX or ""
-        optname_pfxlen = len(optname_prefix)
+        get_symbol_name = self.convert_option_to_symbol_name
 
         reader = self._get_config_file_reader()
 
@@ -229,20 +256,7 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
             for lino, option, value in reader.read_file(
                 infile_path, filename=infile_name
             ):
-                symbol_name = None
-                if option.startswith(optname_prefix):
-                    symbol_name = option[optname_pfxlen:]
-                    if not symbol_name:
-                        raise ValueError(
-                            "empty option name after removing prefix"
-                        )
-                    # --
-                else:
-                    raise NotImplementedError(
-                        "option name does not start with prefix: %s" % option
-                    )
-                # --
-
+                symbol_name = get_symbol_name(option, lenient=False)
                 cfg_dict[symbol_name] = value
             # --
         # --
@@ -260,8 +274,30 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         self._config = cfg_dict
     # --- end of read_config_files (...) ---
 
-# ---
+# --- Config ---
 
 
 class KernelConfig(Config):
     CFG_OPTNAME_PREFIX = "CONFIG_"
+
+    def convert_option_to_symbol_name(self, option_name, lenient=False):
+        opt = option_name.upper() if lenient else option_name
+
+        if opt.startswith(self.CFG_OPTNAME_PREFIX):
+            symbol_name = opt[len(self.CFG_OPTNAME_PREFIX):]
+        elif lenient:
+            symbol_name = opt
+        else:
+            raise ValueError(option_name)
+
+        if not symbol_name:
+            raise ValueError(option_name)
+
+        return symbol_name
+    # ---
+
+    def convert_symbol_name_to_option(self, symbol_name):
+        return self.CFG_OPTNAME_PREFIX + symbol_name
+    # --- end of convert_symbol_name_to_option (...) ---
+
+# --- end of KernelConfig ---
