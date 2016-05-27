@@ -51,6 +51,34 @@ class Expr(object, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError()
 
+    def expand_symbols(self, symbol_name_map):
+        """Recursively replaces symbol name references with symbols from
+        the given mapping.
+
+        @param symbol_name_map:  symbol name to <object> map
+        @type  symbol_name_map:  C{dict} :: C{str} => _
+        @return: set of missing symbol names
+        @rtype:  C{set} of C{str}
+        """
+        symbol_names_missing = set()
+        self.expand_symbols_shared(symbol_name_map, symbol_names_missing)
+        return symbol_names_missing
+    # ---
+
+    @abc.abstractmethod
+    def expand_symbols_shared(self, symbol_name_map, symbols_names_missing):
+        """Recursively replaces symbol name references with symbols from
+        the given mapping, using a shared set for storing missing names.
+
+        @param symbol_name_map:        symbol name to <object> map
+        @type  symbol_name_map:        C{dict} :: C{str} => _
+        @param symbols_names_missing:  shared set of missing symbol names
+        @type  symbols_names_missing:  C{set} of C{str}
+        @return: None
+        """
+        raise NotImplementedError()
+    # ---
+
 # ---
 
 
@@ -113,6 +141,16 @@ class _MultiExpr(Expr):
     def __str__(self):
         # redundant parentheses are OK
         return self.OP_STR.join(("({!s})".format(e) for e in self.exprv))
+
+    def expand_symbols_shared(self, symbol_name_map, symbol_names_missing):
+        for subexpr in self.exprv:
+            if subexpr is not None:
+                subexpr.expand_symbols_shared(
+                    symbol_name_map, symbol_names_missing
+                )
+            # --
+        # --
+    # --- end of expand_symbols_shared (...) ---
 # ---
 
 
@@ -138,10 +176,20 @@ class Expr_Symbol(_UnaryExpr):
     """Expression that represents a Kconfig symbol.
 
     @ivar expr: Kconfig symbol
-    @type expr: C{str} (for now)
+    @type expr: C{str} or symbol object
     """
     __slots__ = []
     EXPR_FMT = "{0!s}"
+
+    def expand_symbols_shared(self, symbol_name_map, symbol_names_missing):
+        if isinstance(self.expr, str):
+            try:
+                repl = symbol_name_map[self.expr]
+            except KeyError:
+                symbol_names_missing.add(self.expr)
+            else:
+                self.expr = repl
+    # --- end of expand_symbols_shared (...) ---
 # ---
 
 
@@ -166,6 +214,15 @@ class _Expr_SymbolValueComparison(Expr_Symbol):
 
     def __str__(self):
         return self.EXPR_FMT.format(self.expr, self.cmp_expr)
+
+    def expand_symbols_shared(self, symbol_name_map, symbols_names_missing):
+        for expr in (self.expr, self.cmp_expr):
+            if expr is not None:
+                expr.expand_symbols_shared(
+                    symbol_name_map, symbols_names_missing
+                )
+        # --
+    # --- end of expand_symbols_shared (...) ---
 # ---
 
 
@@ -187,6 +244,13 @@ class Expr_Not(_UnaryExpr):
     __slots__ = []
 
     EXPR_FMT = "!({0!s})"
+
+    def expand_symbols_shared(self, symbol_name_map, symbol_names_missing):
+        if self.expr is not None:
+            self.expr.expand_symbols_shared(
+                symbol_name_map, symbol_names_missing
+            )
+    # --- end of expand_symbols_shared (...) ---
 # ---
 
 
