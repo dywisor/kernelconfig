@@ -13,6 +13,7 @@ SRC_DOCDIR := $(S:/=)/doc
 _BUILD_DIR := $(O:/=)/build
 _PYMOD_DIRS := $(addprefix $(S:/=)/,$(_PRJNAME))
 _SETUP_PY := $(S:/=)/setup.py
+_EPYDOC_DIR = $(SRC_DOCDIR:/=)/epydoc
 
 MKDIR = mkdir
 MKDIRP = $(MKDIR) -p
@@ -27,6 +28,8 @@ X_PEP8 = pep8
 X_PYFLAKES = pyflakes
 X_GREP = grep
 GREP_CHECK_OPTS = -n --color
+X_EPYDOC = epydoc
+EPYDOC_OPTS = --html -v --name '$(PN)'
 
 PRJ_LKC_SRC = $(_PRJROOT)/src/lkc
 
@@ -52,6 +55,11 @@ PHONY += clean
 clean:
 	true
 
+PHONY += epydoc-clean
+epydoc-clean:
+	$(call f_sanity_check_output_dir,$(_EPYDOC_DIR))
+	$(RMF) -r -- $(_EPYDOC_DIR)
+
 PHONY += pyclean
 pyclean:
 	$(call f_sanity_check_output_dir,$(_PYMOD_DIRS))
@@ -69,6 +77,14 @@ endef
 define f_grep_check_recursive
 	$(call _f_grep_check_recursive,$(1),$(_PYMOD_DIRS)) && exit 1 || true
 endef
+
+PHONY += epydoc
+epydoc: $(_EPYDOC_DIR)
+
+$(_EPYDOC_DIR): epydoc-clean FORCE
+	$(MKDIRP) -- $(@D)
+	$(X_EPYDOC) $(EPYDOC_OPTS) -o $(@) $(_PYMOD_DIRS)
+
 
 PHONY += check
 check:
