@@ -57,7 +57,7 @@ class TristateKconfigSymbol(AbstractKconfigSymbol):
         if not value:
             return self.format_value_is_not_set()
         else:
-            return "{name}={value!s}".format(name=self.name, value=self.value)
+            return "{name}={value!s}".format(name=self.name, value=value)
     # ---
 # --- end of TristateKconfigSymbol ---
 
@@ -70,7 +70,7 @@ class BooleanKconfigSymbol(TristateKconfigSymbol):
     def normalize_and_validate(cls, value):
         normval = super().normalize_and_validate(value)
 
-        if normval == TristateKconfigSymbolValue.module:
+        if normval == TristateKconfigSymbolValue.m:
             raise ValueError(value)
 
         return normval
@@ -95,7 +95,7 @@ class StringKconfigSymbol(AbstractKconfigSymbol):
             return self.format_value_is_not_set()
         else:
             # FIXME: escape quotes in value
-            return self.VALUE_FMT_STR.format(name=self.name, value=self.value)
+            return self.VALUE_FMT_STR.format(name=self.name, value=value)
     # ---
 
 # --- end of StringKconfigSymbol ---

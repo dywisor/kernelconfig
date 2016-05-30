@@ -181,7 +181,7 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
             raise ValueError(option_name)
 
         return option_name
-    # --- end of unprefix_option_name (...) ---
+    # --- end of convert_option_to_symbol_name (...) ---
 
     def convert_symbol_name_to_option(self, symbol_name):
         """Converts a symbol name to an option name.
@@ -199,7 +199,7 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         @rtype:              C{str}
         """
         return symbol_name
-    # --- end of prefix_symbol_name (...) ---
+    # --- end of convert_symbol_name_to_option (...) ---
 
     def normalize_key_str(self, key):
         """Normalizes a str key so that it can be used
@@ -215,7 +215,7 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         @return:     normalized key
         @rtype:      C{str}
         """
-        return self.unprefix_option_name(key, lenient=True)
+        return self.convert_option_to_symbol_name(key, lenient=True)
     # --- end of normalize_key_str (...) ---
 
     def normalize_key(self, key):
