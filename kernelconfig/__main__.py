@@ -57,3 +57,6 @@ if __name__ == "__main__":
     cfg.read_config_file(
         arg_config.config or os.path.join(kinfo.srctree, ".config")
     )
+    cfg.write_config_file(
+        sys.stdout
+    )
