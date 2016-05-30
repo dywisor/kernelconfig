@@ -13,6 +13,15 @@ __all__ = ["KconfigSymbolGenerator"]
 class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
     """Converts 'C' struct expr/ExprView objects to 'Python' Expr objects."""
 
+    SYM_CMP_CLS_MAP = {
+        lkconfig.ExprView.E_EQUAL: symbolexpr.Expr_SymbolEQ,
+        lkconfig.ExprView.E_UNEQUAL: symbolexpr.Expr_SymbolNEQ,
+        lkconfig.ExprView.E_LTH: symbolexpr.Expr_SymbolLTH,
+        lkconfig.ExprView.E_LEQ: symbolexpr.Expr_SymbolLEQ,
+        lkconfig.ExprView.E_GTH: symbolexpr.Expr_SymbolGTH,
+        lkconfig.ExprView.E_GEQ: symbolexpr.Expr_SymbolGEQ,
+    }
+
     def create(self, top_expr_view):
         """Recursively converts an ExprView to an Expr.
 
@@ -22,6 +31,7 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
         @return: expr
         @rtype:  subclass of L{Expr}
         """
+        sym_cmp_cls_map = self.SYM_CMP_CLS_MAP
         logger = self.logger
 
         def expand_expr(eview):
@@ -30,6 +40,7 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
             Recursive: expand_expr -> _
             """
             nonlocal logger
+            nonlocal sym_cmp_cls_map
 
             def expand_sym(sym):
                 """Expands a E_SYMBOL-type ExprView.
@@ -128,23 +139,18 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
                     logger.debug("dropping empty NOT expr")
                     expr = None
 
-            elif etype == eview.E_EQUAL:
-                expr = symbolexpr.Expr_SymbolEQ(
-                    expand_sym(lsym), expand_sym(rsym)
-                )
-
-            elif etype == eview.E_UNEQUAL:
-                expr = symbolexpr.Expr_SymbolNEQ(
-                    expand_sym(lsym), expand_sym(rsym)
-                )
-
             elif etype == eview.E_SYMBOL:
                 expr = symbolexpr.Expr_Symbol(
                     expand_sym(lsym)
                 )
 
             else:
-                raise NotImplementedError(etype)
+                try:
+                    sym_cmp_cls = sym_cmp_cls_map[etype]
+                except KeyError:
+                    raise NotImplementedError(etype) from None
+
+                expr = expand_sym_cmp(sym_cmp_cls, lsym, rsym)
             # --
 
             return expr

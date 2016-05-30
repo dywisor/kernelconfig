@@ -240,6 +240,34 @@ class Expr_SymbolNEQ(_Expr_SymbolValueComparison):
 # ---
 
 
+class Expr_SymbolLTH(_Expr_SymbolValueComparison):
+    __slots__ = []
+
+    EXPR_FMT = "{0!s}<{1!s}"
+# ---
+
+
+class Expr_SymbolLEQ(_Expr_SymbolValueComparison):
+    __slots__ = []
+
+    EXPR_FMT = "{0!s}<={1!s}"
+# ---
+
+
+class Expr_SymbolGTH(_Expr_SymbolValueComparison):
+    __slots__ = []
+
+    EXPR_FMT = "{0!s}!>{1!s}"
+# ---
+
+
+class Expr_SymbolGEQ(_Expr_SymbolValueComparison):
+    __slots__ = []
+
+    EXPR_FMT = "{0!s}!>={1!s}"
+# ---
+
+
 class Expr_Not(_UnaryExpr):
     __slots__ = []
 

@@ -100,6 +100,10 @@ static PyObject* lkconfig_ExprViewObject_get_expr (
 
         case E_EQUAL:
         case E_UNEQUAL:
+        case E_LTH:
+        case E_LEQ:
+        case E_GTH:
+        case E_GEQ:
         case E_RANGE:
             /* left is a symbol, right is a symbol */
             if (
@@ -164,9 +168,13 @@ static PyObject* lkconfig_ExprViewObject_get_expr (
             }
             break;
 
+        case E_NONE:
+            PyErr_SetString ( PyExc_ValueError, "E_NONE expression" );
+            return NULL;
+
         default:
             /* undefined */
-            PyErr_SetString ( PyExc_ValueError, "unknown type" );
+            PyErr_Format ( PyExc_ValueError, "unknown type '%d'", self->e_type );
             return NULL;
     }
 
