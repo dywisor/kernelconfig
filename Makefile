@@ -5,8 +5,12 @@ SHELL ?= sh
 
 _PRJNAME := kernelconfig
 _PRJROOT := $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
+PN := $(_PRJNAME)
 
 S := $(_PRJROOT)
+O := $(S)
+SRC_DOCDIR := $(S:/=)/doc
+_BUILD_DIR := $(O:/=)/build
 _PYMOD_DIRS := $(addprefix $(S:/=)/,$(_PRJNAME))
 _SETUP_PY := $(S:/=)/setup.py
 
@@ -14,6 +18,10 @@ MKDIR = mkdir
 MKDIRP = $(MKDIR) -p
 CP = cp
 CPV = $(CP) -v
+RM = rm
+RMF = $(RM) -f
+LN = ln
+LNS = $(LN) -s
 
 X_PEP8 = pep8
 X_PYFLAKES = pyflakes
@@ -27,6 +35,12 @@ LKC_FILE_NAMES  = $(addsuffix .h,expr list lkc lkc_proto)
 LKC_FILE_NAMES += $(addsuffix .c,confdata expr menu symbol util)
 LKC_FILE_NAMES += $(addsuffix .c,$(addprefix zconf.,tab hash lex))
 
+define _f_sanity_check_output_dir
+	test -n '$(1)'
+	test '$(1)' != '/'
+	test '$(1)' != '$(S)'
+endef
+f_sanity_check_output_dir = $(call _f_sanity_check_output_dir,$(strip $(1)))
 
 
 PHONY += all
@@ -40,6 +54,7 @@ clean:
 
 PHONY += pyclean
 pyclean:
+	$(call f_sanity_check_output_dir,$(_PYMOD_DIRS))
 	find $(_PYMOD_DIRS) -name '*.py[co]' -delete -print
 
 PHONY += distclean
