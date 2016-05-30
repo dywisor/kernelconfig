@@ -13,6 +13,12 @@ __all__ = ["Config", "KernelConfig"]
 
 
 class ConfigFileReader(loggable.AbstractLoggable):
+    """
+    @ivar option_expr_str:  regexp str for matching config option names
+    @type option_expr_str:  C{str}
+    @ivar value_expr_str:   regexp str for matching any value
+    @type value_expr_str:   C{str}
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -21,6 +27,23 @@ class ConfigFileReader(loggable.AbstractLoggable):
     # ---
 
     def unpack_value(self, inval):
+        """Converts a str value from dubious sources to a value suitable
+        for storing in a kconfig symbol X value dict.
+        Also detects the type of the value.
+
+        @raises: ValueError if inval is faulty
+
+        @param inval:  input value
+        @type  inval:  necessarily C{str}
+
+        @return: 2-tuple (value type, value),
+                 the value type can also be used for creating kconfig symbols
+        @rtype:  2-tuple (
+                   L{symbol.KconfigSymbolValueType},
+                   C{str}|C{int}|L{symbol.TristateKconfigSymbolValue})
+        """
+        # FIXME: this method could be moved to somewhere else,
+        #        e.g. kconfig.symbol - there's nothing specific to this class
         _vtype = symbol.KconfigSymbolValueType
 
         if not inval:
@@ -61,7 +84,28 @@ class ConfigFileReader(loggable.AbstractLoggable):
             raise ValueError(inval)
     # --- end of unpack_value (...) ---
 
-    def read_file(self, infile, filename=None):
+    def read_file(self, infile, filename=None, **kwargs):
+        """Generator that reads and processes entries from a .config file.
+
+        @param   infile:    file object or path
+        @type    infile:    fileobj or C{str}
+        @keyword filename:  file name, defaults to None
+        @type    filename:  C{str} or C{None}
+        @param   kwargs:    additional keyword parameters
+                            for L{fileio.read_text_file_lines()}
+        @type    kwargs:    C{dict} :: C{str} => _
+
+        @return 3-tuple (
+                  line number, option name, None or 2-tuple(value type, value))
+        @rtype: 3-tuple (
+                 C{int},
+                 C{str},
+                 C{None} | 2-tuple (
+                   L{symbol.KconfigSymbolValueType},
+                   C{str}|C{int}|L{symbol.TristateKconfigSymbolValue}
+                  )
+                )
+        """
         _unpack_value = self.unpack_value
 
         option_value_regexp = re.compile(
@@ -77,7 +121,7 @@ class ConfigFileReader(loggable.AbstractLoggable):
         )
 
         for lino, line in fileio.read_text_file_lines(
-            infile, filename=filename, rstrip=None
+            infile, filename=filename, rstrip=None, **kwargs
         ):
             if line:
                 opt_val_match = option_value_regexp.match(line)
@@ -111,7 +155,7 @@ class ConfigFileReader(loggable.AbstractLoggable):
 
 
 class Config(loggable.AbstractLoggable, collections.abc.Mapping):
-    """The kernel configuration.
+    """A kconfig-based configuration.
 
     @cvar CFG_DICT_CLS:  dict type or constructor, for storing config options
     @type CFG_DICT_CLS:  C{type}
@@ -249,6 +293,8 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
 
         @raises ValueError: bad option name
                             (propagated from convert_option_to_symbol_name)
+                            or bad option value
+                            (propagated from ConfigFileReader.unpack_value)
 
         @param cfg_dict:  dict for storing config options (symbol => value)
         @type  cfg_dict:  C{dict}:: L{AbstractKconfigSymbol} => _
@@ -265,6 +311,7 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         kconfig_syms = self._kconfig_symbols
 
         for infile_item in infiles:
+            # unpack infile_item, it's either a str or a 2-tuple(str,str|None)
             if isinstance(infile_item, tuple):
                 infile_path, infile_name = infile_item
             else:
@@ -277,9 +324,14 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
                 infile_path, filename=infile_name
             ):
                 symbol_name = get_symbol_name(option, lenient=False)
+
                 try:
                     sym = kconfig_syms[symbol_name]
                 except KeyError:
+                    # symbol does not exist yet
+                    # * if the option is not set, ignore it
+                    # * if the option is set, create a new symbol
+                    #   and log about it
                     self.logger.warning("Read unknown symbol %s", symbol_name)
                     if value is None:
                         self.logger.info(
@@ -323,26 +375,76 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
     # ---
 
     def read_config_file(self, infile, filename=None, update=False):
+        """Reads options from a single ".config" file and stores them
+        in the config dict.
+
+        If the update parameter is true, then entries are added to the
+        existing configuration, and otherwise a new config dict is created.
+
+        Note: This operation replaces the existing _config dict,
+              but only when successful (i.e. no exceptions occurred).
+              However, it modifies the kconfig symbols inplace!
+
+        @raises ValueError: bad option name
+                            (propagated from convert_option_to_symbol_name)
+                            or bad option value
+                            (propagated from ConfigFileReader.unpack_value)
+
+        @param   infile:    .config file object or path
+        @type    infile:    fileobj or C{str}
+        @param   filename:  name of the config file or None. Defaults to None.
+        @type    filename:  C{str} or C{None}
+        @keyword update:    whether to update the current configuration dict
+                            with the entries from infile (True)
+                            or create a config dict (False).
+                            Defaults to False.
+        @type    update:    C{bool}
+
+        @return: None (implicit)
+        """
         cfg_dict = self.get_new_config_dict(update=update)
         self._read_config_files(cfg_dict, [(infile, filename)])
         self._config = cfg_dict
     # --- end of read_config_file (...) ---
 
     def read_config_files(self, *infiles, update=False):
+        """
+        Similar to L{read_config_file()}, but accepts a series of input files.
+        """
         cfg_dict = self.get_new_config_dict(update=update)
         self._read_config_files(cfg_dict, infiles)
         self._config = cfg_dict
     # --- end of read_config_files (...) ---
 
     def generate_config_lines(self):
+        """Generator that creates text lines representing the current
+        configuration, suitable for writing to a ".config" file.
+
+        @return: "option=value", "# option is not set"
+        @rtype:  C{str}
+        """
         for sym, val in self.iter_config():
             yield sym.format_value(val)
     # --- end of generate_config_lines (...) ---
 
-    def write_config_file(self, outfile, filename=None):
+    def write_config_file(self, outfile, filename=None, **kwargs):
+        """Writes the current configuration to a file.
+
+        @param   outfile:   output file object or path
+        @type    outfile:   fileobj or C{str}
+        @keyword filename:  name of the output file or None (the default)
+        @type    filename:  C{str} or C{None}
+        @param   kwargs:    additional keyword arguments for
+                            L{fileio.write_text_file_lines()}
+        @type    kwargs:    C{dict} :: C{str} => _
+
+        @return: None (implicit)
+        """
         fileio.write_text_file_lines(
             outfile,
-            self.generate_config_lines()
+            self.generate_config_lines(),
+            append_newline=True,
+            **kwargs
         )
     # --- end of write_config_file (...) ---
 
@@ -350,6 +452,8 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
 
 
 class KernelConfig(Config):
+    """A kernel configuration."""
+
     CFG_OPTNAME_PREFIX = "CONFIG_"
 
     def convert_option_to_symbol_name(self, option_name, lenient=False):
