@@ -5,7 +5,7 @@ from ..abc import loggable
 from . import symbol
 from . import symbols
 from . import symbolexpr
-from . import lkconfig
+from . import lkconfig  # pylint: disable=E0611
 
 __all__ = ["KconfigSymbolGenerator"]
 

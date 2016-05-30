@@ -145,4 +145,4 @@ class KconfigSymbolValueType(enum.Enum):
     v_hex = HexKconfigSymbol
 
     def __str__(self):
-        return self.value.type_name
+        return self.value.type_name  # pylint: disable=E1101

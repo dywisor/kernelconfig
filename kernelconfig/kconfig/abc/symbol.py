@@ -40,7 +40,7 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
     VALUE_NOT_SET_FMT_STR = "# {name} is not set"
 
     @abc.abstractproperty
-    def type_name(cls):
+    def type_name(cls):  # pylint: disable=E0213
         raise NotImplementedError()
 
     @abc.abstractclassmethod

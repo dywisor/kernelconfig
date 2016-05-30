@@ -96,7 +96,7 @@ class _UnaryExpr(Expr):
     __slots__ = ["expr"]
 
     @abc.abstractproperty
-    def EXPR_FMT(cls):
+    def EXPR_FMT(cls):  # pylint: disable=E0213
         raise NotImplementedError()
 
     def __init__(self, expr, **kwargs):
@@ -125,7 +125,7 @@ class _MultiExpr(Expr):
     __slots__ = ["exprv"]
 
     @abc.abstractproperty
-    def OP_STR(cls):
+    def OP_STR(cls):  # pylint: disable=E0213
         raise NotImplementedError()
 
     def __init__(self, **kwargs):
@@ -204,7 +204,7 @@ class _Expr_SymbolValueComparison(Expr_Symbol):
 
     # EXPR_FMT needs to be abstract again
     @abc.abstractproperty
-    def EXPR_FMT(cls):
+    def EXPR_FMT(cls):  # pylint: disable=E0213
         raise NotImplementedError()
 
     def __init__(self, lsym, rsym, **kwargs):
