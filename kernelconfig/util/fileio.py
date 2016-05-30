@@ -2,9 +2,10 @@
 # -*- coding: utf-8 -*-
 
 import io
+import os
 
 
-__all__ = ["read_text_file_lines"]
+__all__ = ["read_text_file_lines", "write_text_file_lines"]
 
 
 class _TextFileIOWrapper(object):
@@ -118,19 +119,35 @@ def read_text_file_lines(infile, filename=None, rstrip=True):
 # --- end of read_text_file_lines (...) ---
 
 
-def read_text_file_lines(infile, filename=None, strip=True):
-    # or hasattr(infile, read|readlines + __iter__),
-    #  but this would also allow IO objects that read bytes, not str
-    if isinstance(infile, io.TextIOBase):
-        # infile is an already opened file (opened in text mode)
-        # #fname = filename or getattr(infile, "name", None)
-        yield from _read_text_file_lines_from_fh(infile, filename, strip)
+def write_text_file_lines(outfile, lines, filename=None, append_newline=True):
+    """Writes text line to a file.
 
-    else:
-        # infile is filepath
-        fpath = str(infile)
-        # #fname = filename or fpath
-        with open(fpath, "rt") as fh:
-            yield from _read_text_file_lines_from_fh(fh, filename, strip)
+    @param   outfile:         output file
+    @type    outfile:         fileobj or C{str}
+    @param   lines:           text lines / iterable of __str__()-able objects
+    @type    lines:           iterable (list, genexpr, ...) of objects
+    @keyword filename:        name of the output file. Defaults to None.
+    @type    filename:        C{str} or C{None}
+    @keyword append_newline:  str sequence that gets appended to each text line
+                              May be True for L{os.linesep},
+                              or any false value for disabling this behavior.
+                              Defaults to True.
+    @type    append_newline:  C{bool}|C{None} or C{str}
+
+    @return: None (implicit)
+    """
+    if append_newline is True:
+        append_newline = os.linesep
     # --
-# ---
+
+    if append_newline:
+        outlines = ((str(l) + append_newline) for l in lines)  # genexpr
+    else:
+        outlines = map(str, lines)
+    # --
+
+    with _TextFileIOWrapper(outfile, "wt") as fh:
+        for line in outlines:
+            fh.write(line)
+    # --
+# --- end of write_text_file_lines (...) ---
