@@ -1,11 +1,33 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import bz2
+import codecs
+import gzip
 import io
+import mimetypes
 import os
 
-
 __all__ = ["read_text_file_lines", "write_text_file_lines"]
+
+
+class _Compression(object):
+    MIME_TYPES = mimetypes.MimeTypes()
+
+    COMP_MAP = {
+        "bzip2":  bz2.BZ2File,
+        "gzip":   gzip.GzipFile,
+    }
+
+    @classmethod
+    def _guess_file_type(cls, filepath):
+        return cls.MIME_TYPES.guess_type(filepath)
+
+    @classmethod
+    def guess_compression(cls, filepath):
+        return cls.COMP_MAP.get(cls._guess_file_type(filepath)[-1])
+
+# --- end of _Compression ---
 
 
 def check_is_fileobj(suspect):
@@ -44,13 +66,18 @@ def read_text_file_lines_from_fh(infile_fh, filename=None, rstrip=True):
 # --- end of read_text_file_lines_from_fh (...) ---
 
 
-def read_text_file_lines(infile, filename=None, **kwargs):
+def read_text_file_lines(infile, filename=None, encoding="utf-8", **kwargs):
     """Generator that reads lines from a text file.
+
+    Supports reading of gzip- or bzip2-compressed files
+    based on mimetypes detection.
 
     @param   infile:    input file, may be a file object or path
     @type    infile:    fileobj or C{str}
     @keyword filename:  name of the file. Defaults to None.
     @type    filename:  C{str} or C{None}
+    @keyword encoding:  input file encoding, defaults to "utf-8"
+    @type    encoding:  C{str}
     @keyword rstrip:    chars to strip from the end of each text line;
                         May to False to disable rstrip altogether,
                         None for removing any whitespace,
@@ -66,10 +93,21 @@ def read_text_file_lines(infile, filename=None, **kwargs):
             infile, filename=filename, **kwargs
         )
     else:
-        with open(infile, "rt") as fh:
-            yield from read_text_file_lines_from_fh(
-                fh, filename=(filename or infile), **kwargs
-            )
+        open_compressed = _Compression.guess_compression(infile)
+
+        if open_compressed is not None:
+            enc_reader = codecs.getreader(encoding)
+
+            with open_compressed(infile, "rb") as ch:
+                yield from read_text_file_lines_from_fh(
+                    enc_reader(ch), filename=(filename or infile), **kwargs
+                )
+            # -- end with
+        else:
+            with open(infile, "rt", encoding=encoding) as fh:
+                yield from read_text_file_lines_from_fh(
+                    fh, filename=(filename or infile), **kwargs
+                )
 # --- end of read_text_file_lines (...) ---
 
 
