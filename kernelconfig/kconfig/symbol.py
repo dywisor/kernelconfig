@@ -1,19 +1,22 @@
 # kernelconfig -- Kconfig symbol types
 # -*- coding: utf-8 -*-
 
+import re
 import enum
 import numbers
 
 from .abc.symbol import AbstractKconfigSymbol
 
 __all__ = [
+    "KconfigSymbolValueType",
     "TristateKconfigSymbolValue",
     "TristateKconfigSymbol",
     "BooleanKconfigSymbol",
     "StringKconfigSymbol",
     "IntKconfigSymbol",
     "HexKconfigSymbol",
-    "UndefKconfigSymbol"
+    "UndefKconfigSymbol",
+    "unpack_value_str"
 ]
 
 
@@ -85,6 +88,23 @@ class StringKconfigSymbol(AbstractKconfigSymbol):
 
     VALUE_FMT_STR = "{name}={value!s}"
 
+    # apparently, the only char that actually gets escaped in Makefile
+    # variables is #, the (un)escaping of quotes ("') is done by the shell
+    _SPECIAL_CHARS = re.escape("#")
+
+    UNESCAPE_CHR_REGEXP = re.compile(r'\\([{}])'.format(_SPECIAL_CHARS))
+    ESCAPE_CHR_REGEXP = re.compile(r'[{}]'.format(_SPECIAL_CHARS))
+
+    @classmethod
+    def unescape_value(cls, inval):
+        return cls.UNESCAPE_CHR_REGEXP.sub(r'\1', inval)
+    # ---
+
+    @classmethod
+    def escape_value(cls, inval):
+        return cls.ESCAPE_CHR_REGEXP.sub(r'\\\1', inval)
+    # ---
+
     @classmethod
     def normalize_and_validate(cls, value):
         return value  # which will be converted to str when necessary
@@ -94,14 +114,15 @@ class StringKconfigSymbol(AbstractKconfigSymbol):
         if value is None:
             return self.format_value_is_not_set()
         else:
-            # FIXME: escape quotes in value
-            return self.VALUE_FMT_STR.format(name=self.name, value=value)
+            return self.VALUE_FMT_STR.format(
+                name=self.name, value=self.escape_value(value)
+            )
     # ---
 
 # --- end of StringKconfigSymbol ---
 
 
-class IntKconfigSymbol(StringKconfigSymbol):
+class IntKconfigSymbol(AbstractKconfigSymbol):
     __slots__ = []
     type_name = "int"
 
@@ -111,6 +132,13 @@ class IntKconfigSymbol(StringKconfigSymbol):
     def normalize_and_validate(cls, value):
         return int(value)
     # --- end of normalize_and_validate (...) ---
+
+    def format_value(self, value):
+        if value is None:
+            return self.format_value_is_not_set()
+        else:
+            return self.VALUE_FMT_STR.format(name=self.name, value=value)
+    # ---
 
 # --- end of IntKconfigSymbol ---
 
@@ -146,3 +174,63 @@ class KconfigSymbolValueType(enum.Enum):
 
     def __str__(self):
         return self.value.type_name  # pylint: disable=E1101
+# --- end of KconfigSymbolValueType ---
+
+
+def unpack_value_str(inval):
+    """Converts a str value from dubious sources to a value suitable
+    for storing in a kconfig symbol X value dict.
+    Also detects the type of the value.
+
+    @raises: ValueError if inval is faulty
+
+    @param inval:  input value
+    @type  inval:  necessarily C{str}
+
+    @return: 2-tuple (value type, value),
+             the value type can also be used for creating kconfig symbols
+    @rtype:  2-tuple (
+               L{KconfigSymbolValueType},
+               C{str}|C{int}|L{TristateKconfigSymbolValue})
+    """
+    _vtype = KconfigSymbolValueType
+
+    if not inval:
+        raise ValueError()
+
+    elif inval == "n":
+        # tristate or boolean value
+        # or inval in {"n", "m", "y"}: getattr(_, inval)
+        return (_vtype.v_tristate, TristateKconfigSymbolValue.n)
+    elif inval == "m":
+        return (_vtype.v_tristate, TristateKconfigSymbolValue.m)
+    elif inval == "y":
+        return (_vtype.v_tristate, TristateKconfigSymbolValue.y)
+
+    elif inval[0] in "\"'" and inval[0] == inval[-1] and len(inval) > 1:
+        # string value (always quoted)
+        return (
+            _vtype.v_string,
+            StringKconfigSymbol.unescape_value(inval[1:-1])
+        )
+
+    else:
+        # could be int w/ base 10
+        try:
+            intval = int(inval, 10)
+        except ValueError:
+            pass
+        else:
+            return (_vtype.v_int, intval)
+
+        # otherwise, could be int w/ base 16
+        try:
+            intval = int(inval, 0x10)
+        except ValueError:
+            pass
+        else:
+            return (_vtype.v_hex, intval)
+
+        # unknown value
+        raise ValueError(inval)
+# --- end of unpack_value_str (...) ---

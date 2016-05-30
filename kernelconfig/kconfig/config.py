@@ -26,64 +26,6 @@ class ConfigFileReader(loggable.AbstractLoggable):
         self.value_expr_str = r'(?:\S+(?:\s+\S+)*)'
     # ---
 
-    def unpack_value(self, inval):
-        """Converts a str value from dubious sources to a value suitable
-        for storing in a kconfig symbol X value dict.
-        Also detects the type of the value.
-
-        @raises: ValueError if inval is faulty
-
-        @param inval:  input value
-        @type  inval:  necessarily C{str}
-
-        @return: 2-tuple (value type, value),
-                 the value type can also be used for creating kconfig symbols
-        @rtype:  2-tuple (
-                   L{symbol.KconfigSymbolValueType},
-                   C{str}|C{int}|L{symbol.TristateKconfigSymbolValue})
-        """
-        # FIXME: this method could be moved to somewhere else,
-        #        e.g. kconfig.symbol - there's nothing specific to this class
-        _vtype = symbol.KconfigSymbolValueType
-
-        if not inval:
-            raise ValueError()
-
-        elif inval == "n":
-            # tristate or boolean value
-            # or inval in {"n", "m", "y"}: getattr(_, inval)
-            return (_vtype.v_tristate, symbol.TristateKconfigSymbolValue.n)
-        elif inval == "m":
-            return (_vtype.v_tristate, symbol.TristateKconfigSymbolValue.m)
-        elif inval == "y":
-            return (_vtype.v_tristate, symbol.TristateKconfigSymbolValue.y)
-
-        elif inval[0] in "\"'" and inval[0] == inval[-1] and len(inval) > 1:
-            # string value (always quoted)
-            #  FIXME: unescape value
-            return (_vtype.v_string, inval[1:-1])
-
-        else:
-            # could be int w/ base 10
-            try:
-                intval = int(inval, 10)
-            except ValueError:
-                pass
-            else:
-                return (_vtype.v_int, intval)
-
-            # otherwise, could be int w/ base 16
-            try:
-                intval = int(inval, 0x10)
-            except ValueError:
-                pass
-            else:
-                return (_vtype.v_hex, intval)
-
-            # unknown value
-            raise ValueError(inval)
-    # --- end of unpack_value (...) ---
-
     def read_file(self, infile, filename=None, **kwargs):
         """Generator that reads and processes entries from a .config file.
 
@@ -106,7 +48,7 @@ class ConfigFileReader(loggable.AbstractLoggable):
                   )
                 )
         """
-        _unpack_value = self.unpack_value
+        _unpack_value = symbol.unpack_value_str
 
         option_value_regexp = re.compile(
             r'^(?P<option>{oexpr})[=](?P<value>{vexpr})$'.format(
