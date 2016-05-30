@@ -30,6 +30,10 @@ X_GREP = grep
 GREP_CHECK_OPTS = -n --color
 X_EPYDOC = epydoc
 EPYDOC_OPTS = --html -v --name '$(PN)'
+X_PYREVERSE = pyreverse
+PYREVERSE_OPTS = -p '$(_PRJNAME)' -fALL
+X_DOT = dot
+DOT_OPTS =
 
 PRJ_LKC_SRC = $(_PRJROOT)/src/lkc
 
@@ -84,6 +88,40 @@ epydoc: $(_EPYDOC_DIR)
 $(_EPYDOC_DIR): epydoc-clean FORCE
 	$(MKDIRP) -- $(@D)
 	$(X_EPYDOC) $(EPYDOC_OPTS) -o $(@) $(_PYMOD_DIRS)
+
+
+$(_BUILD_DIR)/pym/.stamp: $(_PYMOD_DIRS)
+	$(RMF) -- $(@)
+	$(MKDIRP) -- $(@D)
+	{ set -e; \
+		$(foreach p,$^,\
+			$(RMF) -- $(@D)/$(notdir $(p)); \
+			$(LNS) -- $(p) $(@D)/$(notdir $(p)); \
+		) \
+	}
+	touch -- $(@)
+
+$(_BUILD_DIR)/pym: %: %/.stamp
+
+_UML_OUTFORMATS = dot png
+uml: $(addprefix uml-,$(_UML_OUTFORMATS))
+
+PHONY += $(addprefix uml-,$(_UML_OUTFORMATS))
+uml-dot uml-png: uml-%: $(foreach t,classes packages,$(_BUILD_DIR)/uml/$(t)_$(_PRJNAME).%)
+
+$(_BUILD_DIR)/uml/classes_$(_PRJNAME).dot: $(_BUILD_DIR)/pym
+	$(MKDIRP) -- $(@D)
+	cd '$(@D)' && \
+		PYTHONPATH='$(<)' $(X_PYREVERSE) $(PYREVERSE_OPTS) -o dot $(_PRJNAME)
+
+$(_BUILD_DIR)/uml/packages_$(_PRJNAME).dot: \
+	%/packages_$(_PRJNAME).dot: | %/classes_$(_PRJNAME).dot
+	# byproduct
+
+$(_BUILD_DIR)/uml/%.png: $(_BUILD_DIR)/uml/%.dot
+	$(MKDIRP) -- $(@D)
+	$(X_DOT) $(DOT_OPTS) '-T$(patsubst .%,%,$(suffix $(@F)))' '$(<)' -o '$(@)'
+
 
 
 PHONY += check
