@@ -77,7 +77,7 @@ class ConfigFileReader(loggable.AbstractLoggable):
         )
 
         for lino, line in fileio.read_text_file_lines(
-            infile, filename=filename, strip=None
+            infile, filename=filename, rstrip=None
         ):
             if line:
                 opt_val_match = option_value_regexp.match(line)
