@@ -279,13 +279,13 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
                     self.logger.warning("Read unknown symbol %s", symbol_name)
                     if value is None:
                         self.logger.info(
-                            "Cannot infer type, ignoring %s (not set)",
+                            "Cannot infer type of %s (not set), ignoring",
                             symbol_name
                         )
                     else:
                         self.logger.info(
-                            "Adding unknown symbol %s as new %s",
-                            symbol_name, value[0].value.__name__
+                            "Adding unknown symbol %s as new %s symbol",
+                            symbol_name, value[0]
                         )
 
                         sym = kconfig_syms.add_unknown_symbol(
@@ -294,8 +294,24 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
                         cfg_dict[sym] = value[-1]
 
                 else:
-                    # FIXME: check if value type suitable
-                    cfg_dict[sym] = None if value is None else value[-1]
+                    if value is None:
+                        # do not remove sym from the config, just disable it
+                        cfg_dict[sym] = None
+
+                    else:
+                        try:
+                            normval = sym.normalize_and_validate(value[1])
+                        except ValueError:
+                            self.logger.error(
+                                "invalid %s value %r for %s symbol %s",
+                                value[0], value[1], sym.type_name, sym.name
+                            )
+                            raise  # or recover // FIXME
+                        else:
+                            cfg_dict[sym] = normval
+                        # --
+                    # -- end if value
+                # -- end try to use existing symbol
             # --
         # --
 
