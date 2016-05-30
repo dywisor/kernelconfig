@@ -323,10 +323,8 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
         """Instructs the lkc parser to read kconfig symbols.
         Unsafe, use read_lkc_symbols().
         """
-        self.source_info.setenv()  # FIXME: not here
         lkconfig.read_symbols(
-            # FIXME: top-level Kconfig file should be a property of SourceInfo
-            self.source_info.get_filepath("Kconfig")
+            self.source_info.get_toplevel_kconfig_filepath()
         )
     # --- end of _read_lkc_symbols (...) ---
 
