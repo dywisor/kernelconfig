@@ -230,6 +230,10 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         return self._kconfig_symbols[sym_key]
     # ---
 
+    def iter_config(self):
+        return self._config.items()
+    # --- end of iter_config (...) ---
+
     def __getitem__(self, key):
         return self._config[self.normalize_key(key)]
 
@@ -329,6 +333,18 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         self._read_config_files(cfg_dict, infiles)
         self._config = cfg_dict
     # --- end of read_config_files (...) ---
+
+    def generate_config_lines(self):
+        for sym, val in self.iter_config():
+            yield sym.format_value(val)
+    # --- end of generate_config_lines (...) ---
+
+    def write_config_file(self, outfile, filename=None):
+        fileio.write_text_file_lines(
+            outfile,
+            self.generate_config_lines()
+        )
+    # --- end of write_config_file (...) ---
 
 # --- Config ---
 
