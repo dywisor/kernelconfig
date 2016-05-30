@@ -33,20 +33,16 @@ if __name__ == "__main__":
     # currently,
     #  all of srctree, arch, srcarch and kernelversion need to be specified
     arg_parser.add_argument("-S", "--kernel-src", default="/usr/src/linux")
-    arg_parser.add_argument("-A", "--arch", default="x86_64")
-    arg_parser.add_argument("-a", "--srcarch", default="x86")
-    arg_parser.add_argument("-k", "--kernelversion", default="4.6.0")
-
+    arg_parser.add_argument("-A", "--arch", default=None)
     arg_parser.add_argument("-C", "--config", default=None)
 
     arg_config = arg_parser.parse_args()
 
     kinfo = kernelconfig.kernel.info.KernelInfo(
         srctree=arg_config.kernel_src,
-        arch=arg_config.arch,
-        srcarch=arg_config.srcarch,
-        kernelversion=arg_config.kernelversion
+        arch=arg_config.arch
     )
+    kinfo.prepare()
 
     kconfig_syms = (
         kernelconfig.kconfig.symbolgen.
