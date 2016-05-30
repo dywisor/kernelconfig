@@ -143,3 +143,6 @@ class KconfigSymbolValueType(enum.Enum):
     v_string = StringKconfigSymbol
     v_int = IntKconfigSymbol
     v_hex = HexKconfigSymbol
+
+    def __str__(self):
+        return self.value.type_name
