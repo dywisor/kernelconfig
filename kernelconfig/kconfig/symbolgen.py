@@ -34,7 +34,6 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
         @rtype:  subclass of L{Expr}
         """
         sym_cmp_cls_map = self.SYM_CMP_CLS_MAP
-        logger = self.logger
 
         const_false = symbolexpr.Expr_Constant.get_instance(
             symbol.TristateKconfigSymbolValue.n
@@ -45,7 +44,6 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
 
             Recursive: expand_expr -> _
             """
-            nonlocal logger
             nonlocal sym_cmp_cls_map
             nonlocal const_false
 
