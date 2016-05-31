@@ -610,10 +610,22 @@ class Expr_Not(_UnaryExpr):
     # --- end of evaluate (...) ---
 
     def simplify(self):
-        if isinstance(self.expr, Expr_Constant):
-            return Expr_Constant.get_instance(self.evaluate(None))
+        simpler_expr = self.expr.simplify()
+
+        if isinstance(simpler_expr, Expr_Constant):
+            return Expr_Constant.get_instance(
+                simpler_expr.evaluate(None).__invert__()
+            )
+
+        elif isinstance(self.expr, Expr_Not):
+            # not not expr => expr
+            return self.expr.expr.simplify()
+
+        elif simpler_expr is self.expr:
+            return self  # unmodified
+
         else:
-            return self
+            return Expr_Not(simpler_expr)
     # --- end of simplify (...) ---
 # ---
 
