@@ -2,6 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import abc
+import operator
+
+from . import symbol
 
 
 __all__ = [
@@ -129,7 +132,37 @@ class Expr(object, metaclass=abc.ABCMeta):
             )
         # --
     # --- end of expand_subexpr_symbols_shared (...) ---
-# ---
+
+    @abc.abstractmethod
+    def evaluate(self, symbol_value_map):
+        """
+        Given a symbol => value map,
+        calculates the boolean value of this expression.
+
+        Note: the expression should be simplified before calling this method.
+
+        @param symbol_value_map:  (incomplete) symbol to value mapping
+        @type  symbol_value_map:  C{dict} :: L{AbstractKconfigSymbol} => _
+        @return: tristate value
+        @rtype:  L{TristateKconfigSymbolValue}
+        """
+        raise NotImplementedError()
+    # --- end of evaluate (...) ---
+
+    @abc.abstractmethod
+    def simplify(self):
+        """Simplifies the expression.
+
+        Note: this performs basic simplifications only,
+        such as evaluating constant expressions.
+
+        @return:  unmodified self, or new, modified Expr
+        @rtype:   subclass of L{Expr}
+        """
+        raise NotImplementedError()
+    # --- end of simplify (...) ---
+
+# --- end of Expr ---
 
 
 class _UnaryExpr(Expr):
@@ -149,8 +182,8 @@ class _UnaryExpr(Expr):
     def EXPR_FMT(cls):  # pylint: disable=E0213
         raise NotImplementedError()
 
-    def __init__(self, expr, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, expr):
+        super().__init__()
         self.expr = expr
 
     def add_expr(self, expr):
@@ -178,15 +211,18 @@ class _MultiExpr(Expr):
     def OP_STR(cls):  # pylint: disable=E0213
         raise NotImplementedError()
 
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, *args):
+        super().__init__()
         self.exprv = []
+        self.extend_expr(args)
 
     def add_expr(self, expr):
-        # if expr is None:   # that's nothing that should be decided here
-        #    return None
         self.exprv.append(expr)
         return expr
+
+    def extend_expr(self, exprv):
+        for expr in exprv:
+            self.add_expr(expr)
 
     def __str__(self):
         # redundant parentheses are OK
@@ -202,7 +238,84 @@ class _MultiExpr(Expr):
         ]
         return self
     # --- end of expand_symbols_shared (...) ---
-# ---
+
+    def iter_evaluate_subexpr(self, symbol_value_map):
+        if not self.exprv:
+            raise AssertionError("empty expr")
+
+        for subexpr in self.exprv:
+            yield subexpr.evaluate(symbol_value_map)
+    # --- end of iter_evaluate_subexpr (...) ---
+
+    def simplify_and_split_subexpr(self):
+        """Splits self.exprv into constants, symbols and nested expressions.
+
+        The result can then be simplified,
+        and then converted back into a Expr with join_simplified_subexpr().
+
+        @return: 3-tuple (
+                   set of constant values,
+                   set of symbol expr,
+                   list of recursive expr
+                 )
+        @rtype:  3-tuple (
+                   C{set} of C{TristateKconfigSymbolValue},
+                   C{set} of L{Expr_Symbol},
+                   C{set} of subclass of L{Expr}
+                 )
+        """
+        constant_values = set()
+        symbol_exprs = set()
+        nested_exprs = []
+
+        # assert commutative, associative, idempotent
+        for expr in self.exprv:
+            simpler_expr = expr.simplify()
+
+            if isinstance(simpler_expr, Expr_Constant):
+                constant_values.add(simpler_expr.evaluate(None))
+            elif isinstance(simpler_expr, Expr_Symbol):
+                symbol_exprs.add(simpler_expr)
+            else:
+                nested_exprs.append(simpler_expr)
+        # -- end for
+
+        return (constant_values, symbol_exprs, nested_exprs)
+    # --- end of simplify_and_split_subexpr (...) ---
+
+    def join_simplified_subexpr(
+        self, constant_values, symbol_exprs, nested_exprs
+    ):
+        """Constructs a new expression
+        from the given constants, symbols and nested expressions.
+
+        "Inverse" of simplify_and_split_subexpr(),
+        but does not accept all-empty input and creates a new Expr object.
+
+        @param constant_values:  constant values
+        @type  constant_values:  C{set} of C{TristateKconfigSymbolValue}
+        @param symbol_exprs:     symbol expressions
+        @type  symbol_exprs:     C{set} of L{Expr_Symbol}
+        @param nested_exprs:     nested expressions
+        @type  nested_exprs:     C{list} of subclass L{Expr}
+
+        @return:  new expression
+        @rtype:   this class
+        """
+        expr = self.__class__()
+        expr.extend_expr(
+            (Expr_Constant.get_instance(v) for v in constant_values)
+        )
+        expr.extend_expr(symbol_exprs)
+        expr.extend_expr(nested_exprs)
+
+        if not expr.exprv:
+            raise AssertionError("created empty expression")
+
+        return expr
+    # --- end of join_simplified_subexpr (...) ---
+
+# --- end of _MultiExpr
 
 
 class _SelfConsumingMultiExpr(_MultiExpr):
@@ -263,6 +376,26 @@ class _UnaryValueExpr(_UnaryExpr):
     ):
         return self
 
+    def simplify(self):
+        return self
+
+    @abc.abstractmethod
+    def get_value(self, symbol_value_map):
+        raise NotImplementedError()
+
+    def evaluate(self, symbol_value_map):
+        value = self.get_value(symbol_value_map)
+        if isinstance(value, symbol.TristateKconfigSymbolValue):
+            return value
+        elif value:
+            return symbol.TristateKconfigSymbolValue.y
+        else:
+            return symbol.TristateKconfigSymbolValue.n
+    # --- end of evaluate (...) ---
+
+    def __repr__(self):
+        return "{c.__qualname__}<{s.expr}>".format(s=self, c=self.__class__)
+
 # --- end of _UnaryValueExpr ---
 
 
@@ -274,6 +407,11 @@ class Expr_Constant(_UnaryValueExpr):
     """
     __slots__ = []
     _instances = {}
+
+    def get_value(self, symbol_value_map):
+        return self.expr
+    # --- end of evaluate (...) ---
+
 # --- end of Expr_Constant ---
 
 
@@ -285,6 +423,14 @@ class Expr_Symbol(_UnaryValueExpr):
     """
     __slots__ = []
     _instances = {}
+
+    def get_value(self, symbol_value_map):
+        try:
+            return symbol_value_map[self.expr]
+        except KeyError:
+            return symbol.TristateKconfigSymbolValue.n
+    # --- end of evaluate (...) ---
+
 # --- end of Expr_Symbol ---
 
 
@@ -320,6 +466,18 @@ class Expr_SymbolName(_UnaryExpr):
         else:
             return Expr_Symbol.get_instance(repl)
     # --- end of expand_symbols_shared (...) ---
+
+    def get_value(self, symbol_value_map):
+        raise TypeError()
+    # --- end of get_value (...) ---
+
+    def evaluate(self, symbol_value_map):
+        raise TypeError()
+    # --- end of evaluate (...) ---
+
+    def simplify(self):
+        return self
+    # --- end of simplify (...) ---
 # ---
 
 
@@ -335,11 +493,15 @@ class _Expr_SymbolValueComparison(Expr):
     __slots__ = ["lsym", "rsym"]
 
     @abc.abstractproperty
+    def OP_EVAL(cls):  # pylint: disable=E0213
+        raise NotImplementedError()
+
+    @abc.abstractproperty
     def EXPR_FMT(cls):  # pylint: disable=E0213
         raise NotImplementedError()
 
-    def __init__(self, lsym, rsym, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, lsym, rsym):
+        super().__init__()
         self.lsym = lsym
         self.rsym = rsym
     # ---
@@ -361,6 +523,23 @@ class _Expr_SymbolValueComparison(Expr):
         )
         return self
     # --- end of expand_symbols_shared (...) ---
+
+    def evaluate(self, symbol_value_map):
+        loper = self.lsym.get_value(symbol_value_map)
+        roper = self.rsym.get_value(symbol_value_map)
+        return self.OP_EVAL(loper, roper)
+    # --- end of evaluate (...) ---
+
+    def simplify(self):
+        if (
+            isinstance(self.lsym, Expr_Constant)
+            and isinstance(self.rsym, Expr_Constant)
+        ):
+            return Expr_Constant(self.evaluate(None))
+        else:
+            return self
+    # --- end of simplify (...) ---
+
 # ---
 
 
@@ -368,6 +547,7 @@ class Expr_SymbolEQ(_Expr_SymbolValueComparison):
     __slots__ = []
 
     EXPR_FMT = "{0!s}={1!s}"
+    OP_EVAL = operator.__eq__
 # ---
 
 
@@ -375,6 +555,7 @@ class Expr_SymbolNEQ(_Expr_SymbolValueComparison):
     __slots__ = []
 
     EXPR_FMT = "{0!s}!={1!s}"
+    OP_EVAL = operator.__ne__
 # ---
 
 
@@ -382,6 +563,7 @@ class Expr_SymbolLTH(_Expr_SymbolValueComparison):
     __slots__ = []
 
     EXPR_FMT = "{0!s}<{1!s}"
+    OP_EVAL = operator.__lt__
 # ---
 
 
@@ -389,6 +571,7 @@ class Expr_SymbolLEQ(_Expr_SymbolValueComparison):
     __slots__ = []
 
     EXPR_FMT = "{0!s}<={1!s}"
+    OP_EVAL = operator.__le__
 # ---
 
 
@@ -396,6 +579,7 @@ class Expr_SymbolGTH(_Expr_SymbolValueComparison):
     __slots__ = []
 
     EXPR_FMT = "{0!s}!>{1!s}"
+    OP_EVAL = operator.__gt__
 # ---
 
 
@@ -403,6 +587,7 @@ class Expr_SymbolGEQ(_Expr_SymbolValueComparison):
     __slots__ = []
 
     EXPR_FMT = "{0!s}!>={1!s}"
+    OP_EVAL = operator.__ge__
 # ---
 
 
@@ -419,6 +604,17 @@ class Expr_Not(_UnaryExpr):
         )
         return self
     # --- end of expand_symbols_shared (...) ---
+
+    def evaluate(self, symbol_value_map):
+        return self.expr.evaluate(symbol_value_map).__invert__()
+    # --- end of evaluate (...) ---
+
+    def simplify(self):
+        if isinstance(self.expr, Expr_Constant):
+            return Expr_Constant.get_instance(self.evaluate(None))
+        else:
+            return self
+    # --- end of simplify (...) ---
 # ---
 
 
@@ -426,6 +622,51 @@ class Expr_And(_SelfConsumingMultiExpr):
     __slots__ = []
 
     OP_STR = " && "
+
+    def evaluate(self, symbol_value_map):
+        # this is not identical to all(...),
+        #  which would return a bool, whereas "y and m" == "m"
+        ret_value = symbol.TristateKconfigSymbolValue.y
+        for value in self.iter_evaluate_subexpr(symbol_value_map):
+            ret_value = min(ret_value, value)
+            if not ret_value:
+                break
+
+        return ret_value
+    # --- end of evaluate (...) ---
+
+    def simplify(self):
+        constant_values, symbol_exprs, nested_exprs = \
+            self.simplify_and_split_subexpr()
+
+        if symbol.TristateKconfigSymbolValue.n in constant_values:
+            # constant "n" in AND
+            return Expr_Constant.get_instance(
+                symbol.TristateKconfigSymbolValue.n
+            )
+
+        elif not symbol_exprs and not nested_exprs:
+            if constant_values:
+                # any other constant in AND (and no symbols/exprs)
+                return Expr_Constant.get_instance(min(constant_values))
+            else:
+                # empty AND
+                return Expr_Constant.get_instance(
+                    symbol.TristateKconfigSymbolValue.n
+                )
+
+        else:
+            # AND depends on a dynamic value
+
+            # "y" && _ <=> _
+            constant_values.discard(symbol.TristateKconfigSymbolValue.y)
+            # constant_values is now either empty or contains just m
+
+            return self.join_simplified_subexpr(
+                constant_values, symbol_exprs, nested_exprs
+            )
+    # --- end of simplify (...) ---
+
 # ---
 
 
@@ -433,4 +674,47 @@ class Expr_Or(_SelfConsumingMultiExpr):
     __slots__ = []
 
     OP_STR = " || "
+
+    def evaluate(self, symbol_value_map):
+        ret_value = symbol.TristateKconfigSymbolValue.n
+        for value in self.iter_evaluate_subexpr(symbol_value_map):
+            ret_value = max(ret_value, value)
+            if ret_value == symbol.TristateKconfigSymbolValue.y:
+                # "m" is not enough
+                break
+
+        return ret_value
+    # --- end of evaluate (...) ---
+
+    def simplify(self):
+        constant_values, symbol_exprs, nested_exprs = \
+            self.simplify_and_split_subexpr()
+
+        if symbol.TristateKconfigSymbolValue.y in constant_values:
+            # constant "y" in OR
+            return Expr_Constant.get_instance(
+                symbol.TristateKconfigSymbolValue.y
+            )
+
+        elif not symbol_exprs and not nested_exprs:
+            if constant_values:
+                # any other constant in OR (and no symbols/exprs)
+                return Expr_Constant.get_instance(max(constant_values))
+            else:
+                # empty OR
+                return Expr_Constant.get_instance(
+                    symbol.TristateKconfigSymbolValue.y
+                )
+
+        else:
+            # OR depends on a dynamic value
+
+            # "n" || _ <=> _
+            constant_values.discard(symbol.TristateKconfigSymbolValue.n)
+            # constant_values is now either empty or contains just m
+
+            return self.join_simplified_subexpr(
+                constant_values, symbol_exprs, nested_exprs
+            )
+    # --- end of simplify (...) ---
 # ---

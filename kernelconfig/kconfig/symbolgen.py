@@ -36,6 +36,10 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
         sym_cmp_cls_map = self.SYM_CMP_CLS_MAP
         logger = self.logger
 
+        const_false = symbolexpr.Expr_Constant.get_instance(
+            symbol.TristateKconfigSymbolValue.n
+        )
+
         def expand_expr(eview):
             """Recursively expands/converts an ExprView.
 
@@ -43,6 +47,7 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
             """
             nonlocal logger
             nonlocal sym_cmp_cls_map
+            nonlocal const_false
 
             def expand_sym(sym):
                 """Expands a E_SYMBOL-type ExprView.
@@ -54,9 +59,11 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
 
                 @rtype: L{Expr_Symbol}
                 """
+                nonlocal const_false
+
                 if not sym.name:
                     # meta symbols
-                    return None
+                    return const_false
                 else:
                     return symbolexpr.Expr_SymbolName(sym.name)
             # ---
@@ -76,16 +83,7 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
                 @return:  Expr
                 @rtype:   sym_cmp_cls
                 """
-                nonlocal logger
-
-                lsym_expr = expand_sym(lsym)
-                rsym_expr = expand_sym(rsym)
-
-                if lsym_expr is None or rsym_expr is None:
-                    logger.debug("dropping %r expr" % sym_cmp_cls)
-                    return None
-                else:
-                    return sym_cmp_cls(lsym_expr, rsym_expr)
+                return sym_cmp_cls(expand_sym(lsym), expand_sym(rsym))
             # ---
 
             def expand_expr_or_sym(subeview, sym):
@@ -94,7 +92,7 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
 
                 Recursive: expand_expr_or_sym -> expand_expr -> _
 
-                Note: at least one out of the two parameters {subeview,sym}
+                Note: exactly one out of the two parameters {subeview,sym}
                       must be None.
                       This is guaranteed by how SymbolView.get_expr() works.
 
@@ -112,7 +110,7 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
                 elif subeview is not None:
                     return expand_expr(subeview)
                 else:
-                    return None
+                    raise AssertionError()
             # ---
 
             if eview is None:
@@ -132,14 +130,7 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
                 expr.add_expr(expand_expr_or_sym(rexpr, rsym))
 
             elif etype == eview.E_NOT:
-                subexpr = expand_expr_or_sym(lexpr, lsym)
-                # subexpr may be None if the not-expr references
-                # unknown symbols
-                if subexpr is not None:
-                    expr = symbolexpr.Expr_Not(subexpr)
-                else:
-                    logger.debug("dropping empty NOT expr")
-                    expr = None
+                expr = symbolexpr.Expr_Not(expand_expr_or_sym(lexpr, lsym))
 
             elif etype == eview.E_SYMBOL:
                 expr = expand_sym(lsym)
@@ -153,6 +144,7 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
                 expr = expand_sym_cmp(sym_cmp_cls, lsym, rsym)
             # --
 
+            # Note: "return expr.simplify()" would hide missing symbols
             return expr
         # ---
 
@@ -385,12 +377,12 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
             # --
         # -- end if default missing and retry
 
-        # assign dir_dep, rev_dep to symbols
+        # simplify and assign dir_dep, rev_dep to symbols
         for sym, dep_expr in self._dir_deps.items():
-            sym.dir_dep = dep_expr
+            sym.dir_dep = None if dep_expr is None else dep_expr.simplify()
 
         for sym, dep_expr in self._rev_deps.items():
-            sym.rev_dep = dep_expr
+            sym.rev_dep = None if dep_expr is None else dep_expr.simplify()
     # --- end of _link_deps (...) ---
 
     def get_symbols(self):
