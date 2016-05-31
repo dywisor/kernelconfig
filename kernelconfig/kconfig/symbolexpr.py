@@ -5,14 +5,26 @@ import abc
 
 
 __all__ = [
+    "clear_cache",
     "Expr",
     "Expr_And",
     "Expr_Not",
     "Expr_Or",
+    "Expr_Constant",
     "Expr_Symbol",
+    "Expr_SymbolName",
     "Expr_SymbolEQ",
     "Expr_SymbolNEQ"
 ]
+
+
+def clear_cache():
+    """
+    Clears the instance caches of various classes provided by this module.
+    """
+    Expr_Constant.clear_instance_cache()
+    Expr_Symbol.clear_instance_cache()
+# --- end of clear_cache (...) ---
 
 
 class Expr(object, metaclass=abc.ABCMeta):
@@ -51,34 +63,72 @@ class Expr(object, metaclass=abc.ABCMeta):
         """
         raise NotImplementedError()
 
-    def expand_symbols(self, symbol_name_map):
+    def expand_symbols(self, symbol_name_map, constants):
         """Recursively replaces symbol name references with symbols from
-        the given mapping.
+        the given mappings.
+        The symbol name is first looked up in constants
+        (resulting in a Expr_Constant object),
+        and then in symbol_name_map (Expr_Symbol).
 
         @param symbol_name_map:  symbol name to <object> map
         @type  symbol_name_map:  C{dict} :: C{str} => _
-        @return: set of missing symbol names
-        @rtype:  C{set} of C{str}
+        @param constants:        symbol name to constant,hashable value map
+        @type  constants:        C{dict} :: C{str} => a, a.__hash__ != None
+        @return: 2-tuple
+                 (modified Expr structure or self, set of missing symbol names)
+        @rtype:  2-tuple (L{Expr}, C{set} of C{str})
         """
         symbol_names_missing = set()
-        self.expand_symbols_shared(symbol_name_map, symbol_names_missing)
-        return symbol_names_missing
+        expr = self.expand_symbols_shared(
+            symbol_name_map, constants, symbol_names_missing
+        )
+        return (expr, symbol_names_missing)
     # ---
 
     @abc.abstractmethod
-    def expand_symbols_shared(self, symbol_name_map, symbols_names_missing):
+    def expand_symbols_shared(
+        self, symbol_name_map, constants, symbols_names_missing
+    ):
         """Recursively replaces symbol name references with symbols from
         the given mapping, using a shared set for storing missing names.
 
         @param symbol_name_map:        symbol name to <object> map
         @type  symbol_name_map:        C{dict} :: C{str} => _
+        @param constants:              symbol name to hashable value map
+        @type  constants:              C{dict} :: C{str} => a
         @param symbols_names_missing:  shared set of missing symbol names
         @type  symbols_names_missing:  C{set} of C{str}
-        @return: None
+
+        @return: modified Expr structure or self
         """
         raise NotImplementedError()
     # ---
 
+    def expand_subexpr_symbols_shared(
+        self, subexpr, symbol_name_map, constants, symbol_names_missing
+    ):
+        """Recursively expands a single subexpression by calling
+        its expand_symbols_shared() method.
+
+        @param subexpr:                subexpression, must not be self
+        @type  subexpr:                subclass of L{Expr} or C{None}
+        @param symbol_name_map:        symbol name to <object> map
+        @type  symbol_name_map:        C{dict} :: C{str} => _
+        @param constants:              symbol name to hashable value map
+        @type  constants:              C{dict} :: C{str} => a
+        @param symbols_names_missing:  shared set of missing symbol names
+        @type  symbols_names_missing:  C{set} of C{str}
+
+        @return: modified Expr structure
+        """
+        if subexpr is None:
+            return None
+        else:
+            return subexpr.expand_symbols_shared(
+                symbol_name_map, constants, symbol_names_missing
+            )
+        # --
+    # --- end of expand_subexpr_symbols_shared (...) ---
 # ---
 
 
@@ -142,14 +192,15 @@ class _MultiExpr(Expr):
         # redundant parentheses are OK
         return self.OP_STR.join(("({!s})".format(e) for e in self.exprv))
 
-    def expand_symbols_shared(self, symbol_name_map, symbol_names_missing):
-        for subexpr in self.exprv:
-            if subexpr is not None:
-                subexpr.expand_symbols_shared(
-                    symbol_name_map, symbol_names_missing
-                )
-            # --
-        # --
+    def expand_symbols_shared(
+        self, symbol_name_map, constants, symbols_names_missing
+    ):
+        self.exprv = [
+            self.expand_subexpr_symbols_shared(
+                subexpr, symbol_name_map, constants, symbols_names_missing
+            ) for subexpr in self.exprv
+        ]
+        return self
     # --- end of expand_symbols_shared (...) ---
 # ---
 
@@ -172,56 +223,143 @@ class _SelfConsumingMultiExpr(_MultiExpr):
 # ---
 
 
-class Expr_Symbol(_UnaryExpr):
-    """Expression that represents a Kconfig symbol.
+class _UnaryValueExpr(_UnaryExpr):
+    """Expression that represents a value, either from a symbol or a constant.
 
-    @ivar expr: Kconfig symbol
-    @type expr: C{str} or symbol object
+    @cvar _instances:  a value => object cache,
+                        derived classes must set this to a dict
+    @type _instances:  C{dict} :: a => subclass of L{_UnaryValueExpr},
+                         a.__hash__ != None
+
+    @ivar expr:  Kconfig symbol or constant value
+    @type expr:  L{AbstractKconfigSymbol} or undef a, a.__hash__ != None
     """
     __slots__ = []
     EXPR_FMT = "{0!s}"
 
-    def expand_symbols_shared(self, symbol_name_map, symbol_names_missing):
-        if isinstance(self.expr, str):
-            try:
-                repl = symbol_name_map[self.expr]
-            except KeyError:
-                symbol_names_missing.add(self.expr)
-            else:
-                self.expr = repl
+    _instances = None
+
+    @classmethod
+    def clear_instance_cache(cls):
+        cls._instances.clear()
+    # --- end of clear_instance_cache (...) ---
+
+    @classmethod
+    def get_instance(cls, value):
+        try:
+            obj = cls._instances[value]
+        except KeyError:
+            obj = cls(value)
+            cls._instances[value] = obj
+
+        return obj
+    # --- end of get_instance (...) ---
+
+    def __hash__(self):
+        return hash((self.__class__, self.expr))
+
+    def expand_symbols_shared(
+        self, symbol_name_map, constants, symbols_names_missing
+    ):
+        return self
+
+# --- end of _UnaryValueExpr ---
+
+
+class Expr_Constant(_UnaryValueExpr):
+    """Expression that represents a constant value.
+
+    @ivar expr:  constant value
+    @type expr:  undef
+    """
+    __slots__ = []
+    _instances = {}
+# --- end of Expr_Constant ---
+
+
+class Expr_Symbol(_UnaryValueExpr):
+    """Expression that references a Kconfig symbol.
+
+    @ivar expr: Kconfig symbol
+    @type expr: L{AbstractKconfigSymbol}
+    """
+    __slots__ = []
+    _instances = {}
+# --- end of Expr_Symbol ---
+
+
+class Expr_SymbolName(_UnaryExpr):
+    """Expression that references a Kconfig symbol by name.
+
+    @ivar expr: Kconfig symbol name
+    @type expr: C{str}
+    """
+    __slots__ = []
+    EXPR_FMT = "{0!s}"
+
+    def expand_symbols_shared(
+        self, symbol_name_map, constants, symbol_names_missing
+    ):
+        key = self.expr
+
+        try:
+            repl = constants[key]
+        except KeyError:
+            pass
+        else:
+            return Expr_Constant.get_instance(repl)
+
+        if key is None:
+            return self
+
+        try:
+            repl = symbol_name_map[key]
+        except KeyError:
+            symbol_names_missing.add(key)
+            return self
+        else:
+            return Expr_Symbol.get_instance(repl)
     # --- end of expand_symbols_shared (...) ---
 # ---
 
 
-class _Expr_SymbolValueComparison(Expr_Symbol):
+class _Expr_SymbolValueComparison(Expr):
     """Expression that represents a comparison of a Kconfig symbol
     with a value or another symbol.
 
-    @ivar cmp_expr: Kconfig symbol or value
-    @type cmp_expr: C{str} (for now) or undefined
+    @ivar lsym:  symbol or value (left operand)
+    @type lsym:  L{Expr_SymbolName}|L{Expr_Symbol}|L{Expr_Constant}|C{None}
+    @ivar rsym:  symbol or value (right operand)
+    @type rsym:  L{Expr_SymbolName}|L{Expr_Symbol}|L{Expr_Constant}|C{None}
     """
-    __slots__ = ["cmp_expr"]
+    __slots__ = ["lsym", "rsym"]
 
-    # EXPR_FMT needs to be abstract again
     @abc.abstractproperty
     def EXPR_FMT(cls):  # pylint: disable=E0213
         raise NotImplementedError()
 
     def __init__(self, lsym, rsym, **kwargs):
-        super().__init__(lsym, **kwargs)
-        self.cmp_expr = rsym
+        super().__init__(**kwargs)
+        self.lsym = lsym
+        self.rsym = rsym
     # ---
 
-    def __str__(self):
-        return self.EXPR_FMT.format(self.expr, self.cmp_expr)
+    def add_expr(self, expr):
+        raise TypeError()
 
-    def expand_symbols_shared(self, symbol_name_map, symbols_names_missing):
-        for expr in (self.expr, self.cmp_expr):
-            if expr is not None:
-                expr.expand_symbols_shared(
-                    symbol_name_map, symbols_names_missing
-                )
-        # --
+    def __str__(self):
+        return self.EXPR_FMT.format(self.lsym, self.rsym)
+
+    def expand_symbols_shared(
+        self, symbol_name_map, constants, symbols_names_missing
+    ):
+        self.lsym = self.expand_subexpr_symbols_shared(
+            self.lsym, symbol_name_map, constants, symbols_names_missing
+        )
+        self.rsym = self.expand_subexpr_symbols_shared(
+            self.rsym, symbol_name_map, constants, symbols_names_missing
+        )
+        return self
     # --- end of expand_symbols_shared (...) ---
 # ---
 
@@ -273,11 +411,13 @@ class Expr_Not(_UnaryExpr):
 
     EXPR_FMT = "!({0!s})"
 
-    def expand_symbols_shared(self, symbol_name_map, symbol_names_missing):
-        if self.expr is not None:
-            self.expr.expand_symbols_shared(
-                symbol_name_map, symbol_names_missing
-            )
+    def expand_symbols_shared(
+        self, symbol_name_map, constants, symbols_names_missing
+    ):
+        self.expr = self.expand_subexpr_symbols_shared(
+            self.expr, symbol_name_map, constants, symbols_names_missing
+        )
+        return self
     # --- end of expand_symbols_shared (...) ---
 # ---
 

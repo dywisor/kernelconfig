@@ -1,6 +1,8 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import logging
+
 from ..abc import loggable
 from . import symbol
 from . import symbols
@@ -56,7 +58,7 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
                     # meta symbols
                     return None
                 else:
-                    return symbolexpr.Expr_Symbol(sym.name)
+                    return symbolexpr.Expr_SymbolName(sym.name)
             # ---
 
             def expand_sym_cmp(sym_cmp_cls, lsym, rsym):
@@ -140,9 +142,7 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
                     expr = None
 
             elif etype == eview.E_SYMBOL:
-                expr = symbolexpr.Expr_Symbol(
-                    expand_sym(lsym)
-                )
+                expr = expand_sym(lsym)
 
             else:
                 try:
@@ -211,6 +211,23 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
 
     _did_read_lkc_symbols = False
 
+    @classmethod
+    def get_default_symbol_constants(cls):
+        if __debug__:
+            # FIXME: remove in future
+            #        : when not running in python -O mode,
+            #        : let constify_missing_symbol() handle all sym names
+            return {}
+
+        return {
+            "n": symbol.TristateKconfigSymbolValue.n,
+            "m": symbol.TristateKconfigSymbolValue.m,
+            "y": symbol.TristateKconfigSymbolValue.y,
+            "0": 0,
+            "1": 1
+        }
+    # --- end of get_default_symbol_constants (...) ---
+
     def __init__(self, source_info, **kwargs):
         super().__init__(**kwargs)
         self.source_info = source_info
@@ -240,6 +257,40 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
         self.read_lkc_symbols()
         return self._get_lkc_symbols()
     # --- end of get_lkc_symbols (...) ---
+
+    def constify_missing_symbol(self, name):
+        """Converts the name of a missing symbol into a constant value.
+
+        First, checks if the name is already a value and, if so,
+        returns that value.
+
+        Otherwise, defaults to symbol to tristate "n".
+
+        @param name:  name of the missing symbol
+        @type  name:  C{str}
+        @return:      hashable value
+        @rtype:       L{symbol.TristateKconfigSymbolValue} | C{int}
+        """
+        try:
+            value_type, value = symbol.unpack_value_str(name)
+        except ValueError:
+            return symbol.TristateKconfigSymbolValue.n
+
+        if value_type == symbol.KconfigSymbolValueType.v_unknown:
+            # this cannot happen,
+            # unpack_value_str() should have raised a ValueError
+            raise AssertionError()
+
+        elif value_type == symbol.KconfigSymbolValueType.v_string:
+            # unpack_value_str() is strict when determing a string value type,
+            # but don't allow string comparisons for now
+            self.logger.warning(
+                "string comparisons are not allowed: %r", value
+            )
+            return symbol.TristateKconfigSymbolValue.n
+        else:
+            return value
+    # --- end of constify_missing_symbol (...) ---
 
     def _prepare_symbols(self):
         """
@@ -280,30 +331,66 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
 
         Reports missing symbol names via self.logger.
         """
-        symbol_names_missing = set()
+        def expand_once(symbol_map, constants):
+            def expand_dep_dict(dep_dict, symbol_names_missing):
+                nonlocal symbol_map, constants
+                for sym_key in list(dep_dict):
+                    dep_expr = dep_dict[sym_key]
+                    if dep_expr is not None:
+                        dep_dict[sym_key] = dep_expr.expand_symbols_shared(
+                            symbol_map, constants, symbol_names_missing
+                        )
+            # ---
 
-        for sym, dep_expr in self._dir_deps.items():
-            if dep_expr is not None and sym.dir_dep is None:
-                dep_expr.expand_symbols_shared(
-                    self._symbols, symbol_names_missing
-                )
-                sym.dir_dep = dep_expr
-        # --
+            symbol_names_missing = set()
+            expand_dep_dict(self._dir_deps, symbol_names_missing)
+            expand_dep_dict(self._rev_deps, symbol_names_missing)
+            return symbol_names_missing
+        # ---
 
-        for sym, dep_expr in self._rev_deps.items():
-            if dep_expr is not None and sym.rev_dep is None:
-                dep_expr.expand_symbols_shared(
-                    self._symbols, symbol_names_missing
-                )
-                sym.rev_dep = dep_expr
-        # --
+        sym_constants = self.get_default_symbol_constants()
+
+        # expand once, collect missing names
+        self.logger.debug("Expanding dependency expressions")
+        symbol_names_missing = expand_once(self._symbols, sym_constants)
 
         if symbol_names_missing:
-            # FIXME: reduce log level,
-            #        sym-names-missing includes constant values (n,m,y,0,1)
-            self.logger.error(
-                "missing symbols: %s", ", ".join(sorted(symbol_names_missing))
+            self.logger.info(
+                "missing %d symbols, defaulting them.",
+                len(symbol_names_missing)
             )
+
+            if self.logger.isEnabledFor(logging.DEBUG):
+                for name in sorted(symbol_names_missing):
+                    value = self.constify_missing_symbol(name)
+                    self.logger.debug(
+                        "Defaulting symbol %s to %s", name, value
+                    )
+                    sym_constants[name] = value
+                # --
+            else:
+                sym_constants.update((
+                    (name, self.constify_missing_symbol(name))
+                    for name in symbol_names_missing
+                ))
+            # -- end debug | nodebug
+
+            self.logger.debug("Expanding dependency expressions again")
+            symbol_names_missing = expand_once(self._symbols, sym_constants)
+            if symbol_names_missing:
+                raise AssertionError(
+                    "second expr expansion should not report missing symbols",
+                    symbol_names_missing
+                )
+            # --
+        # -- end if default missing and retry
+
+        # assign dir_dep, rev_dep to symbols
+        for sym, dep_expr in self._dir_deps.items():
+            sym.dir_dep = dep_expr
+
+        for sym, dep_expr in self._rev_deps.items():
+            sym.rev_dep = dep_expr
     # --- end of _link_deps (...) ---
 
     def get_symbols(self):
@@ -314,8 +401,12 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
         @return: kconfig symbols
         @rtype:  L{KconfigSymbols}
         """
-        self._prepare_symbols()
-        self._link_deps()
+        symbolexpr.clear_cache()
+        try:
+            self._prepare_symbols()
+            self._link_deps()
+        finally:
+            symbolexpr.clear_cache()
         return self._symbols
     # --- end of get_symbols (...) ---
 
