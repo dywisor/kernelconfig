@@ -287,10 +287,12 @@ class AbstractConfigDecision(loggable.AbstractLoggable):
     A config decision keeps track of user-requested values
     for a single kconfig symbol.
 
-    @ivar symbol:  symbol controlled by this decision
-    @type symbol:  subclass of L{AbstractKconfigSymbol}
+    @ivar symbol:   symbol controlled by this decision
+    @type symbol:   subclass of L{AbstractKconfigSymbol}
+    @ivar default:  default value, e.g. from defconfig, may be None if unknown
+    @type default:  L{TristateKconfigSymbolValue} | C{str} | C{int} | C{None}
     """
-    __slots__ = ["symbol"]
+    __slots__ = ["symbol", "default"]
 
     @abc.abstractmethod
     def disable(self, source=None):
@@ -420,8 +422,9 @@ class AbstractConfigDecision(loggable.AbstractLoggable):
         return super().set_logger(**kwargs)
     # --- end of set_logger (...) ---
 
-    def __init__(self, kconfig_symbol, **kwargs):
+    def __init__(self, kconfig_symbol, default, **kwargs):
         self.symbol = kconfig_symbol  # needs to be set before super()
+        self.default = default
         super().__init__(**kwargs)
     # --- end of __init__ (...) ---
 
@@ -546,7 +549,9 @@ class AbstractRestrictionSetConfigDecision(AbstractConfigDecision):
         if prev_decision is None:
             # no previous decision, first restriction
             self.logger.debug(
-                "Setting decision to %r", self.get_decision_str_of(decision)
+                "Setting decision to %r (overrides default value %s)",
+                self.get_decision_str_of(decision),
+                ("<unset>" if self.default is None else self.default)
             )
             self.values = decision
             return True
