@@ -10,6 +10,7 @@ __all__ = [
     "AbstractConfigChoices",
     "AbstractConfigDecision",
     "AbstractRestrictionSetConfigDecision",
+    "AbstractValueConfigDecision",
 ]
 
 
@@ -621,3 +622,52 @@ class AbstractRestrictionSetConfigDecision(AbstractConfigDecision):
         return self.operation_not_supported("add", source=source)
 
 # --- end of AbstractRestrictionSetConfigDecision ---
+
+
+class AbstractValueConfigDecision(AbstractConfigDecision):
+    __slots__ = ["value"]
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.value = None
+    # --- end of __init__ (...) ---
+
+    def get_decisions(self):
+        return None if self.value is None else [self.value]
+
+    def set_to(self, value, source=None):
+        try:
+            normval = self.typecheck_value(value)
+        except ValueError:
+            self.logger.error("Invalid value: %r", value)
+            return False
+
+        if self.value is None:
+            return self.do_set_value(normval, source=source)
+
+        elif self.value == normval:
+            self.logger.debug("Keeping decision %r", normval)
+            return True
+
+        else:
+            self.logger.error(
+                "Cannot override earlier decision %r with %r",
+                self.value, normval
+            )
+            return False
+    # --- end of set_to (...) ---
+
+    def do_set_value(self, value, source=None):
+        self.logger.debug(
+            "Setting decision to %r (overrides '%s')",
+            value,
+            (
+                self.value if self.value is not None
+                else ("<unset>" if self.default is None else self.default)
+            )
+        )
+        self.value = value
+        return True
+    # --- end of do_set_value (...) ---
+
+# --- end of AbstractValueConfigDecision ---
