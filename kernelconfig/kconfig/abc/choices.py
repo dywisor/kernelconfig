@@ -200,7 +200,7 @@ class AbstractConfigChoices(loggable.AbstractLoggable):
         elif value is False:
             return config_option.disable(source=source)
         else:
-            return config_option.set_to(value, source=None)
+            return config_option.set_to(value, source=source)
 
     def __setitem__(self, key, value):
         """Convenience wrapper that calls option_set_to(key, value)."""
@@ -229,7 +229,7 @@ class AbstractConfigChoices(loggable.AbstractLoggable):
         @return: success (True/False)
         @rtype:  C{bool}
         """
-        return config_option.append(value, source=None)
+        return config_option.append(value, source=source)
 
     @_decision_method
     def option_add(self, config_option, value, source=None):
@@ -255,7 +255,7 @@ class AbstractConfigChoices(loggable.AbstractLoggable):
         @return: success (True/False)
         @rtype:  C{bool}
         """
-        return config_option.add(value, source=None)
+        return config_option.add(value, source=source)
 
     def __enter__(self):
         return self
