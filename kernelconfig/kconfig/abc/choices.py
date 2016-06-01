@@ -182,7 +182,8 @@ class AbstractConfigChoices(loggable.AbstractLoggable):
         unsupported value, and previous decisions.
 
         A value of True gets interpreted as option_builtin_or_module(),
-        and False as option_disable().
+        False as option_disable(), and None is forbidden, because it is used
+        for internal purposes.
 
         @param   config_option:  option name
         @type    config_option:  usually C{str}
@@ -199,6 +200,8 @@ class AbstractConfigChoices(loggable.AbstractLoggable):
             return config_option.builtin_or_module(source=source)
         elif value is False:
             return config_option.disable(source=source)
+        elif value is None:
+            return self._log_forbidden_value(value, source=source)
         else:
             return config_option.set_to(value, source=source)
 
@@ -218,6 +221,8 @@ class AbstractConfigChoices(loggable.AbstractLoggable):
         This operation may result in failure due to missing config options,
         unsupported value, and previous decisions.
 
+        A value of None is forbidden as it is used for internal purposes.
+
         @param   config_option:  option name
         @type    config_option:  usually C{str}
         @param   value:          option value
@@ -229,7 +234,10 @@ class AbstractConfigChoices(loggable.AbstractLoggable):
         @return: success (True/False)
         @rtype:  C{bool}
         """
-        return config_option.append(value, source=source)
+        if value is None:
+            return self._log_forbidden_value(value, source=source)
+        else:
+            return config_option.append(value, source=source)
 
     @_decision_method
     def option_add(self, config_option, value, source=None):
@@ -244,6 +252,8 @@ class AbstractConfigChoices(loggable.AbstractLoggable):
         This operation may result in failure due to missing config options,
         unsupported value, and previous decisions.
 
+        A value of None is forbidden as it is used for internal purposes.
+
         @param   config_option:  option name
         @type    config_option:  usually C{str}
         @param   value:          option value
@@ -256,6 +266,11 @@ class AbstractConfigChoices(loggable.AbstractLoggable):
         @rtype:  C{bool}
         """
         return config_option.add(value, source=source)
+
+    def _log_forbidden_value(self, value, source=None):
+        self.logger.error("%r value is forbidden", value)
+        return False
+    # --- end of _log_forbidden_value (...) ---
 
     def __enter__(self):
         return self
