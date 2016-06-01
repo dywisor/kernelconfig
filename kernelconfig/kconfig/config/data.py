@@ -216,9 +216,25 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         return self._kconfig_symbols[sym_key]
     # ---
 
+    def set_config_dict(self, cfg_dict):
+        """Assign a new config dict to this object.
+
+        Unsafe operation, no checks will be performed!
+
+        @param cfg_dict:  config dict
+        @type  cfg_dict:  dict :: L{AbstractKconfigSymbol} => _
+
+        @return: None (implicit)
+        """
+        self._config = cfg_dict
+    # ---
+
     def iter_config(self):
         return self._config.items()
     # --- end of iter_config (...) ---
+
+    def get_symbol_value(self, kconfig_symbol):
+        return self._config[kconfig_symbol]
 
     def __getitem__(self, key):
         return self._config[self.normalize_key(key)]
