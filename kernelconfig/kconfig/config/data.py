@@ -5,9 +5,9 @@ import collections
 import collections.abc
 import re
 
-from ..abc import loggable
-from ..util import fileio
-from . import symbol
+from ...abc import loggable
+from ...util import fileio
+from .. import symbol
 
 __all__ = ["Config", "KernelConfig"]
 
