@@ -425,10 +425,29 @@ class AbstractConfigDecision(loggable.AbstractLoggable):
         super().__init__(**kwargs)
     # --- end of __init__ (...) ---
 
+    def typecheck_value(self, value):
+        """Checks and converts a value.
+
+        By default, calls the symbol's normalize_and_validate() method.
+        Derived classes may override this method
+        to allow for a wider range of input.
+
+        @raises ValueError: bad value
+
+        @param value:  input value
+        @type  value:  undef
+
+        @return: modified value
+        @rtype:  undef
+        """
+        return self.symbol.normalize_and_validate(value)
+    # --- end of typecheck_value (...) ---
+
     def typecheck_values(self, values):
         """
-        Checks an iterable of values using the symbol's
-        normalize_and_validate() method.
+        Checks an iterable of values the using typecheck_value() method.
+
+        Catches ValueErrors.
 
         Returns a 2-tuple (good values, bad values).
 
@@ -438,12 +457,14 @@ class AbstractConfigDecision(loggable.AbstractLoggable):
         @return: 2-tuple (normalized, invalid)
         @rtype:  2-tuple (C{list}, C{list})
         """
+        _typecheck_value = self.typecheck_value
+
         normvals = []
         badvals = []
 
         for val in values:
             try:
-                normval = self.symbol.normalize_and_validate(val)
+                normval = _typecheck_value(val)
             except ValueError:
                 badvals.append(val)
             else:
