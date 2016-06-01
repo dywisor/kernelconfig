@@ -295,6 +295,22 @@ class AbstractConfigDecision(loggable.AbstractLoggable):
     __slots__ = ["symbol", "default"]
 
     @abc.abstractmethod
+    def get_decisions(self):
+        """Returns an ordered list of decision variants made for the symbol.
+
+        Returns None if no decision has been made,
+        and empty list there are no variants,
+        a list with one element if there's only one variant,
+        and a list with multiple elements if there are > 2 variants,
+        with the most preferred variant at the end of the list,
+        so that it can be retrieved with <list>.pop().
+
+        @return: new list or C{None}
+        @rtype:  C{list} or C{None}
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def disable(self, source=None):
         """Make a request to the disable the option.
 
