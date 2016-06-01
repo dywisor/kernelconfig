@@ -18,6 +18,8 @@ class AbstractLoggable(object, metaclass=abc.ABCMeta):
     @type logger:  L{logging.Logger}
     """
 
+    __slots__ = ["logger"]
+
     DEFAULT_LOGGER_NAME = None
 
     def __init__(self, *, logger=None, logger_name=None, parent_logger=None):
