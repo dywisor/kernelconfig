@@ -35,6 +35,10 @@ class Visitable(collections.abc.Hashable):
     __slots__ = []
 
     @abc.abstractmethod
+    def visit(self, visitor):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def __eq__(self, other):
         raise NotImplementedError()
 
@@ -430,6 +434,9 @@ class _UnaryValueExpr(_UnaryExpr):
         pass
     # --- end of calculate_static_hash (...) ---
 
+    def visit(self, visitor):
+        return visitor.visit_symbol(self)
+
     def expand_symbols_shared(
         self, symbol_name_map, constants, symbols_names_missing
     ):
@@ -507,6 +514,9 @@ class Expr_SymbolName(_UnaryExpr):
     __slots__ = []
     EXPR_FMT = "{0!s}"
 
+    def visit(self, visitor):
+        return visitor.visit_symbol(self)
+
     def calculate_static_hash(self):
         pass
 
@@ -583,6 +593,9 @@ class _Expr_SymbolValueComparison(Expr):
         # both of these are no-ops
         self.lsym.calculate_static_hash()
         self.rsym.calculate_static_hash()
+
+    def visit(self, visitor):
+        return visitor.visit_symbol_cmp(self)
 
     def add_expr(self, expr):
         raise TypeError()
@@ -692,6 +705,9 @@ class Expr_Not(_UnaryExpr):
 
     EXPR_FMT = "!({0!s})"
 
+    def visit(self, visitor):
+        return visitor.visit_not(self)
+
     def calculate_static_hash(self):
         self.expr.calculate_static_hash()
 
@@ -764,6 +780,9 @@ class Expr_And(_SelfConsumingMultiExpr):
 
     OP_STR = " && "
 
+    def visit(self, visitor):
+        return visitor.visit_and(self)
+
     def evaluate(self, symbol_value_map):
         # this is not identical to all(...),
         #  which would return a bool, whereas "y and m" == "m"
@@ -815,6 +834,9 @@ class Expr_Or(_SelfConsumingMultiExpr):
     __slots__ = []
 
     OP_STR = " || "
+
+    def visit(self, visitor):
+        return visitor.visit_or(self)
 
     def evaluate(self, symbol_value_map):
         ret_value = symbol.TristateKconfigSymbolValue.n
