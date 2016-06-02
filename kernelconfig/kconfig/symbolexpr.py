@@ -311,8 +311,10 @@ class _MultiExpr(Expr):
 
         if not expr.exprv:
             raise AssertionError("created empty expression")
-
-        return expr
+        elif len(expr.exprv) == 1:
+            return expr.exprv[0]
+        else:
+            return expr
     # --- end of join_simplified_subexpr (...) ---
 
 # --- end of _MultiExpr
