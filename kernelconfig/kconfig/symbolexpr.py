@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import abc
+import collections.abc
 import operator
 
 from . import symbol
@@ -30,13 +31,24 @@ def clear_cache():
 # --- end of clear_cache (...) ---
 
 
-class Expr(object, metaclass=abc.ABCMeta):
+class Visitable(collections.abc.Hashable):
+    __slots__ = []
+
+    @abc.abstractmethod
+    def __eq__(self, other):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def calculate_static_hash(self):
+        raise NotImplementedError()
+
+# --- end of Visitable (...) ---
+
+
+class Expr(Visitable):
     """Base class for dependency expressions."""
     # use __slots__, there will be many Expr objects floating around
     __slots__ = []
-
-    # not hashable
-    __hash__ = None
 
     @abc.abstractmethod
     def add_expr(self, expr):
@@ -186,6 +198,16 @@ class _UnaryExpr(Expr):
     def EXPR_FMT(cls):  # pylint: disable=E0213
         raise NotImplementedError()
 
+    def __hash__(self):
+        return hash((self.__class__, self.expr))
+
+    def __eq__(self, other):
+        if type(self) is type(other):
+            return self.expr == other.expr
+        else:
+            return False
+    # ---
+
     def __init__(self, expr):
         super().__init__()
         self.expr = expr
@@ -209,14 +231,27 @@ class _MultiExpr(Expr):
     @ivar exprv:   list of subexpressions
     @type exprv:   subclass of L{Expr}
     """
-    __slots__ = ["exprv"]
+    __slots__ = ["exprv", "static_hash"]
 
     @abc.abstractproperty
     def OP_STR(cls):  # pylint: disable=E0213
         raise NotImplementedError()
 
+    def __hash__(self):
+        static_hash = self.static_hash
+        if static_hash is None:
+            raise TypeError("%r relies on pre-hashing" % self.__class__)
+        return static_hash
+
+    def __eq__(self, other):
+        if type(self) is type(other):
+            return set(self.exprv) == set(other.exprv)
+        else:
+            return False
+
     def __init__(self, *args):
         super().__init__()
+        self.static_hash = None
         self.exprv = []
         self.extend_expr(args)
 
@@ -227,6 +262,18 @@ class _MultiExpr(Expr):
     def extend_expr(self, exprv):
         for expr in exprv:
             self.add_expr(expr)
+
+    def calculate_static_hash(self):
+        self.static_hash = None
+
+        sources = [self.__class__]
+        for expr in self.exprv:
+            expr.calculate_static_hash()
+            sources.append(expr)
+        # --
+
+        self.static_hash = hash(tuple(sources))
+    # --- end of calculate_static_hash (...) ---
 
     def __str__(self):
         # redundant parentheses are OK
@@ -379,8 +426,9 @@ class _UnaryValueExpr(_UnaryExpr):
         return obj
     # --- end of get_instance (...) ---
 
-    def __hash__(self):
-        return hash((self.__class__, self.expr))
+    def calculate_static_hash(self):
+        pass
+    # --- end of calculate_static_hash (...) ---
 
     def expand_symbols_shared(
         self, symbol_name_map, constants, symbols_names_missing
@@ -459,6 +507,9 @@ class Expr_SymbolName(_UnaryExpr):
     __slots__ = []
     EXPR_FMT = "{0!s}"
 
+    def calculate_static_hash(self):
+        pass
+
     def expand_symbols_shared(
         self, symbol_name_map, constants, symbol_names_missing
     ):
@@ -528,8 +579,22 @@ class _Expr_SymbolValueComparison(Expr):
         self.rsym = rsym
     # ---
 
+    def calculate_static_hash(self):
+        # both of these are no-ops
+        self.lsym.calculate_static_hash()
+        self.rsym.calculate_static_hash()
+
     def add_expr(self, expr):
         raise TypeError()
+
+    def __hash__(self):
+        return hash((self.__class__, self.lsym, self.rsym))
+
+    def __eq__(self, other):
+        if type(self) is type(other):
+            return (self.lsym == other.lsym) and (self.rsym == other.rsym)
+        else:
+            return False
 
     def __str__(self):
         return self.EXPR_FMT.format(self.lsym, self.rsym)
@@ -575,6 +640,8 @@ class Expr_SymbolEQ(_Expr_SymbolValueComparison):
 
     EXPR_FMT = "{0!s}={1!s}"
     OP_EVAL = operator.__eq__
+
+    # def __eq__  allow swapped lsym,rsym
 # ---
 
 
@@ -583,6 +650,8 @@ class Expr_SymbolNEQ(_Expr_SymbolValueComparison):
 
     EXPR_FMT = "{0!s}!={1!s}"
     OP_EVAL = operator.__ne__
+
+    # def __eq__  allow swapped lsym,rsym
 # ---
 
 
@@ -622,6 +691,9 @@ class Expr_Not(_UnaryExpr):
     __slots__ = []
 
     EXPR_FMT = "!({0!s})"
+
+    def calculate_static_hash(self):
+        self.expr.calculate_static_hash()
 
     def expand_symbols_shared(
         self, symbol_name_map, constants, symbols_names_missing
