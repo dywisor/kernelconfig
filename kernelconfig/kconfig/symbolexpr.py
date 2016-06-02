@@ -162,6 +162,10 @@ class Expr(object, metaclass=abc.ABCMeta):
         raise NotImplementedError()
     # --- end of simplify (...) ---
 
+    @abc.abstractmethod
+    def move_negation_inwards(self):
+        raise NotImplementedError()
+
 # --- end of Expr ---
 
 
@@ -317,6 +321,11 @@ class _MultiExpr(Expr):
             return expr
     # --- end of join_simplified_subexpr (...) ---
 
+    def move_negation_inwards(self):
+        self.exprv = [e.move_negation_inwards() for e in self.exprv]
+        return self
+    # --- end of move_negation_inwards (...) ---
+
 # --- end of _MultiExpr
 
 
@@ -380,6 +389,11 @@ class _UnaryValueExpr(_UnaryExpr):
 
     def simplify(self):
         return self
+
+    def move_negation_inwards(self):
+        # must return self
+        return self
+    # --- end of move_negation_inwards (...) ---
 
     @abc.abstractmethod
     def get_value(self, symbol_value_map):
@@ -480,6 +494,12 @@ class Expr_SymbolName(_UnaryExpr):
     def simplify(self):
         return self
     # --- end of simplify (...) ---
+
+    def move_negation_inwards(self):
+        # must return self
+        return self
+    # --- end of move_negation_inwards (...) ---
+
 # ---
 
 
@@ -541,6 +561,11 @@ class _Expr_SymbolValueComparison(Expr):
         else:
             return self
     # --- end of simplify (...) ---
+
+    def move_negation_inwards(self):
+        # must return self
+        return self
+    # --- end of move_negation_inwards (...) ---
 
 # ---
 
@@ -629,6 +654,36 @@ class Expr_Not(_UnaryExpr):
         else:
             return Expr_Not(simpler_expr)
     # --- end of simplify (...) ---
+
+    def move_negation_inwards(self):
+        subexpr = self.expr
+
+        if isinstance(subexpr, Expr_Not):
+            # double negation
+            return subexpr.expr.move_negation_inwards()
+
+        elif isinstance(subexpr, Expr_And):
+            expr_repl = Expr_Or()
+            expr_repl.extend_expr((Expr_Not(e) for e in subexpr.exprv))
+            return expr_repl.move_negation_inwards()
+
+        elif isinstance(subexpr, Expr_Or):
+            expr_repl = Expr_And()
+            expr_repl.extend_expr((Expr_Not(e) for e in subexpr.exprv))
+            return expr_repl.move_negation_inwards()
+
+        elif isinstance(
+            subexpr,
+            (_Expr_SymbolValueComparison, _UnaryValueExpr, Expr_SymbolName)
+        ):
+            subexpr_repl = subexpr.move_negation_inwards()
+            self.expr = subexpr_repl
+            return self
+
+        else:
+            raise AssertionError("expr")
+    # --- end of move_negation_inwards (...) ---
+
 # ---
 
 
