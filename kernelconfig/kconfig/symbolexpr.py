@@ -4,7 +4,9 @@
 import abc
 import collections.abc
 import operator
+import itertools
 
+from ..abc import loggable
 from . import symbol
 
 
@@ -880,4 +882,190 @@ class Expr_Or(_SelfConsumingMultiExpr):
                 constant_values, symbol_exprs, nested_exprs
             )
     # --- end of simplify (...) ---
+
 # ---
+
+
+class ExprVisitor(loggable.AbstractLoggable):
+
+    @abc.abstractmethod
+    def visit_not(self, expr):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def visit_and(self, expr):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def visit_or(self, expr):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def visit_symbol(self, expr):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def visit_symbol_cmp(self, expr):
+        raise NotImplementedError()
+
+    def __call__(self, expr):
+        expr.calculate_static_hash()
+        return expr.visit(self)
+
+# --- end of ExprVisitor ---
+
+
+class CNFVisitor(ExprVisitor):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.clauses = set()
+        # key -> int
+        self.cnfvars = {}
+        self._symbol_exprs = {}
+        self._var_counter = itertools.count(1)
+
+    def get_symbol(self, cnfvar):
+        try:
+            return self._symbol_exprs[cnfvar]
+        except KeyError:
+            pass
+
+        return None
+
+    def iter_clauses(self):
+        for clause in self.clauses:
+            yield sorted(clause, key=abs)
+
+    def get_clauses(self):
+        return sorted(self.iter_clauses())   # key=?
+
+    def get_numvars(self):
+        return len(self.cnfvars)
+
+    def push_clause(self, clause):
+        self.clauses.add(frozenset(clause))
+
+    def push_clauses(self, clauses):
+        self.clauses.update(map(frozenset, clauses))
+
+    def _get_new_var_for_expr(self, expr):
+        cnfvar = next(self._var_counter)
+        self.cnfvars[expr] = cnfvar
+        return cnfvar
+
+    def get_new_var_for_expr(self, expr):
+        return self._get_new_var_for_expr(expr)
+
+    def get_new_var_for_symbol(self, symbol_expr):
+        cnfvar = self._get_new_var_for_expr(symbol_expr)
+        self._symbol_exprs[cnfvar] = symbol_expr
+        return cnfvar
+
+    def get_new_var_for_symbol_cmp(self, symbol_cmp_expr):
+        return self.get_new_var_for_symbol(symbol_cmp_expr)
+
+# --- end of CNFVisitor ---
+
+
+class TseitinVisitor(CNFVisitor):
+
+    def recur_visit_expr(self, expr):
+        cnfvar = self.cnfvars.get(expr, None)
+        if cnfvar is None:
+            cnfvar = expr.visit(self)
+            assert cnfvar is not None
+            self.cnfvars[expr] = cnfvar
+        # --
+
+        return cnfvar
+    # --- end of recur_visit_expr (...) ---
+
+    def recur_visit_exprv(self, exprv):
+        return [self.recur_visit_expr(e) for e in exprv]  # or set/frozenset
+    # --- end of recur_visit_exprv (...) ---
+
+    def visit_and(self, expr):
+        # A = OR(F_0,...,F_n)
+        #  -->
+        #  AND(
+        #     OR(-F_0, ..., -F_n, A)
+        #     OR(F_0, -A)
+        #     ...
+        #     OR(F_N, -A)
+        #  )
+        subvars = self.recur_visit_exprv(expr.exprv)
+        cnfvar = self.get_new_var_for_expr(expr)
+
+        clause = set()
+        clause.update((-v for v in subvars))
+        clause.add(cnfvar)
+        self.push_clause(clause)
+
+        self.push_clauses(
+            ({subvar, -cnfvar} for subvar in subvars)
+        )
+
+        return cnfvar
+    # --- end of visit_and (...) ---
+
+    def visit_or(self, expr):
+        # A = OR(F_0,...,F_n)
+        #  -->
+        #  AND(
+        #     OR(F_0, ..., F_n, -A)
+        #     OR(-F_0, A)
+        #     ...
+        #     OR(-F_N, A)
+        #  )
+        subvars = self.recur_visit_exprv(expr.exprv)
+        cnfvar = self.get_new_var_for_expr(expr)
+
+        clause = set()
+        clause.update(subvars)
+        clause.add(-cnfvar)
+        self.push_clause(clause)
+
+        self.push_clauses(
+            ({-subvar, cnfvar} for subvar in subvars)
+        )
+
+        return cnfvar
+    # --- end of visit_or (...) ---
+
+    def visit_not(self, expr):
+        # A = NOT(F)
+        #  -->
+        #  AND(
+        #     OR(-F, -A)
+        #     OR(F, A)
+        #  )
+        subvar = self.recur_visit_expr(expr.expr)
+        cnfvar = self.get_new_var_for_expr(expr)
+
+        self.push_clause({-subvar, -cnfvar})
+        self.push_clause({subvar, cnfvar})
+
+        return cnfvar
+    # --- end of visit_not (...) ---
+
+    def visit_symbol(self, expr):
+        cnfvar = self.cnfvars.get(expr, None)
+        if cnfvar is None:
+            cnfvar = self.get_new_var_for_symbol(expr)
+            assert cnfvar is not None
+
+        return cnfvar
+    # --- end of visit_symbol (...) ---
+
+    def visit_symbol_cmp(self, expr):
+        # not modelling symbol comparison.
+        cnfvar = self.cnfvars.get(expr, None)
+        if cnfvar is None:
+            cnfvar = self.get_new_var_for_symbol_cmp(expr)
+            assert cnfvar is not None
+
+        return cnfvar
+    # --- end of visit_symbol_cmp (...) ---
+
+# --- end of TseitinVisitor ---
