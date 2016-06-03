@@ -951,9 +951,14 @@ class ExprVisitor(loggable.AbstractLoggable):
     def visit_symbol_cmp(self, expr):
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def recur_visit_expr(self, expr):
+        """Recursively processes a single expression of any type."""
+        raise NotImplementedError()
+
     def __call__(self, expr):
         expr.calculate_static_hash()
-        return expr.visit(self)
+        return self.recur_visit_expr(expr)
 
 # --- end of ExprVisitor ---
 
