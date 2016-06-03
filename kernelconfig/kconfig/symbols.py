@@ -39,10 +39,10 @@ class KconfigSymbols(collections.abc.Mapping):
     # ---
 
     def __iter__(self):
-        return iter(self.name_map)  # debatable, could also iter(_symbols)
+        return iter(self._symbols)
 
     def __len__(self):
-        return len(self._symbols)   # len(_symbols) > len(name_map)
+        return len(self._symbols)   # len(_symbols) >= len(name_map)
 
     def _add_symbol(self, sym_name_key, sym):
         if sym_name_key is self.name_map:
