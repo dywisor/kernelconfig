@@ -84,6 +84,17 @@ class Expr(Visitable):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def gen_func_str(self, indent=None):
+        raise NotImplementedError()
+
+    def func_str(self, indent=None):
+        return "\n".join((
+            (("%s%s" % (ind or "", text)) if text else "")
+            for ind, text in self.gen_func_str(indent=indent)
+        ))
+    # --- end of func_str (...) ---
+
     def expand_symbols(self, symbol_name_map, constants):
         """Recursively replaces symbol name references with symbols from
         the given mappings.
@@ -469,6 +480,9 @@ class _UnaryValueExpr(_UnaryExpr):
     def __repr__(self):
         return "{c.__qualname__}<{s.expr}>".format(s=self, c=self.__class__)
 
+    def gen_func_str(self, indent=None):
+        yield (indent, self.EXPR_FMT.format(self.expr))
+
 # --- end of _UnaryValueExpr ---
 
 
@@ -563,6 +577,9 @@ class Expr_SymbolName(_UnaryExpr):
         return self
     # --- end of move_negation_inwards (...) ---
 
+    def gen_func_str(self, indent=None):
+        yield (indent, self.EXPR_FMT.format(self.expr))
+
 # ---
 
 
@@ -613,6 +630,9 @@ class _Expr_SymbolValueComparison(Expr):
 
     def __str__(self):
         return self.EXPR_FMT.format(self.lsym, self.rsym)
+
+    def gen_func_str(self, indent=None):
+        yield (indent, self.EXPR_FMT.format(self.lsym, self.rsym))
 
     def expand_symbols_shared(
         self, symbol_name_map, constants, symbols_names_missing
@@ -774,6 +794,11 @@ class Expr_Not(_UnaryExpr):
             raise AssertionError("expr")
     # --- end of move_negation_inwards (...) ---
 
+    def gen_func_str(self, indent=None):
+        yield (indent, "NOT(")
+        yield from self.expr.gen_func_str(indent=("%s   " % (indent or "")))
+        yield (indent, ")")
+
 # ---
 
 
@@ -829,7 +854,13 @@ class Expr_And(_SelfConsumingMultiExpr):
             )
     # --- end of simplify (...) ---
 
-# ---
+    def gen_func_str(self, indent=None):
+        yield (indent, "AND(")
+        for expr in self.exprv:
+            yield from expr.gen_func_str(indent=("%s   " % (indent or "")))
+        yield (indent, ")")
+
+# --- end of Expr_And ---
 
 
 class Expr_Or(_SelfConsumingMultiExpr):
@@ -883,7 +914,13 @@ class Expr_Or(_SelfConsumingMultiExpr):
             )
     # --- end of simplify (...) ---
 
-# ---
+    def gen_func_str(self, indent=None):
+        yield (indent, "OR(")
+        for expr in self.exprv:
+            yield from expr.gen_func_str(indent=("%s   " % (indent or "")))
+        yield (indent, ")")
+
+# --- end of Expr_Or ---
 
 
 class ExprVisitor(loggable.AbstractLoggable):
