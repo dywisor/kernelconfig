@@ -20,7 +20,8 @@ __all__ = [
     "Expr_Symbol",
     "Expr_SymbolName",
     "Expr_SymbolEQ",
-    "Expr_SymbolNEQ"
+    "Expr_SymbolNEQ",
+    "Expr_Impl",
 ]
 
 
@@ -921,6 +922,11 @@ class Expr_Or(_SelfConsumingMultiExpr):
         yield (indent, ")")
 
 # --- end of Expr_Or ---
+
+
+def Expr_Impl(expr_premise, expr_conclusion):
+    return Expr_Or(Expr_Not(expr_premise), expr_conclusion)
+# --- end of Expr_Impl ---
 
 
 class ExprVisitor(loggable.AbstractLoggable):
