@@ -929,6 +929,14 @@ def Expr_Impl(expr_premise, expr_conclusion):
 # --- end of Expr_Impl ---
 
 
+class Expr_CnfVar(_UnaryValueExpr):
+    _instances = {}
+
+    def get_value(self, symbol_value_map):
+        return self.expr
+# ---
+
+
 class ExprVisitor(loggable.AbstractLoggable):
 
     @abc.abstractmethod
@@ -1047,6 +1055,133 @@ class CNFVisitor(ExprVisitor):
         @return:  None (implicit)
         """
         self.clauses.update(map(frozenset, clauses))
+
+    def itranslate_assignment_to_expr(self, assignment):
+        """Generator that translates a cnfvar assignment back to
+        symbols/constants/symbol comparisons and filters out substitution
+        variables.
+
+        @raises: AssertionError if any cnfvar==0
+                 (hidden when running w/ "python -O")
+
+        @raises: KeyError if cnfvar is unknown
+
+        @param assignment:  iterable of cnfvars
+        @type  assignment:  iterable of C{int}
+
+        @return: 2-tuple (expression truth value, expression)
+        @rtype:  2-tuple (C{bool}, L{Expr})
+        """
+        _get_sym_expr = self.symbol_vars.__getitem__
+        _get_expr = self.expr_vars.__getitem__
+
+        for cnfvar in assignment:
+            assert cnfvar
+
+            key = abs(cnfvar)
+            try:
+                # cnfvar is symbol-like?
+                expr = _get_sym_expr(key)
+            except KeyError:
+                # if cnfvar is not a symbol, then it gets filtered out,
+                # but it must exist, i.e. be mapped to a expr
+                try:
+                    _get_expr(key)
+                except KeyError:
+                    raise KeyError(cnfvar) from None
+            else:
+                yield ((cnfvar > 0), expr)
+        # --
+    # --- end of itranslate_assignment_to_expr (...) ---
+
+    def translate_assignment_to_expr(self, assignment):
+        """Translates a cnfvar assignment back to symbols/constants/symbol
+        comparisons and filters out substitution variables.
+
+        @param assignment:  iterable of cnfvars
+        @type  assignment:  iterable of C{int}
+
+        @return: list of 2-tuples (expression truth value, expression)
+        @rtype:  C{list} of 2-tuple(C{bool}, L{Expr})
+        """
+        return list(self.itranslate_assignment_to_expr(assignment))
+    # --- end of translate_assignment_to_expr (...) ---
+
+    def _translate_cnfvar(self, cnfvar):
+        """Translates a cnfvar back to its expression.
+
+        This method is different to translate_assignment([...]) in that it
+        (a) makes no conclusions about the expressions truth value and
+        (b) replaces substitution variables with Expr_CnfVar expressions.
+
+        @param cnfvar:  cnfvar
+        @type  cnfvar:  C{int}
+
+        @return:  expression
+        @rtype:   L{Expr}
+        """
+        if not cnfvar:
+            raise ValueError(cnfvar)
+
+        key = abs(cnfvar)
+
+        # symbol?
+        try:
+            expr = self.symbol_vars[key]
+        except KeyError:
+            pass
+        else:
+            return Expr_Not(expr) if cnfvar < 0 else expr
+
+        # any other expr?  substitution var
+        expr = self.expr_vars[key]
+        substvar = Expr_CnfVar.get_instance("Z_%d" % key)
+        return Expr_Not(substvar) if cnfvar < 0 else substvar
+    # --- end of _translate_cnfvar (...) ---
+
+    def itranslate_clauses_to_expr(self, clauses=None):
+        """Generator that converts cnfvar clauses to Expr_Or objects.
+
+        @param clauses:  cnf;
+                         May be None, in which case this object's clauses
+                         are processed.
+        @type  clauses:  C{None} or iterable of (iterable of C{int})
+
+        @return:  expression OR(<literal>)
+        @rtype:   L{Expr_Or}
+        """
+        if clauses is None:
+            clauses = self.iter_clauses()
+
+        for clause in clauses:
+            expr = Expr_Or()
+            expr.extend_expr(
+                (self._translate_cnfvar(e) for e in clause)
+            )
+            yield expr
+        # --
+    # ---
+
+    def translate_to_expr(self, clauses=None):
+        """Converts cnfvar clauses to a Expr_And(<Expr_Or(<literal>)>) object.
+
+        The result can be used for printing out the cnf-converted expression.
+        It should not be fed a CNFVisitor again!
+
+        @param clauses:  cnf;
+                         May be None, in which case this object's clauses
+                         are processed.
+        @type  clauses:  C{None} or iterable of (iterable of C{int})
+
+        @return:  expression AND(<OR(<literal>)>)
+        @rtype:   L{Expr_And} a | a.exprv: C{list} of L{Expr_Or}
+        """
+        expr = Expr_And()
+        expr.extend_expr(
+            self.itranslate_clauses_to_expr(clauses=clauses)
+        )
+        return expr
+    # --- end of translate_to_expr (...) ---
 
     def _get_new_var_for_expr(self, expr):
         """Creates a new cnfvar and maps it to expr.
