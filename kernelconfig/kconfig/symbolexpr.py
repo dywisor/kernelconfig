@@ -964,66 +964,150 @@ class ExprVisitor(loggable.AbstractLoggable):
 
 
 class CNFVisitor(ExprVisitor):
+    """
+    @ivar clauses:       set of disjunctive clauses
+    @type clauses:       C{set} of (C{frozenset} of C{int})
+
+    @ivar cnfvar_map:    a expr to cnfvar mapping
+    @type cnfvar_map:    C{dict} :: L{Expr} => C{int}
+
+    @ivar symbol_vars:   a cnfvar to symbol expr mapping
+    @type symbol_vars:   C{dict} :: C{int} => L{Expr}
+
+    @ivar expr_vars:     a cnfvar to expr mapping
+    @type expr_vars:     C{dict} :: C{int} => L{Expr}
+
+    Condition:  each cnfvar must appear in either expr_vars or symbol_vars,
+                but not both: union(expr_vars'keys, symbol_vars'keys) is empty
+
+    @ivar _var_counter:  cnfvar generator
+    @type _var_counter:  genexpr
+    """
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.clauses = set()
-        # key -> int
-        self.cnfvars = {}
-        self._symbol_exprs = {}
+        self.cnfvar_map = {}
+        self.symbol_vars = {}
+        self.expr_vars = {}
         self._var_counter = itertools.count(1)
 
-    def get_symbol(self, cnfvar):
-        try:
-            return self._symbol_exprs[cnfvar]
-        except KeyError:
-            pass
-
-        return None
-
     def iter_clauses(self):
+        """Generates clauses as list of literals.
+
+        @return: disjunctive clause (sorted)
+        @rtype:  C{list} of C{int}
+        """
         for clause in self.clauses:
             yield sorted(clause, key=abs)
 
     def get_clauses(self):
+        """Returns a list of all clauses.
+
+        @return: cnf (sorted)
+        @rtype:  C{list} of (C{list} of C{int})
+        """
         return sorted(self.iter_clauses())   # key=?
 
     def get_numvars(self):
-        return len(self.cnfvars)
+        """
+        @return: number of cnfvars
+        @rtype:  C{int}
+        """
+        return len(self.cnfvar_map)
 
-    def push_clause(self, clause):
-        self.clauses.add(frozenset(clause))
+    if __debug__:
+        def push_clause(self, clause):
+            """
+            Adds a clause to the cnf, __debug__ variant of push_clause().
+
+            @raises AssertionError:  if any literal in clause appears
+                                     in both its positive and negative form
+            """
+            clause_set = frozenset(clause)
+            assert all((-x not in clause_set) for x in clause_set)
+            self.clauses.add(clause_set)
+    else:
+        def push_clause(self, clause):
+            """Adds a clause to the cnf.
+
+            @param clause:  cnfvars
+            @type  clause:  iterable/genexpr/... of C{int}
+
+            @return:  None (implicit)
+            """
+            self.clauses.add(frozenset(clause))
 
     def push_clauses(self, clauses):
+        """Adds zero or more clauses to the cnf.
+
+        @param clause:  iterable of cnfvar iterables
+        @type  clause:  iterable/genexpr/... of (iterable/... of C{int})
+
+        @return:  None (implicit)
+        """
         self.clauses.update(map(frozenset, clauses))
 
     def _get_new_var_for_expr(self, expr):
+        """Creates a new cnfvar and maps it to expr.
+        Does not map expr to the cnfvar, this must be done afterwards.
+
+        @param expr:  expression
+        @type  expr:  L{Expr}
+
+        @return:  new cnfvar
+        @rtype:   C{int}
+        """
         cnfvar = next(self._var_counter)
-        self.cnfvars[expr] = cnfvar
+        self.cnfvar_map[expr] = cnfvar
         return cnfvar
 
     def get_new_var_for_expr(self, expr):
-        return self._get_new_var_for_expr(expr)
+        """Creates a new cnfvar for a non-symbol expression.
+        Maps the expression to this cnfvar in self.expr_vars.
+
+        @param expr:  expression
+        @type  expr:  L{Expr}
+
+        @return:  new cnfvar
+        @rtype:   C{int}
+        """
+        cnfvar = self._get_new_var_for_expr(expr)
+        self.expr_vars[cnfvar] = expr
+        return cnfvar
 
     def get_new_var_for_symbol(self, symbol_expr):
+        """Creates a new cnfvar for a symbol-like expression.
+        Maps the expression to this cnfvar in self.symbol_vars.
+
+        @param expr:  symbol expression
+        @type  expr:  L{Expr}
+
+        @return:  new cnfvar
+        @rtype:   C{int}
+        """
         cnfvar = self._get_new_var_for_expr(symbol_expr)
-        self._symbol_exprs[cnfvar] = symbol_expr
+        self.symbol_vars[cnfvar] = symbol_expr
         return cnfvar
 
     def get_new_var_for_symbol_cmp(self, symbol_cmp_expr):
+        """Creates a new cnfvar for a symbol comparison expression.
+        Maps the expression to this cnfvar in self.symbol_vars.
+
+        @param expr:  symbol comparison expression
+        @type  expr:  L{Expr}
+
+        @return:  new cnfvar
+        @rtype:   C{int}
+        """
         return self.get_new_var_for_symbol(symbol_cmp_expr)
 
-# --- end of CNFVisitor ---
-
-
-class TseitinVisitor(CNFVisitor):
-
     def recur_visit_expr(self, expr):
-        cnfvar = self.cnfvars.get(expr, None)
+        cnfvar = self.cnfvar_map.get(expr, None)
         if cnfvar is None:
             cnfvar = expr.visit(self)
             assert cnfvar is not None
-            self.cnfvars[expr] = cnfvar
+            assert expr in self.cnfvar_map
         # --
 
         return cnfvar
@@ -1032,6 +1116,19 @@ class TseitinVisitor(CNFVisitor):
     def recur_visit_exprv(self, exprv):
         return [self.recur_visit_expr(e) for e in exprv]  # or set/frozenset
     # --- end of recur_visit_exprv (...) ---
+
+# --- end of CNFVisitor ---
+
+
+class TseitinVisitor(CNFVisitor):
+    """
+    Expr to CNF converter that uses the Tseitin (Tseytin) transformation.
+
+    This method avoids exponential growth of the formula by substitute
+    the output of expressions for an additional variable.
+    The result is an equisatisfiable expression, where the additional
+    variables should be discarded when unencoding satisfying assignments.
+    """
 
     def visit_and(self, expr):
         # A = OR(F_0,...,F_n)
@@ -1098,7 +1195,7 @@ class TseitinVisitor(CNFVisitor):
     # --- end of visit_not (...) ---
 
     def visit_symbol(self, expr):
-        cnfvar = self.cnfvars.get(expr, None)
+        cnfvar = self.cnfvar_map.get(expr, None)
         if cnfvar is None:
             cnfvar = self.get_new_var_for_symbol(expr)
             assert cnfvar is not None
@@ -1108,7 +1205,7 @@ class TseitinVisitor(CNFVisitor):
 
     def visit_symbol_cmp(self, expr):
         # not modelling symbol comparison.
-        cnfvar = self.cnfvars.get(expr, None)
+        cnfvar = self.cnfvar_map.get(expr, None)
         if cnfvar is None:
             cnfvar = self.get_new_var_for_symbol_cmp(expr)
             assert cnfvar is not None
