@@ -56,6 +56,21 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
         """
         raise NotImplementedError()
 
+    def normalize_and_validate_set(self, value_set):
+        badvals = []
+        normval_set = set()
+        for value in value_set:
+            try:
+                normval = self.normalize_and_validate(value)
+            except ValueError:
+                badvals.append(value)
+            else:
+                normval_set.add(normval)
+        # --
+
+        return (badvals, normval_set)
+    # ---
+
     def format_value_is_not_set(self):
         return self.VALUE_NOT_SET_FMT_STR.format(name=self.name)
     # --- format_value_is_not_set (...) ---
