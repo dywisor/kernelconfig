@@ -52,10 +52,45 @@ class Visitable(collections.abc.Hashable):
 # --- end of Visitable (...) ---
 
 
+class SolutionCache(object):
+    __slots__ = ["solutions"]
+
+    def __init__(self):
+        super().__init__()
+        self.solutions = [{}]
+
+    def push_symbol(self, sym, values):
+        solutions_new = []
+        for sol in self.solutions:
+            try:
+                entry = sol[sym] & values
+            except KeyError:
+                entry = values
+
+            if entry:
+                sol[sym] = entry
+                solutions_new.append(sol)
+        # --
+
+        self.solutions = solutions_new
+        return bool(solutions_new)
+
+    def get_solutions(self):
+        return self.solutions
+
+
 class Expr(Visitable):
     """Base class for dependency expressions."""
     # use __slots__, there will be many Expr objects floating around
     __slots__ = []
+
+    EXPR_VALUES_N = frozenset([symbol.TristateKconfigSymbolValue.n])
+    EXPR_VALUES_M = frozenset([symbol.TristateKconfigSymbolValue.m])
+    EXPR_VALUES_Y = frozenset([symbol.TristateKconfigSymbolValue.y])
+    EXPR_VALUES_YM = frozenset([
+        symbol.TristateKconfigSymbolValue.m,
+        symbol.TristateKconfigSymbolValue.y
+    ])
 
     @abc.abstractmethod
     def add_expr(self, expr):
@@ -196,6 +231,25 @@ class Expr(Visitable):
     def move_negation_inwards(self):
         raise NotImplementedError()
 
+    def find_solution(self, expr_values):
+        sol_cache = SolutionCache()
+        ret = self._find_solution(expr_values, sol_cache)
+        return (ret, sol_cache.get_solutions())
+    # ---
+
+    @abc.abstractmethod
+    def _find_solution(self, expr_values, sol_cache):
+        raise NotImplementedError()
+
+    def get_dependent_symbols(self):
+        symbol_set = set()
+        self.get_dependent_symbols_shared(symbol_set)
+        return symbol_set
+
+    @abc.abstractmethod
+    def get_dependent_symbols_shared(self, symbol_set):
+        raise NotImplementedError()
+
 # --- end of Expr ---
 
 
@@ -307,6 +361,10 @@ class _MultiExpr(Expr):
         ]
         return self
     # --- end of expand_symbols_shared (...) ---
+
+    def get_dependent_symbols_shared(self, symbol_set):
+        for expr in self.exprv:
+            expr.get_dependent_symbols_shared(symbol_set)
 
     def iter_evaluate_subexpr(self, symbol_value_map):
         if not self.exprv:
@@ -468,14 +526,19 @@ class _UnaryValueExpr(_UnaryExpr):
     def get_value(self, symbol_value_map):
         raise NotImplementedError()
 
-    def evaluate(self, symbol_value_map):
-        value = self.get_value(symbol_value_map)
+    def _evaluate_value(self, value):
         if isinstance(value, symbol.TristateKconfigSymbolValue):
             return value
         elif value:
             return symbol.TristateKconfigSymbolValue.y
         else:
+            # FIXME: not correct -- empty string, integer 0
             return symbol.TristateKconfigSymbolValue.n
+
+    def evaluate(self, symbol_value_map):
+        return self._evaluate_value(
+            self.get_value(symbol_value_map)
+        )
     # --- end of evaluate (...) ---
 
     def __repr__(self):
@@ -496,9 +559,15 @@ class Expr_Constant(_UnaryValueExpr):
     __slots__ = []
     _instances = {}
 
+    def get_dependent_symbols_shared(self, symbol_set):
+        pass
+
     def get_value(self, symbol_value_map):
         return self.expr
     # --- end of evaluate (...) ---
+
+    def _find_solution(self, expr_values, sol_cache):
+        return self.evaluate(None) in expr_values
 
 # --- end of Expr_Constant ---
 
@@ -512,12 +581,21 @@ class Expr_Symbol(_UnaryValueExpr):
     __slots__ = []
     _instances = {}
 
+    def get_dependent_symbols_shared(self, symbol_set):
+        symbol_set.add(self.expr)
+
     def get_value(self, symbol_value_map):
         try:
             return symbol_value_map[self.expr]
         except KeyError:
             return symbol.TristateKconfigSymbolValue.n
     # --- end of evaluate (...) ---
+
+    def _find_solution(self, expr_values, sol_cache):
+        return sol_cache.push_symbol(
+            self.expr,
+            self.expr.normalize_and_validate_set(expr_values)[1]
+        )
 
 # --- end of Expr_Symbol ---
 
@@ -535,6 +613,9 @@ class Expr_SymbolName(_UnaryExpr):
         return visitor.visit_symbol(self)
 
     def calculate_static_hash(self):
+        pass
+
+    def get_dependent_symbols_shared(self, symbol_set):
         pass
 
     def expand_symbols_shared(
@@ -580,6 +661,9 @@ class Expr_SymbolName(_UnaryExpr):
 
     def gen_func_str(self, indent=None):
         yield (indent, self.EXPR_FMT.format(self.expr))
+
+    def _find_solution(self, expr_values, sol_cache):
+        raise TypeError()
 
 # ---
 
@@ -647,10 +731,18 @@ class _Expr_SymbolValueComparison(Expr):
         return self
     # --- end of expand_symbols_shared (...) ---
 
+    def get_dependent_symbols_shared(self, symbol_set):
+        self.lsym.get_dependent_symbols_shared(symbol_set)
+        self.rsym.get_dependent_symbols_shared(symbol_set)
+
     def evaluate(self, symbol_value_map):
         loper = self.lsym.get_value(symbol_value_map)
         roper = self.rsym.get_value(symbol_value_map)
-        return self.OP_EVAL(loper, roper)
+
+        if self.OP_EVAL(loper, roper):
+            return symbol.TristateKconfigSymbolValue.y
+        else:
+            return symbol.TristateKconfigSymbolValue.n
     # --- end of evaluate (...) ---
 
     def simplify(self):
@@ -668,7 +760,47 @@ class _Expr_SymbolValueComparison(Expr):
         return self
     # --- end of move_negation_inwards (...) ---
 
+    def _solve_symbol_x_symbol(self, symbol_choices, expr_value):
+        raise NotImplementedError("symbol X symbol")
+
+    def _solve_symbol_x_constant(self, symbol_choices, expr_value):
+        raise NotImplementedError("symbol X constant")
+
+    def _solve_constant_x_symbol(self, symbol_choices, expr_value):
+        raise NotImplementedError("constant X symbol")
+
+    def _solve_constant_x_constant(self, symbol_choices, expr_value):
+        raise NotImplementedError("constant X constant")
+
+    def _find_solution(self, expr_values, sol_cache):
+        expr_value = bool(max(expr_values))
+
+        if isinstance(self.lsym, Expr_Symbol):
+            if isinstance(self.rsym, Expr_Symbol):
+                return self._solve_symbol_x_symbol(expr_value)
+
+            elif isinstance(self.rsym, Expr_Constant):
+                return self._solve_symbol_x_constant(expr_value)
+
+            else:
+                raise TypeError("rsym", type(self.rsym))
+
+        elif isinstance(self.lsym, Expr_Constant):
+            if isinstance(self.rsym, Expr_Symbol):
+                return self._solve_constant_x_symbol(expr_value)
+
+            elif isinstance(self.rsym, Expr_Constant):
+                return self._solve_constant_x_constant(expr_value)
+
+            else:
+                raise TypeError("rsym", type(self.rsym))
+
+        else:
+            raise TypeError("lsym", type(self.lsym))
+    # ---
+
 # ---
+
 
 
 class Expr_SymbolEQ(_Expr_SymbolValueComparison):
@@ -743,6 +875,9 @@ class Expr_Not(_UnaryExpr):
         return self
     # --- end of expand_symbols_shared (...) ---
 
+    def get_dependent_symbols_shared(self, symbol_set):
+        self.expr.get_dependent_symbols_shared(symbol_set)
+
     def evaluate(self, symbol_value_map):
         return self.expr.evaluate(symbol_value_map).__invert__()
     # --- end of evaluate (...) ---
@@ -800,6 +935,19 @@ class Expr_Not(_UnaryExpr):
         yield from self.expr.gen_func_str(indent=("%s   " % (indent or "")))
         yield (indent, ")")
 
+    def _find_solution(self, expr_values, sol_cache):
+        # assert that expr_values contains either a single "n"
+        # or any combination of "y", "m"
+        #  FIXME: or use __invert__(), !m == m?
+        if symbol.TristateKconfigSymbolValue.n in expr_values:
+            return self.expr._find_solution(
+                self.EXPR_VALUES_YM, sol_cache
+            )
+        else:
+            return self.expr._find_solution(
+                self.EXPR_VALUES_N, sol_cache
+            )
+
 # ---
 
 
@@ -822,6 +970,13 @@ class Expr_And(_SelfConsumingMultiExpr):
 
         return ret_value
     # --- end of evaluate (...) ---
+
+    def _find_solution(self, expr_values, sol_cache):
+        for subexpr in self.exprv:
+            if not subexpr._find_solution(expr_values, sol_cache):
+                return False
+        return True
+    # ---
 
     def simplify(self):
         constant_values, symbol_exprs, nested_exprs = \
@@ -920,6 +1075,25 @@ class Expr_Or(_SelfConsumingMultiExpr):
         for expr in self.exprv:
             yield from expr.gen_func_str(indent=("%s   " % (indent or "")))
         yield (indent, ")")
+
+    def _find_solution(self, expr_values, sol_cache):
+        # for each subexpr
+        #    collection solutions in a new sol_cache
+        # with each existing solution, merge alternatives
+
+        raise NotImplementedError("merge sub-solutions")
+
+        sub_solutions = []
+        for subexpr in self.exprv:
+            sub_sol = SolutionCache()
+            if subexpr._find_solution(expr_values, sub_sol):
+                sub_solutions.append(sub_sol)
+            # --
+        # --
+
+        if not sub_solutions:
+            return False
+
 
 # --- end of Expr_Or ---
 
