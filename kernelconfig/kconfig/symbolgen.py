@@ -149,7 +149,7 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
         if top_expr_view.e_type == top_expr_view.E_NONE:
             return None
         else:
-            return expand_expr(top_expr_view)
+            return expand_expr(top_expr_view).move_negation_inwards()
     # ---
 # ---
 
