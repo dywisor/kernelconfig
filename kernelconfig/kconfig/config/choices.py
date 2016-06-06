@@ -4,6 +4,7 @@
 from ..abc import choices as _choices_abc
 from .. import symbol
 from . import decision
+from .. import depgraph
 
 __all__ = ["ConfigChoices"]
 
@@ -28,69 +29,43 @@ class ConfigChoices(_choices_abc.AbstractConfigChoices):
     # --- end of __init__ (...) ---
 
     def resolve(self):
-        cfg_dict = self.config.get_new_config_dict(update=True)
+        eff_decisions = {}
 
-        decisions = self.decisions.copy()  # do not modify self.decisions
-
-        # find non-variants
-        syms_nonvariant = []
-        for sym, dec in decisions.items():
+        for sym, dec in self.decisions.items():
             values = dec.get_decisions()
-            if values is None:
+            if values:
+                # FIXME: limitation,  and forth-and-back set conversion
+                #          decisions need to be sets
+                eff_decisions[sym] = set(values)
+
+            elif values is None:
                 # this means that a decision object has been created in the
                 # past, but it did not get used at all or the operation
                 # it was requested to perform failed
-                syms_nonvariant.append(sym)
+                pass
 
-            elif not values:
+            else:
                 # this means that the values have been restricted to the
                 # empty set, in which case no config can be created
                 raise NotImplementedError("decision is empty")
-
-            elif len(values) == 1:
-                cfg_dict[sym] = values[0]
-                syms_nonvariant.append(sym)
-
-            else:
-                # is a variant
-                #   FIXME: remove: temporarily picking "best" item, see below
-                cfg_dict[sym] = values[-1]
-                syms_nonvariant.append(sym)
         # --
 
-        for sym in syms_nonvariant:
-            decisions.pop(sym)
-        # --
+        dgraph = self.create_loggable(
+            depgraph.ConfigGraph,
+            self.config, eff_decisions
+        )
+        dgraph.resolve()
 
-        # at this point, we have
-        # * a dict A :: symbol => value, which contains fixed decisions
-        # * B,  the complement of A's symbols,  not yet decided symbols
-        #   composed of:
-        #   * C,  variant symbol decisions (choose value out of <>)
-        #   * D,  undecided symbols (choose value freely)
-        #
-        # naively:
-        #    while nonempty C or dep-invalid A:
-        #       if any decision in C restricted to empty set:
-        #          error
-        #
-        #       constify dep expr with values from A
-        #
-        #       restrict items from C further,
-        #         or restrict items from D (and add them to C),
-        #         so that A could become dep-valid
-        #
+        cfg_dict = self.config.get_new_config_dict(update=True)
+        for sym, value in dgraph.iter_update_config():
+            cfg_dict[sym] = value
 
-        if decisions:
-            self.logger.error("missing: resolve variants")
-
-        self.logger.error("missing: resolve deps, visibility")
-        return cfg_dict
+        return cfg_dict, set(dgraph.decisions)
     # --- end of resolve (...) ---
 
     def commit(self):
-        cfg_dict = self.resolve()
-        self.config.set_config_dict(cfg_dict)
+        cfg_dict, decision_syms = self.resolve()
+        self.config._incorporate_changes(cfg_dict, decision_syms)
     # --- end of commit (...) ---
 
     def get_or_create_decision_for_symbol(self, kconfig_symbol):

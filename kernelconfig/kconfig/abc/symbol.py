@@ -17,17 +17,18 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
 
     a specific type,
     which is determined by its class and may also be retrieved as str via
-    @cvar type_name: short word describing the type. no spaces allowed
+    @ivar type_name: short word describing the type. no spaces allowed
     @type type_name: C{str}
 
     optionally dependencies on other symbols,
-    @cvar dir_dep:  the symbol's dependencies ("depends on"). May be None.
+    @ivar dir_dep:  the symbol's dependencies ("depends on"). May be None.
     @type dir_dep:  C{None} or undef
 
     and optionally reverse dependencies
-    @cvar rev_dep:  the symbol's reverse dependencies ("selected by").
+    @ivar rev_dep:  the symbol's reverse dependencies ("selected by").
                     May be None.
     @type rev_dep:  C{None} or undef
+
 
     Additionally, a class-wide variables exists for str-formatting the
     option in case of "is not set" values:

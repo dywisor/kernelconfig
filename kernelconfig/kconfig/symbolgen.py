@@ -237,12 +237,6 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
 
     @classmethod
     def get_default_symbol_constants(cls):
-        if __debug__:
-            # FIXME: remove in future
-            #        : when not running in python -O mode,
-            #        : let constify_missing_symbol() handle all sym names
-            return {}
-
         return {
             "n": symbol.TristateKconfigSymbolValue.n,
             "m": symbol.TristateKconfigSymbolValue.m,
