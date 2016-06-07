@@ -56,12 +56,13 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
         """
         raise NotImplementedError()
 
-    def normalize_and_validate_set(self, value_set):
+    @classmethod
+    def normalize_and_validate_set(cls, value_set):
         badvals = []
         normval_set = set()
         for value in value_set:
             try:
-                normval = self.normalize_and_validate(value)
+                normval = cls.normalize_and_validate(value)
             except ValueError:
                 badvals.append(value)
             else:
