@@ -760,37 +760,47 @@ class _Expr_SymbolValueComparison(Expr):
         return self
     # --- end of move_negation_inwards (...) ---
 
-    def _solve_symbol_x_symbol(self, symbol_choices, expr_value):
+    def _solve_symbol_x_symbol(self, expr_value, sol_cache, lsym, rsym):
         raise NotImplementedError("symbol X symbol")
 
-    def _solve_symbol_x_constant(self, symbol_choices, expr_value):
+    def _solve_symbol_x_constant(self, expr_value, sol_cache, lsym, rsym):
         raise NotImplementedError("symbol X constant")
 
-    def _solve_constant_x_symbol(self, symbol_choices, expr_value):
+    def _solve_constant_x_symbol(self, expr_value, sol_cache, lsym, rsym):
         raise NotImplementedError("constant X symbol")
 
-    def _solve_constant_x_constant(self, symbol_choices, expr_value):
+    def _solve_constant_x_constant(self, expr_value, sol_cache, lsym, rsym):
         raise NotImplementedError("constant X constant")
 
     def _find_solution(self, expr_values, sol_cache):
         expr_value = bool(max(expr_values))
+        lsym = self.lsym
+        rsym = self.rsym
 
         if isinstance(self.lsym, Expr_Symbol):
-            if isinstance(self.rsym, Expr_Symbol):
-                return self._solve_symbol_x_symbol(expr_value)
+            if isinstance(rsym, Expr_Symbol):
+                return self._solve_symbol_x_symbol(
+                    expr_value, sol_cache, lsym, rsym
+                )
 
-            elif isinstance(self.rsym, Expr_Constant):
-                return self._solve_symbol_x_constant(expr_value)
+            elif isinstance(rsym, Expr_Constant):
+                return self._solve_symbol_x_constant(
+                    expr_value, sol_cache, lsym, rsym
+                )
 
             else:
                 raise TypeError("rsym", type(self.rsym))
 
         elif isinstance(self.lsym, Expr_Constant):
             if isinstance(self.rsym, Expr_Symbol):
-                return self._solve_constant_x_symbol(expr_value)
+                return self._solve_constant_x_symbol(
+                    expr_value, sol_cache, lsym, rsym
+                )
 
             elif isinstance(self.rsym, Expr_Constant):
-                return self._solve_constant_x_constant(expr_value)
+                return self._solve_constant_x_constant(
+                    expr_value, sol_cache, lsym, rsym
+                )
 
             else:
                 raise TypeError("rsym", type(self.rsym))
@@ -802,7 +812,6 @@ class _Expr_SymbolValueComparison(Expr):
 # ---
 
 
-
 class Expr_SymbolEQ(_Expr_SymbolValueComparison):
     __slots__ = []
 
@@ -810,6 +819,13 @@ class Expr_SymbolEQ(_Expr_SymbolValueComparison):
     OP_EVAL = operator.__eq__
 
     # def __eq__  allow swapped lsym,rsym
+
+    def _solve_symbol_x_constant(self, expr_value, sol_cache, lsym, rsym):
+        return sol_cache.push_symbol(lsym.expr, {rsym.expr, })
+
+    def _solve_constant_x_symbol(self, expr_value, sol_cache, lsym, rsym):
+        return self._solve_symbol_x_constant(expr_value, sol_cache, rsym, lsym)
+
 # ---
 
 
@@ -820,6 +836,9 @@ class Expr_SymbolNEQ(_Expr_SymbolValueComparison):
     OP_EVAL = operator.__ne__
 
     # def __eq__  allow swapped lsym,rsym
+
+    def _solve_constant_x_symbol(self, expr_value, sol_cache, lsym, rsym):
+        return self._solve_symbol_x_constant(expr_value, sol_cache, rsym, lsym)
 # ---
 
 

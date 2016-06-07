@@ -16,7 +16,8 @@ __all__ = [
     "IntKconfigSymbol",
     "HexKconfigSymbol",
     "UndefKconfigSymbol",
-    "unpack_value_str"
+    "unpack_value_str",
+    "is_tristate_symbol"
 ]
 
 
@@ -263,3 +264,8 @@ def unpack_value_str(inval):
         # unknown value
         raise ValueError(inval)
 # --- end of unpack_value_str (...) ---
+
+
+def is_tristate_symbol(sym):
+    return sym.__class__ is TristateKconfigSymbol
+# --- end of is_tristate_symbol (...) ---

@@ -11,7 +11,13 @@ from . import symbolexpr
 from . import symbol
 
 
-__all__ = []
+__all__ = ["ConfigGraph"]
+
+
+def reversed_enumerate(listlike):
+    last_idx = len(listlike) - 1
+    for k, item in enumerate(reversed(listlike)):
+        yield (last_idx - k, item)
 
 
 @enum.unique
@@ -196,106 +202,95 @@ class ConfigGraph(loggable.AbstractLoggable):
         self.dep_order = self._create_deporder()
     # ---
 
-    def _resolve(self, decisions, max_level):
+    def _resolve_upwards_propagation(self, in_decisions):
+        first_grp = True
+        decisions = {}
+        decisions_to_expand = in_decisions
+
+        # "expand": upwards-propagate m,y decisions
+        for k, sym_group in reversed_enumerate(self.dep_order):
+            if not decisions_to_expand:
+                self.logger.debug(
+                    "Stopping at level %2d: nothing to expand", (k+1)
+                )
+                break
+            # --
+
+            decisions_at_this_level = {
+                sym: val
+                for sym, val in decisions_to_expand.items()
+                if sym in sym_group
+            }
+
+            if decisions_at_this_level:
+                if first_grp:
+                    self.logger.debug(
+                        "Starting upwards propagation at level %2d / %2d",
+                        (k+1), len(self.dep_order)
+                    )
+                    first_grp = False
+                # --
+
+                # __debug__ FIXME - just use update()
+                for sym, val in decisions_at_this_level.items():
+                    if sym in decisions:
+                        raise AssertionError("cannot readd sym decision")
+                    # --
+                    decisions[sym] = val
+                # --
+
+                upward_decisions = {
+                    sym: val
+                    for sym, val in decisions_to_expand.items()
+                    if sym not in sym_group
+                }
+
+                decisions_to_expand = self.expand_decision_level_upward(
+                    k, sym_group, upward_decisions, decisions_at_this_level
+                )
+            # --
+        else:
+            self.logger.debug("Stopping upwards propagation at top level")
+        # --
+
+        if decisions_to_expand:
+            raise AssertionError(
+                "did not upwards-propagate all decisions",
+                decisions_to_expand
+            )
+        # --
+
+        return decisions
+    # --- end of _resolve_upwards_propagation (...) ---
+
+    def _resolve_downwards_propagation(self, decisions):
         first_grp = True
 
+        # "reduce" and "set": set decisions, downwards-propagate n,m
         for k, sym_group in enumerate(self.dep_order):
-            if k >= max_level:
-                self.logger.debug("Stopping at level %2d", (k+1))
-                break
-
             if (
                 not first_grp
                 or any((sym in sym_group for sym in decisions))
             ):
                 if first_grp:
                     self.logger.debug(
-                        "Starting resolving at level %2d/%2d",
-                        (k+1), min(max_level, len(self.dep_order))
+                        "Starting resolving at level %2d / %2d",
+                        (k+1), len(self.dep_order)
                     )
                     first_grp = False
                 # --
 
-                self.expand_decision_level(k, sym_group, decisions)
+                self.expand_decision_level_set_and_reduce(
+                    k, sym_group, decisions
+                )
             # --
         else:
             self.logger.debug("Stopping at depth-most level")
-        # --
-    # --- end of _resolve (...) ---
+    # --- end of _resolve_downwards_propagation (...) ---
 
     def resolve(self):
-        return self._resolve(self.decisions, len(self.dep_order))
-
-    def pick_solution(self, solutions):
-        _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
-
-        solutions_redux = []
-        for solution in solutions:
-            solution_redux = {}
-
-            for sym, values in solution.items():
-                sym_value_node = self.value_nodes[sym]
-
-                if sym_value_node.value in values:
-                    # greedily prefer that value,
-                    #  resulting in a no-change for sym
-                    pass
-
-                elif sym_value_node.status >= ConfigValueDecisionState.decided:
-                    # discard solution that would override previous
-                    # decisions
-                    self.logger.debug(
-                        "Discarding decision-conflicting solution %r",
-                        solution
-                    )
-                    break
-
-                else:
-                    # pick value from set
-                    solution_redux[sym] = None
-
-                    # this a "modified min()", it does not allow "n"
-                    for pref_val in (
-                        _TristateKconfigSymbolValue.m,
-                        _TristateKconfigSymbolValue.y
-                    ):
-                        if pref_val in values:
-                            solution_redux[sym] = pref_val
-                            break
-                    # --
-
-                    if solution_redux[sym] is None:
-                        # discard "n" solution
-                        self.logger.debug(
-                            "Discarding n decision %r", solution
-                        )
-                        break
-                # --
-            # -- end for solution
-
-            if not solution_redux:
-                # empty change is the minimal solution
-                return True
-
-            solutions_redux.append(solution_redux)
-        # -- end for solutions
-
-        if not solutions_redux:
-            return None
-        else:
-            # pick a solution
-            # possible measurements:
-            #  * number of symbol to be set
-            #      due to the recursive nature,
-            #      this is not necessarily meaningful.
-            #
-            #  * the number of symbols possibly involved
-            #      (recursion lookahead)
-            #
-            #  * the level at which recursion needs to start
-            #
-            return sorted(solutions_redux, key=len)[0]
-    # --- end of pick_solution (...) ---
+        decisions = self._resolve_upwards_propagation(self.decisions)
+        self._resolve_downwards_propagation(decisions)
 
     def accumulate_upward_decisions(self, sym_group, decisions_at_this_level):
         _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
@@ -374,7 +369,9 @@ class ConfigGraph(loggable.AbstractLoggable):
         return accumulated_solutions
     # --- end of accumulate_upward_decisions (...) ---
 
-    def expand_decision_level(self, level, sym_group, decisions):
+    def expand_decision_level_set_and_reduce(
+        self, level, sym_group, decisions
+    ):
         _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
         _is_tristate_symbol = symbol.is_tristate_symbol
 
@@ -385,41 +382,26 @@ class ConfigGraph(loggable.AbstractLoggable):
                     or dep_value >= sym_value
                 )
             )
+        # ---
 
-        decisions_at_this_level = {
-            sym: val for sym, val in decisions.items() if sym in sym_group
-        }
+        def iter_pick_tristate_decision_value(value_candidates):
+            if _TristateKconfigSymbolValue.m in value_candidates:
+                yield _TristateKconfigSymbolValue.m
 
-        # find solutions
-        solutions = self.accumulate_upward_decisions(
-            sym_group, decisions_at_this_level
-        )
+            if _TristateKconfigSymbolValue.y in value_candidates:
+                yield _TristateKconfigSymbolValue.y
 
-        # resolve solutions
-        #   pick a "minimal" one
-        #   recursively apply that solution (up to this level - 1)
-        if not solutions:
-            raise ConfigUnresolvableError(
-                "no solutions", decisions_at_this_level
-            )
+            if _TristateKconfigSymbolValue.n in value_candidates:
+                yield _TristateKconfigSymbolValue.n
+        # ---
 
-        elif solutions is True:
-            # abort upwards propagation
-            pass
+        def iter_pick_boolean_decision_value(value_candidates):
+            if _TristateKconfigSymbolValue.y in value_candidates:
+                yield _TristateKconfigSymbolValue.y
 
-        else:
-            recur_decisions = self.pick_solution(solutions)
-            if recur_decisions is True:
-                pass
-
-            elif recur_decisions:
-                self._resolve(recur_decisions, level)
-
-            else:
-                raise ConfigUnresolvableError(
-                    "no solution found", decisions_at_this_level
-                )
-        # --
+            if _TristateKconfigSymbolValue.n in value_candidates:
+                yield _TristateKconfigSymbolValue.n
+        # ---
 
         # use of pre-loop calculate symbol X value map is ok, because
         # no symbol in sym_group depends on another symbol of this group,
@@ -452,29 +434,49 @@ class ConfigGraph(loggable.AbstractLoggable):
         for sym in sym_group:
             sym_value_node = self.value_nodes[sym]
 
-            if sym in decisions_at_this_level:
-                sym_value = decisions[sym]
+            if sym in decisions:
+                if _is_tristate_symbol(sym):
+                    decision_iter = iter_pick_tristate_decision_value(
+                        decisions[sym]
+                    )
 
-                if sym_value is _TristateKconfigSymbolValue.n:
-                    self.logger.debug("Disabling %s", sym.name)
-                    sym_value_node.mark_decided(sym_value)
+                elif sym.__class__ is symbol.BooleanKconfigSymbol:
+                    decision_iter = iter_pick_boolean_decision_value(
+                        decisions[sym]
+                    )
 
                 else:
-                    dep_eval = sym.evaluate_dir_dep(symbol_value_map)
+                    decision_iter = iter(decisions[sym])
+                # --
 
-                    if check_upper_bound(sym, sym_value, dep_eval):
-                        self.logger.debug(
-                            "Setting %s to %s", sym.name, sym_value
-                        )
+                for sym_value in decision_iter:
+                    if sym_value is _TristateKconfigSymbolValue.n:
+                        self.logger.debug("Disabling %s", sym.name)
                         sym_value_node.mark_decided(sym_value)
+                        break
 
                     else:
-                        raise AssertionError(
-                            "not resolved", sym.name,
-                            "dep-val", dep_eval,
-                            "deps", str(sym.dir_dep)
-                        )
-                # -- end if
+                        dep_eval = sym.evaluate_dir_dep(symbol_value_map)
+
+                        if check_upper_bound(sym, sym_value, dep_eval):
+                            self.logger.debug(
+                                "Setting %s to %s", sym.name, sym_value
+                            )
+                            sym_value_node.mark_decided(sym_value)
+                            break
+
+                        else:
+                            self.logger.debug(
+                                (
+                                    'Cannot set symbol %s to %s, '
+                                    'dir_deps evaluated to %s'
+                                ), sym.name, sym_value, dep_eval
+                            )
+                        # --
+                    # --
+                else:
+                    raise AssertionError("not resolved or no value candidates")
+                # -- end for
 
             elif (
                 sym_value_node.value is not _TristateKconfigSymbolValue.n
@@ -502,6 +504,131 @@ class ConfigGraph(loggable.AbstractLoggable):
                 # -- end if propagate_syms
             # -- end if sym decision or propagate?
         # -- end for sym
-    # --- end of expand_decision_level (...) ---
+    # --- end of expand_decision_level_set_and_reduce (...) ---
+
+    def expand_decision_level_upward(
+        self, level, sym_group, upward_decisions, decisions_at_this_level
+    ):
+        # find solutions
+        solutions = self.accumulate_upward_decisions(
+            sym_group, decisions_at_this_level
+        )
+
+        # resolve solutions
+        #   pick a "minimal" one
+        #   recursively apply that solution (up to this level - 1)
+        if not solutions:
+            raise ConfigUnresolvableError(
+                "no solutions", decisions_at_this_level
+            )
+
+        elif solutions is True:
+            # no additional decisions
+            upward_solution = {}
+
+        else:
+            upward_solution = self.pick_solution(upward_decisions, solutions)
+
+            if not upward_solution:
+                raise ConfigUnresolvableError(
+                    "no solution found", decisions_at_this_level
+                )
+        # --
+
+        return upward_solution
+    # --- end of expand_decision_level_upward (...) ---
+
+    def pick_solution(self, decisions, solutions):
+        vset_no = {symbol.TristateKconfigSymbolValue.n, }
+
+        def create_decisions(solution):
+            # create a new decisions dict,
+            # rate its "weight"
+            #
+            #  lower weight means less impact (at the upper level)
+            #
+            dec = decisions.copy()
+            change_count = 0
+
+            for sym, values in solution.items():
+                sym_value_node = self.value_nodes[sym]
+
+                # is there an existing decision for sym?
+                if sym in dec:
+                    # must be a further restriction
+                    dec_values = dec[sym] & values
+                    if not dec_values:
+                        self.logger.debug(
+                            (
+                                'Discarding decision-conflicting solution %r'
+                                ', conflicts with %s (%r)'
+                            ), solution, sym.name, dec[sym]
+                        )
+                        return (None, None)
+                    # --
+
+                    dec[sym] = dec_values
+
+                # is there a defconfig value for sym?
+                elif sym_value_node.value in values:
+                    # greedily prefer that value,
+                    #  resulting in a no-change for sym
+
+                    dec[sym] = {sym_value_node.value, }
+
+                # has sym already been decided?
+                elif sym_value_node.status >= ConfigValueDecisionState.decided:
+                    raise AssertionError(
+                        "in upwards mode, how can an upper node be decided?"
+                    )
+                    # discard solution that would override previous
+                    # decisions
+                    self.logger.debug(
+                        "Discarding decision-conflicting solution %r",
+                        solution
+                    )
+                    return (None, None)
+
+                else:
+                    dec_values = values - vset_no
+                    if not dec_values:
+                        # discard "n" solution
+                        self.logger.debug(
+                            "Discarding n decision %r", solution
+                        )
+                        return (None, None)
+                    # --
+
+                    dec[sym] = dec_values
+                    change_count += 1
+                # --
+            # -- end for
+
+            return (change_count, dec)
+        # --- end of create_decisions (...) ---
+
+        decision_solutions = []
+        for solution in solutions:
+            weight, expanded_decisions = create_decisions(solution)
+            if expanded_decisions is not None:
+                decision_solutions.append((weight, expanded_decisions))
+        # -- end for solutions
+
+        if not decision_solutions:
+            return None
+        else:
+            # pick a solution
+            # possible measurements:
+            #  * number of symbol to be set
+            #      due to the recursive nature,
+            #      this is not necessarily meaningful.
+            #
+            #  * the number of symbols possibly involved
+            #      (recursion lookahead)
+            #
+            #  * the level at which recursion needs to start
+            #
+            return sorted(decision_solutions, key=lambda xv: xv[0])[0][1]
+    # --- end of pick_solution (...) ---
 
 # --- end of ConfigGraph ---

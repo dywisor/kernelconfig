@@ -30,60 +30,25 @@ class ConfigChoices(_choices_abc.AbstractConfigChoices):
 
     def resolve(self):
         eff_decisions = {}
-        decisions = self.decisions.copy()  # do not modify self.decisions
 
-        # find non-variants
-        syms_nonvariant = []
-        for sym, dec in decisions.items():
+        for sym, dec in self.decisions.items():
             values = dec.get_decisions()
-            if values is None:
+            if values:
+                # FIXME: limitation,  and forth-and-back set conversion
+                #          decisions need to be sets
+                eff_decisions[sym] = set(values)
+
+            elif values is None:
                 # this means that a decision object has been created in the
                 # past, but it did not get used at all or the operation
                 # it was requested to perform failed
-                syms_nonvariant.append(sym)
+                pass
 
-            elif not values:
+            else:
                 # this means that the values have been restricted to the
                 # empty set, in which case no config can be created
                 raise NotImplementedError("decision is empty")
-
-            elif len(values) == 1:
-                eff_decisions[sym] = values[0]
-                syms_nonvariant.append(sym)
-
-            else:
-                # is a variant
-                #   FIXME: remove: temporarily picking "best" item, see below
-                eff_decisions[sym] = values[-1]
-                syms_nonvariant.append(sym)
         # --
-
-        for sym in syms_nonvariant:
-            decisions.pop(sym)
-        # --
-
-        # at this point, we have
-        # * a dict A :: symbol => value, which contains fixed decisions
-        # * B,  the complement of A's symbols,  not yet decided symbols
-        #   composed of:
-        #   * C,  variant symbol decisions (choose value out of <>)
-        #   * D,  undecided symbols (choose value freely)
-        #
-        # naively:
-        #    while nonempty C or dep-invalid A:
-        #       if any decision in C restricted to empty set:
-        #          error
-        #
-        #       constify dep expr with values from A
-        #
-        #       restrict items from C further,
-        #         or restrict items from D (and add them to C),
-        #         so that A could become dep-valid
-        #
-
-        if decisions:
-            self.logger.error("missing: resolve variants")
-
 
         dgraph = self.create_loggable(
             depgraph.ConfigGraph,
