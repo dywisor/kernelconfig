@@ -72,6 +72,10 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
         return (badvals, normval_set)
     # ---
 
+    @abc.abstractmethod
+    def evaluate_dir_dep(self, symbol_value_map):
+        raise NotImplementedError()
+
     def format_value_is_not_set(self):
         return self.VALUE_NOT_SET_FMT_STR.format(name=self.name)
     # --- format_value_is_not_set (...) ---
