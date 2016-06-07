@@ -63,11 +63,17 @@ class TristateKconfigSymbol(AbstractKconfigSymbol):
         else:
             return self.dir_dep.evaluate(symbol_value_map)
 
-    def format_value(self, value):
+    def format_value(self, value, name_convert=None):
         if not value:
-            return self.format_value_is_not_set()
+            return self.format_value_is_not_set(name_convert=name_convert)
         else:
-            return "{name}={value!s}".format(name=self.name, value=value)
+            return "{name}={value!s}".format(
+                name=(
+                    self.name if name_convert is None
+                    else name_convert(self.name)
+                ),
+                value=value
+            )
     # ---
 
 # --- end of TristateKconfigSymbol ---
@@ -100,7 +106,7 @@ class StringKconfigSymbol(AbstractKconfigSymbol):
     __slots__ = []
     type_name = "string"
 
-    VALUE_FMT_STR = "{name}={value!s}"
+    VALUE_FMT_STR = "{name}=\"{value!s}\""
 
     # apparently, the only char that actually gets escaped in Makefile
     # variables is #, the (un)escaping of quotes ("') is done by the shell
@@ -124,12 +130,16 @@ class StringKconfigSymbol(AbstractKconfigSymbol):
         return value  # which will be converted to str when necessary
     # --- end of normalize_and_validate (...) ---
 
-    def format_value(self, value):
+    def format_value(self, value, name_convert=None):
         if value is None:
-            return self.format_value_is_not_set()
+            return self.format_value_is_not_set(name_convert=name_convert)
         else:
             return self.VALUE_FMT_STR.format(
-                name=self.name, value=self.escape_value(value)
+                name=(
+                    self.name if name_convert is None
+                    else name_convert(self.name)
+                ),
+                value=self.escape_value(value)
             )
     # ---
 
@@ -155,11 +165,17 @@ class IntKconfigSymbol(AbstractKconfigSymbol):
         return int(value)
     # --- end of normalize_and_validate (...) ---
 
-    def format_value(self, value):
+    def format_value(self, value, name_convert=None):
         if value is None:
-            return self.format_value_is_not_set()
+            return self.format_value_is_not_set(name_convert=name_convert)
         else:
-            return self.VALUE_FMT_STR.format(name=self.name, value=value)
+            return self.VALUE_FMT_STR.format(
+                name=(
+                    self.name if name_convert is None
+                    else name_convert(self.name)
+                ),
+                value=value
+            )
     # ---
 
     def evaluate_dir_dep(self, symbol_value_map):

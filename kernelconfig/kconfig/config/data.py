@@ -382,7 +382,7 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         @rtype:  C{str}
         """
         for sym, val in self.iter_config():
-            yield sym.format_value(val)
+            yield sym.format_value(val, self.convert_symbol_name_to_option)
     # --- end of generate_config_lines (...) ---
 
     def write_config_file(self, outfile, filename=None, **kwargs):
