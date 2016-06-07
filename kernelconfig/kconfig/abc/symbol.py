@@ -97,17 +97,24 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
         """
         raise NotImplementedError()
 
-    def format_value_is_not_set(self):
-        return self.VALUE_NOT_SET_FMT_STR.format(name=self.name)
+    def format_value_is_not_set(self, name_convert=None):
+        return self.VALUE_NOT_SET_FMT_STR.format(
+            name=(
+                self.name if name_convert is None
+                else name_convert(self.name)
+            )
+        )
     # --- format_value_is_not_set (...) ---
 
     @abc.abstractmethod
-    def format_value(self, value):
+    def format_value(self, value, name_convert=None):
         """Creates a formatted string representing this kconfig symbol
         alongside with the specified value.
 
-        @param value: symbol value (must be normalized/validated)
-        @type value: depends on symbol type
+        @param value:         symbol value (must be normalized/validated)
+        @type value:          depends on symbol type
+        @param name_convert:  None or function that converts the symbol name
+        @type  name_convert:  C{None} | lambda str: str
 
         @return: C{str}
         """
