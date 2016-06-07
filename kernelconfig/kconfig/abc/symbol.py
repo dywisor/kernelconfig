@@ -80,6 +80,23 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
         return (badvals, normval_set)
     # ---
 
+    @abc.abstractmethod
+    def evaluate_dir_dep(self, symbol_value_map):
+        """
+        Given a symbol => value map,
+        calculates the boolean value of the dir_dep expression of this symbol.
+
+        If the symbol has no dir_deps, returns tristate "y".
+        Reinterprets the expression value based on the symbol type.
+
+        @param symbol_value_map:  (incomplete) symbol to value mapping
+        @type  symbol_value_map:  C{dict} :: L{AbstractKconfigSymbol} => _
+
+        @return: tristate value
+        @rtype:  L{TristateKconfigSymbolValue}
+        """
+        raise NotImplementedError()
+
     def format_value_is_not_set(self):
         return self.VALUE_NOT_SET_FMT_STR.format(name=self.name)
     # --- format_value_is_not_set (...) ---

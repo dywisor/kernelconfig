@@ -56,12 +56,19 @@ class TristateKconfigSymbol(AbstractKconfigSymbol):
             raise ValueError(value)
     # ---
 
+    def evaluate_dir_dep(self, symbol_value_map):
+        if self.dir_dep is None:
+            return TristateKconfigSymbolValue.y
+        else:
+            return self.dir_dep.evaluate(symbol_value_map)
+
     def format_value(self, value):
         if not value:
             return self.format_value_is_not_set()
         else:
             return "{name}={value!s}".format(name=self.name, value=value)
     # ---
+
 # --- end of TristateKconfigSymbol ---
 
 
@@ -79,7 +86,13 @@ class BooleanKconfigSymbol(TristateKconfigSymbol):
         return normval
     # --- end of normalize_and_validate (...) ---
 
-# --- end of BooleanKconfigSymbol --
+    def evaluate_dir_dep(self, symbol_value_map):
+        dep_eval = super().evaluate_dir_dep(symbol_value_map)
+        if dep_eval is TristateKconfigSymbolValue.m:
+            dep_eval = TristateKconfigSymbolValue.y
+        return dep_eval
+
+# --- end of BooleanKconfigSymbol ---
 
 
 class StringKconfigSymbol(AbstractKconfigSymbol):
@@ -119,6 +132,14 @@ class StringKconfigSymbol(AbstractKconfigSymbol):
             )
     # ---
 
+    def evaluate_dir_dep(self, symbol_value_map):
+        if self.dir_dep is None:
+            return TristateKconfigSymbolValue.y
+        elif self.dir_dep.evaluate(symbol_value_map):
+            return TristateKconfigSymbolValue.y
+        else:
+            return TristateKconfigSymbolValue.n
+
 # --- end of StringKconfigSymbol ---
 
 
@@ -139,6 +160,14 @@ class IntKconfigSymbol(AbstractKconfigSymbol):
         else:
             return self.VALUE_FMT_STR.format(name=self.name, value=value)
     # ---
+
+    def evaluate_dir_dep(self, symbol_value_map):
+        if self.dir_dep is None:
+            return TristateKconfigSymbolValue.y
+        elif self.dir_dep.evaluate(symbol_value_map):
+            return TristateKconfigSymbolValue.y
+        else:
+            return TristateKconfigSymbolValue.n
 
 # --- end of IntKconfigSymbol ---
 
