@@ -114,6 +114,14 @@ class ConfigGraph(loggable.AbstractLoggable):
         self.decisions = decisions
         self._prepare(default_config, decisions)
 
+    def iter_update_config(self):
+        # sort output
+        for sym_group in self.dep_order:
+            for sym in sorted(sym_group, key=lambda s: s.name):
+                vnode = self.value_nodes[sym]
+                if vnode.status >= ConfigValueDecisionState.half_decided:
+                    yield (sym, vnode.value)
+
     def iter_symbol_groups_upto(self, max_level):
         for k, sym_group in enumerate(self.dep_order):
             if k >= max_level:

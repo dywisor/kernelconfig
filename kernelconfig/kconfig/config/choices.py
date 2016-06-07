@@ -4,6 +4,7 @@
 from ..abc import choices as _choices_abc
 from .. import symbol
 from . import decision
+from .. import depgraph
 
 __all__ = ["ConfigChoices"]
 
@@ -28,8 +29,7 @@ class ConfigChoices(_choices_abc.AbstractConfigChoices):
     # --- end of __init__ (...) ---
 
     def resolve(self):
-        cfg_dict = self.config.get_new_config_dict(update=True)
-
+        eff_decisions = {}
         decisions = self.decisions.copy()  # do not modify self.decisions
 
         # find non-variants
@@ -48,13 +48,13 @@ class ConfigChoices(_choices_abc.AbstractConfigChoices):
                 raise NotImplementedError("decision is empty")
 
             elif len(values) == 1:
-                cfg_dict[sym] = values[0]
+                eff_decisions[sym] = values[0]
                 syms_nonvariant.append(sym)
 
             else:
                 # is a variant
                 #   FIXME: remove: temporarily picking "best" item, see below
-                cfg_dict[sym] = values[-1]
+                eff_decisions[sym] = values[-1]
                 syms_nonvariant.append(sym)
         # --
 
@@ -84,7 +84,17 @@ class ConfigChoices(_choices_abc.AbstractConfigChoices):
         if decisions:
             self.logger.error("missing: resolve variants")
 
-        self.logger.error("missing: resolve deps, visibility")
+
+        dgraph = self.create_loggable(
+            depgraph.ConfigGraph,
+            self.config, eff_decisions
+        )
+        dgraph.resolve()
+
+        cfg_dict = self.config.get_new_config_dict(update=True)
+        for sym, value in dgraph.iter_update_config():
+            cfg_dict[sym] = value
+
         return cfg_dict
     # --- end of resolve (...) ---
 
