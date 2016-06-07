@@ -529,10 +529,12 @@ class ConfigGraph(loggable.AbstractLoggable):
         else:
             upward_solution = self.pick_solution(upward_decisions, solutions)
 
-            if not upward_solution:
-                raise ConfigUnresolvableError(
-                    "no solution found", decisions_at_this_level
+            if not upward_solution and upward_decisions:
+                raise AssertionError(
+                    "decision filtered out while computing upward solution",
+                    decisions_at_this_level, upward_solution, upward_decisions
                 )
+            # --
         # --
 
         return upward_solution
