@@ -7,6 +7,7 @@ import itertools
 import toposort
 
 from ..abc import loggable
+from . import symbolexpr
 from . import symbol
 
 
@@ -36,9 +37,9 @@ class ConfigUnresolvableError(ConfigResolveError):
 class ConfigValueNode(object):
     __slots__ = ["value", "status"]
 
-    def __init__(self, value=None, status=ConfigValueDecisionState.undecided):
+    def __init__(self, value, status):
         self.value = value
-        self.status = ConfigValueDecisionState.undecided
+        self.status = status
     # ---
 
     def _transition(self, new_state, value):
@@ -50,7 +51,10 @@ class ConfigValueNode(object):
         elif new_state == self.status:
             if self.value != value:
                 raise ConfigOptionDecidedError(
-                    "cannot reset symbol w/ state == old_state, value != old_value"
+                    (
+                        'cannot reset symbol w/ state == old_state, '
+                        'value != old_value'
+                    )
                 )
             else:
                 raise ConfigOptionDecidedError("reset same value")
@@ -67,7 +71,6 @@ class ConfigValueNode(object):
         self._transition(ConfigValueDecisionState.half_decided, value)
 
 # ---
-
 
 
 def merge_solutions(sol_list_a, sol_list_b):
@@ -103,8 +106,12 @@ def merge_solutions(sol_list_a, sol_list_b):
 # ---
 
 
-
 class ConfigGraph(loggable.AbstractLoggable):
+
+    EXPR_VALUES_N = symbolexpr.Expr.EXPR_VALUES_N
+    EXPR_VALUES_M = symbolexpr.Expr.EXPR_VALUES_M
+    EXPR_VALUES_Y = symbolexpr.Expr.EXPR_VALUES_Y
+    EXPR_VALUES_YM = symbolexpr.Expr.EXPR_VALUES_YM
 
     def __init__(self, default_config, decisions, **kwargs):
         super().__init__(**kwargs)
@@ -129,11 +136,6 @@ class ConfigGraph(loggable.AbstractLoggable):
 
             yield (k, sym_group)
         # --
-
-    def get_symbol_level(self, sym):
-        for k, sym_group in enumerate(self.dep_order):
-            if sym in sym_group:
-                return k
 
     def iter_symbols_upto(self, max_level):
         for k, sym_group in self.iter_symbol_groups_upto(max_level):
@@ -165,33 +167,26 @@ class ConfigGraph(loggable.AbstractLoggable):
         return list(toposort.toposort(self.dep_graph))
 
     def _create_value_nodes(self, default_config):
-        def gen_node_parts():
-            for sym in self.dep_graph:
-                try:
-                    defval = default_config[sym]
-                except KeyError:
-                    yield (
-                        sym,
-                        symbol.TristateKconfigSymbolValue.n,
-                        ConfigValueDecisionState.undecided
-                    )
-                else:
-                    yield (
-                        sym,
-                        (
-                            symbol.TristateKconfigSymbolValue.n
-                            if defval is None else defval
-                        ),
-                        ConfigValueDecisionState.default
-                    )
-                # --
-            # --
+        def create_node(sym):
+            try:
+                defval = default_config[sym]
+            except KeyError:
+                return ConfigValueNode(
+                    symbol.TristateKconfigSymbolValue.n,
+                    ConfigValueDecisionState.undecided
+                )
+            else:
+                return ConfigValueNode(
+                    (
+                        symbol.TristateKconfigSymbolValue.n
+                        if defval is None else defval
+                    ),
+                    ConfigValueDecisionState.default
+                )
+            # -- end try
         # ---
 
-        return {
-            sym: ConfigValueNode(val, st)
-            for sym, val, st in gen_node_parts()
-        }
+        return {sym: create_node(sym) for sym in self.dep_graph}
     # ---
 
     def _prepare(self, default_config, decision_symbols):
@@ -203,7 +198,6 @@ class ConfigGraph(loggable.AbstractLoggable):
 
     def _resolve(self, decisions, max_level):
         first_grp = True
-        upper_sym_group = set()
 
         for k, sym_group in enumerate(self.dep_order):
             if k >= max_level:
@@ -222,29 +216,39 @@ class ConfigGraph(loggable.AbstractLoggable):
                     first_grp = False
                 # --
 
-                self.expand_decision_level(
-                    k, upper_sym_group, sym_group, decisions
-                )
+                self.expand_decision_level(k, sym_group, decisions)
             # --
-
-            upper_sym_group = sym_group
         else:
             self.logger.debug("Stopping at depth-most level")
         # --
+    # --- end of _resolve (...) ---
 
     def resolve(self):
         return self._resolve(self.decisions, len(self.dep_order))
 
     def pick_solution(self, solutions):
+        _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
+
         solutions_redux = []
         for solution in solutions:
             solution_redux = {}
 
             for sym, values in solution.items():
-                if self.value_nodes[sym].value in values:
+                sym_value_node = self.value_nodes[sym]
+
+                if sym_value_node.value in values:
                     # greedily prefer that value,
-                    #  resulting a no-change for sym
+                    #  resulting in a no-change for sym
                     pass
+
+                elif sym_value_node.status >= ConfigValueDecisionState.decided:
+                    # discard solution that would override previous
+                    # decisions
+                    self.logger.debug(
+                        "Discarding decision-conflicting solution %r",
+                        solution
+                    )
+                    break
 
                 else:
                     # pick value from set
@@ -252,8 +256,8 @@ class ConfigGraph(loggable.AbstractLoggable):
 
                     # this a "modified min()", it does not allow "n"
                     for pref_val in (
-                        symbol.TristateKconfigSymbolValue.m,
-                        symbol.TristateKconfigSymbolValue.y
+                        _TristateKconfigSymbolValue.m,
+                        _TristateKconfigSymbolValue.y
                     ):
                         if pref_val in values:
                             solution_redux[sym] = pref_val
@@ -262,6 +266,9 @@ class ConfigGraph(loggable.AbstractLoggable):
 
                     if solution_redux[sym] is None:
                         # discard "n" solution
+                        self.logger.debug(
+                            "Discarding n decision %r", solution
+                        )
                         break
                 # --
             # -- end for solution
@@ -276,18 +283,24 @@ class ConfigGraph(loggable.AbstractLoggable):
         if not solutions_redux:
             return None
         else:
-            return sorted(solutions_redux, key=len)[0]  # FIXME
+            # pick a solution
+            # possible measurements:
+            #  * number of symbol to be set
+            #      due to the recursive nature,
+            #      this is not necessarily meaningful.
+            #
+            #  * the number of symbols possibly involved
+            #      (recursion lookahead)
+            #
+            #  * the level at which recursion needs to start
+            #
+            return sorted(solutions_redux, key=len)[0]
     # --- end of pick_solution (...) ---
 
     def accumulate_upward_decisions(self, sym_group, decisions_at_this_level):
-        want_expr_ym = {
-            symbol.TristateKconfigSymbolValue.m,
-            symbol.TristateKconfigSymbolValue.y
-        }
-
-        want_expr_y = {
-            symbol.TristateKconfigSymbolValue.y,
-        }
+        _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
+        want_expr_ym = self.EXPR_VALUES_YM
+        want_expr_y = self.EXPR_VALUES_Y
 
         accumulated_solutions = True
 
@@ -317,15 +330,15 @@ class ConfigGraph(loggable.AbstractLoggable):
         for sym in decisions_at_this_level:
             sym_value = decisions_at_this_level[sym]
 
-            if sym_value is symbol.TristateKconfigSymbolValue.n:
+            if sym_value is _TristateKconfigSymbolValue.n:
                 pass
 
             elif sym.dir_dep is None:
                 pass
 
             else:
-                if sym.__class__ is symbol.TristateKconfigSymbol:
-                    if sym_value is symbol.TristateKconfigSymbolValue.y:
+                if symbol.is_tristate_symbol(sym):
+                    if sym_value is _TristateKconfigSymbolValue.y:
                         want_expr_values = want_expr_y
                     else:
                         want_expr_values = want_expr_ym
@@ -361,13 +374,23 @@ class ConfigGraph(loggable.AbstractLoggable):
         return accumulated_solutions
     # --- end of accumulate_upward_decisions (...) ---
 
-    def expand_decision_level(
-        self, level, upper_sym_group, sym_group, decisions
-    ):
+    def expand_decision_level(self, level, sym_group, decisions):
+        _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
+        _is_tristate_symbol = symbol.is_tristate_symbol
+
+        def check_upper_bound(sym, sym_value, dep_value):
+            return (
+                dep_value and (
+                    not _is_tristate_symbol(sym)
+                    or dep_value >= sym_value
+                )
+            )
+
         decisions_at_this_level = {
             sym: val for sym, val in decisions.items() if sym in sym_group
         }
 
+        # find solutions
         solutions = self.accumulate_upward_decisions(
             sym_group, decisions_at_this_level
         )
@@ -432,20 +455,14 @@ class ConfigGraph(loggable.AbstractLoggable):
             if sym in decisions_at_this_level:
                 sym_value = decisions[sym]
 
-                if sym_value is symbol.TristateKconfigSymbolValue.n:
+                if sym_value is _TristateKconfigSymbolValue.n:
                     self.logger.debug("Disabling %s", sym.name)
                     sym_value_node.mark_decided(sym_value)
 
                 else:
                     dep_eval = sym.evaluate_dir_dep(symbol_value_map)
 
-                    if (
-                        dep_eval
-                        and (
-                            sym.__class__ is not symbol.TristateKconfigSymbolValue
-                            or dep_eval >= sym_value
-                        )
-                    ):
+                    if check_upper_bound(sym, sym_value, dep_eval):
                         self.logger.debug(
                             "Setting %s to %s", sym.name, sym_value
                         )
@@ -460,8 +477,7 @@ class ConfigGraph(loggable.AbstractLoggable):
                 # -- end if
 
             elif (
-                sym_value_node.value
-                is not symbol.TristateKconfigSymbolValue.n
+                sym_value_node.value is not _TristateKconfigSymbolValue.n
             ):
                 # propagate n,m
                 propagate_syms = set((
@@ -473,16 +489,19 @@ class ConfigGraph(loggable.AbstractLoggable):
                 ))
 
                 if propagate_syms:
-                    if (
-                        sym.__class__ is symbol.TristateKconfigSymbol
-                    ):
-                        sym_value = sym_value_node.value
-                    else:
-                        sym_value = symbol.TristateKconfigSymbolValue.m
-
                     dep_eval = sym.evaluate_dir_dep(symbol_value_map)
-                    if dep_eval < sym_value:
+                    if not check_upper_bound(
+                        sym, sym_value_node.value, dep_eval
+                    ):
+                        self.logger.debug(
+                            "Propagating value %s to symbol %s (from %s)",
+                            dep_eval, sym.name, sym_value_node.value
+                        )
                         sym_value_node.mark_value_propagated(dep_eval)
 
-                # --
-        # --
+                # -- end if propagate_syms
+            # -- end if sym decision or propagate?
+        # -- end for sym
+    # --- end of expand_decision_level (...) ---
+
+# --- end of ConfigGraph ---
