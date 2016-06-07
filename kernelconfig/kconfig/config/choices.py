@@ -103,7 +103,10 @@ class ConfigChoices(_choices_abc.AbstractConfigChoices):
         if decision_cls is None:
             raise TypeError("no decision cls for %s" % kconfig_symbol)
 
-        default = self.config.get_symbol_value(kconfig_symbol)
+        try:
+            default = self.config.get_symbol_value(kconfig_symbol)
+        except KeyError:
+            default = None
 
         decision_obj = self.create_loggable(
             decision_cls, kconfig_symbol, default
