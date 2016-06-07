@@ -21,6 +21,18 @@ class ConfigValueDecisionState(enum.IntEnum):
     decided = 4
 
 
+class ConfigResolveError(Exception):
+    pass
+
+
+class ConfigOptionDecidedError(ConfigResolveError):
+    pass
+
+
+class ConfigUnresolvableError(ConfigResolveError):
+    pass
+
+
 class ConfigValueNode(object):
     __slots__ = ["value", "status"]
 
@@ -31,13 +43,17 @@ class ConfigValueNode(object):
 
     def _transition(self, new_state, value):
         if new_state < self.status:
-            raise AssertionError("cannot reset symbol w/ state < old_state")
+            raise ConfigOptionDecidedError(
+                "cannot reset symbol w/ state < old_state"
+            )
 
         elif new_state == self.status:
             if self.value != value:
-                raise AssertionError(
+                raise ConfigOptionDecidedError(
                     "cannot reset symbol w/ state == old_state, value != old_value"
                 )
+            else:
+                raise ConfigOptionDecidedError("reset same value")
 
         else:
             self.status = new_state
@@ -211,6 +227,50 @@ class ConfigGraph(loggable.AbstractLoggable):
     def resolve(self):
         return self._resolve(self.decisions, len(self.dep_order))
 
+    def pick_solution(self, solutions):
+        solutions_redux = []
+        for solution in solutions:
+            solution_redux = {}
+
+            for sym, values in solution.items():
+                if self.value_nodes[sym].value in values:
+                    # greedily prefer that value,
+                    #  resulting a no-change for sym
+                    pass
+
+                else:
+                    # pick value from set
+                    solution_redux[sym] = None
+
+                    # this a "modified min()", it does not allow "n"
+                    for pref_val in (
+                        symbol.TristateKconfigSymbolValue.m,
+                        symbol.TristateKconfigSymbolValue.y
+                    ):
+                        if pref_val in values:
+                            solution_redux[sym] = pref_val
+                            break
+                    # --
+
+                    if solution_redux[sym] is None:
+                        # discard "n" solution
+                        break
+                # --
+            # -- end for solution
+
+            if not solution_redux:
+                # empty change is the minimal solution
+                return True
+
+            solutions_redux.append(solution_redux)
+        # -- end for solutions
+
+        if not solutions_redux:
+            return None
+        else:
+            return sorted(solutions_redux, key=len)[0]  # FIXME
+    # --- end of pick_solution (...) ---
+
     def accumulate_upward_decisions(self, sym_group, decisions_at_this_level):
         want_expr_ym = {
             symbol.TristateKconfigSymbolValue.m,
@@ -256,22 +316,22 @@ class ConfigGraph(loggable.AbstractLoggable):
                 pass
 
             else:
-                if sym_value is symbol.TristateKconfigSymbolValue.y:
-                    want_expr_values = want_expr_y
-
-                elif isinstance(sym_value, (str, int)):
-                    # also: sym_value is tristate "m"
-                    want_expr_values = want_expr_ym
+                if sym.__class__ is symbol.TristateKconfigSymbol:
+                    if sym_value is symbol.TristateKconfigSymbolValue.y:
+                        want_expr_values = want_expr_y
+                    else:
+                        want_expr_values = want_expr_ym
 
                 else:
-                    raise NotImplementedError(sym_value)
+                    # also: sym_value is tristate "m"
+                    want_expr_values = want_expr_ym
                 # --
 
                 solvable, solutions = sym.dir_dep.find_solution(
                     want_expr_values
                 )
                 if not solvable:
-                    raise NotImplementedError("not resolvable", sym.name)
+                    raise ConfigUnresolvableError("symbol", sym.name)
 
                 if accumulated_solutions is True:
                     accumulated_solutions = solutions
@@ -280,7 +340,9 @@ class ConfigGraph(loggable.AbstractLoggable):
                         accumulated_solutions, solutions
                     )
                     if not accumulated_solutions_next:
-                        raise NotImplementedError("unresolvable group")
+                        raise ConfigUnresolvableError(
+                            "group", decisions_at_this_level
+                        )
 
                     accumulated_solutions = accumulated_solutions_next
                     del accumulated_solutions_next
@@ -306,26 +368,26 @@ class ConfigGraph(loggable.AbstractLoggable):
         #   pick a "minimal" one
         #   recursively apply that solution (up to this level - 1)
         if not solutions:
-            raise NotImplementedError("no solutions for this level")
+            raise ConfigUnresolvableError(
+                "no solutions", decisions_at_this_level
+            )
 
         elif solutions is True:
             # abort upwards propagation
             pass
 
         else:
-            if len(solutions) != 1:
-                raise NotImplementedError("pick best solution out of many")
+            recur_decisions = self.pick_solution(solutions)
+            if recur_decisions is True:
+                pass
 
-            # pick best and minimal solution
-            solution = solutions[0]   # FIXME, obvy
+            elif recur_decisions:
+                self._resolve(recur_decisions, level)
 
-            # FIXME: apply decisions_at_this_level before recursion
-            #         otherwise, the symbols get set multiple times
-
-            recur_decisions = {
-                sym: min(values) for sym, values in solutions[0].items()
-            }
-            self._resolve(recur_decisions, level)
+            else:
+                raise ConfigUnresolvableError(
+                    "no solution found", decisions_at_this_level
+                )
         # --
 
         # use of pre-loop calculate symbol X value map is ok, because
@@ -343,7 +405,7 @@ class ConfigGraph(loggable.AbstractLoggable):
         # foreach symbol at this level loop
         #
         #     if there is a decision for sym
-        #         apply that decision  // FIXME: do that before recursion
+        #         apply that decision
         #
         #     else if sym depends on a decided symbol
         #          or sym depends on a half-decided symbol
@@ -366,12 +428,8 @@ class ConfigGraph(loggable.AbstractLoggable):
                     self.logger.debug("Disabling %s", sym.name)
                     sym_value_node.mark_decided(sym_value)
 
-                elif sym.dir_dep is None:
-                    self.logger.debug("Setting %s to %s", sym.name, sym_value)
-                    sym_value_node.mark_decided(sym_value)
-
                 else:
-                    dep_eval = sym.dir_dep.evaluate(symbol_value_map)
+                    dep_eval = sym.evaluate_dir_dep(symbol_value_map)
 
                     if (
                         dep_eval
@@ -386,9 +444,8 @@ class ConfigGraph(loggable.AbstractLoggable):
                         sym_value_node.mark_decided(sym_value)
 
                     else:
-                        raise NotImplementedError(
-                            "not resolved",
-                            sym.name,
+                        raise AssertionError(
+                            "not resolved", sym.name,
                             "dep-val", dep_eval,
                             "deps", str(sym.dir_dep)
                         )
@@ -415,12 +472,9 @@ class ConfigGraph(loggable.AbstractLoggable):
                     else:
                         sym_value = symbol.TristateKconfigSymbolValue.m
 
-                    dep_eval = sym.dir_dep.evaluate(symbol_value_map)
+                    dep_eval = sym.evaluate_dir_dep(symbol_value_map)
                     if dep_eval < sym_value:
-                        self.logger.debug(
-                            "FIXME: downwards-propagate %s < %s for symbol %s",
-                            dep_eval, sym_value, sym.name
-                        )
+                        sym_value_node.mark_value_propagated(dep_eval)
 
                 # --
         # --
