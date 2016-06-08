@@ -146,10 +146,8 @@ class Expr(Visitable):
     EXPR_VALUES_N = frozenset([symbol.TristateKconfigSymbolValue.n])
     EXPR_VALUES_M = frozenset([symbol.TristateKconfigSymbolValue.m])
     EXPR_VALUES_Y = frozenset([symbol.TristateKconfigSymbolValue.y])
-    EXPR_VALUES_YM = frozenset([
-        symbol.TristateKconfigSymbolValue.m,
-        symbol.TristateKconfigSymbolValue.y
-    ])
+    EXPR_VALUES_YM = EXPR_VALUES_Y | EXPR_VALUES_M
+    EXPR_VALUES_YMN = EXPR_VALUES_Y | EXPR_VALUES_M | EXPR_VALUES_N
 
     @abc.abstractmethod
     def add_expr(self, expr):
@@ -829,7 +827,7 @@ class _Expr_SymbolValueComparison(Expr):
         raise NotImplementedError("constant X symbol")
 
     def _solve_constant_x_constant(self, expr_value, sol_cache, lsym, rsym):
-        raise NotImplementedError("constant X constant")
+        return bool(self.evaluate(None)) == bool(expr_value)
 
     def _find_solution(self, expr_values, sol_cache):
         expr_value = bool(max(expr_values))
@@ -880,7 +878,12 @@ class Expr_SymbolEQ(_Expr_SymbolValueComparison):
     # def __eq__  allow swapped lsym,rsym
 
     def _solve_symbol_x_constant(self, expr_value, sol_cache, lsym, rsym):
-        return sol_cache.push_symbol(lsym.expr, {rsym.expr, })
+        if expr_value:
+            return lsym._find_solution({rsym.expr, }, sol_cache)
+        else:
+            return lsym._find_solution(
+                self.EXPR_VALUES_YMN - {rsym.expr, }, sol_cache
+            )
 
     def _solve_constant_x_symbol(self, expr_value, sol_cache, lsym, rsym):
         return self._solve_symbol_x_constant(expr_value, sol_cache, rsym, lsym)
@@ -895,6 +898,14 @@ class Expr_SymbolNEQ(_Expr_SymbolValueComparison):
     OP_EVAL = operator.__ne__
 
     # def __eq__  allow swapped lsym,rsym
+
+    def _solve_symbol_x_constant(self, expr_value, sol_cache, lsym, rsym):
+        if expr_value:
+            return lsym._find_solution(
+                self.EXPR_VALUES_YMN - {rsym.expr, }, sol_cache
+            )
+        else:
+            return lsym._find_solution({rsym.expr, }, sol_cache)
 
     def _solve_constant_x_symbol(self, expr_value, sol_cache, lsym, rsym):
         return self._solve_symbol_x_constant(expr_value, sol_cache, rsym, lsym)
