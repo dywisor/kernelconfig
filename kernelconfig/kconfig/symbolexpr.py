@@ -378,6 +378,12 @@ class _MultiExpr(Expr):
         else:
             return False
 
+    @classmethod
+    def new_from_list(cls, expr_list):
+        obj = cls()
+        obj.extend_expr(expr_list)
+        return obj
+
     def __init__(self, *args):
         super().__init__()
         self.static_hash = None

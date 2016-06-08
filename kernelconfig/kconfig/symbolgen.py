@@ -24,6 +24,40 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
         lkconfig.ExprView.E_GEQ: symbolexpr.Expr_SymbolGEQ,
     }
 
+    def _gen_createv(self, top_expr_views):
+        _create = self.create
+
+        for top_expr_view in top_expr_views:
+            expr = _create(top_expr_view)
+            if expr is not None:
+                yield expr
+        # --
+    # ---
+
+    def createv(self, top_expr_views):
+        return list(self._gen_createv(top_expr_views))
+
+    def createv_and(self, component_views):
+        expr_iter = self._gen_createv(component_views)
+
+        try:
+            first_expr = next(expr_iter)
+        except StopIteration:
+            # no expr
+            return None
+
+        try:
+            next_expr = next(expr_iter)
+        except StopIteration:
+            # one expr
+            return first_expr
+
+        and_expr = symbolexpr.Expr_And(first_expr, next_expr)
+        # add remaining exprs
+        and_expr.extend_expr(expr_iter)
+        return and_expr
+    # ---
+
     def create(self, top_expr_view):
         """Recursively converts an ExprView to an Expr.
 
