@@ -237,12 +237,6 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
 
     @classmethod
     def get_default_symbol_constants(cls):
-        if __debug__:
-            # FIXME: remove in future
-            #        : when not running in python -O mode,
-            #        : let constify_missing_symbol() handle all sym names
-            return {}
-
         return {
             "n": symbol.TristateKconfigSymbolValue.n,
             "m": symbol.TristateKconfigSymbolValue.m,
@@ -258,6 +252,7 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
         self._symbols = symbols.KconfigSymbols()
         self._dir_deps = {}
         self._rev_deps = {}
+        self._selects = {}
     # --- end of __init__ (...) ---
 
     def read_lkc_symbols(self):
@@ -333,6 +328,7 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
         kconfig_symbols = self._symbols
         dir_deps = self._dir_deps
         rev_deps = self._rev_deps
+        selects = self._selects
 
         for sym_view in self.get_lkc_symbols():
             sym_cls = get_symbol_cls(sym_view.s_type)
@@ -344,6 +340,7 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
                 kconfig_symbols.add_symbol(sym)
                 dir_deps[sym] = expr_builder.create(sym_view.get_dir_dep())
                 rev_deps[sym] = expr_builder.create(sym_view.get_rev_dep())
+                selects[sym] = expr_builder.createv_and(sym_view.get_selects())
             # --
         # --
     # --- end of _prepare_symbols (...) ---
@@ -369,6 +366,7 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
             symbol_names_missing = set()
             expand_dep_dict(self._dir_deps, symbol_names_missing)
             expand_dep_dict(self._rev_deps, symbol_names_missing)
+            expand_dep_dict(self._selects, symbol_names_missing)
             return symbol_names_missing
         # ---
 
@@ -415,6 +413,9 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
 
         for sym, dep_expr in self._rev_deps.items():
             sym.rev_dep = None if dep_expr is None else dep_expr.simplify()
+
+        for sym, dep_expr in self._selects.items():
+            sym.selects = None if dep_expr is None else dep_expr
     # --- end of _link_deps (...) ---
 
     def get_symbols(self):

@@ -120,6 +120,51 @@ static PyObject* lkconfig_SymbolViewObject_get_prompt (
 }
 
 
+static int lkconfig_SymbolViewObject__create_expr_and_append_to_list (
+    PyObject* const l, const struct expr* const e
+) {
+    PyObject* expr_view;
+    int append_ret;
+
+    expr_view = lkconfig_ExprViewObject_new_from_struct ( e );
+    if ( expr_view == NULL ) { return -1; }
+
+    append_ret = PyList_Append ( l, expr_view );
+    Py_DECREF ( expr_view );
+    return append_ret;
+}
+
+
+static PyObject* lkconfig_SymbolViewObject_get_selects (
+    lkconfig_SymbolViewObject* const self, PyObject* const args
+) {
+    const struct property* sel;
+    PyObject* sel_list;
+
+    sel_list = PyList_New(0);
+    if ( sel_list == NULL ) { return NULL; }
+
+    for_all_properties(self->kconfig_sym, sel, P_SELECT) {
+        if ( sel->expr == NULL ) {
+            PyErr_SetString ( PyExc_ValueError, "NULL expr in selects" );
+            Py_DECREF ( sel_list );
+            return NULL;
+        }
+
+        if (
+            lkconfig_SymbolViewObject__create_expr_and_append_to_list (
+                sel_list, sel->expr
+            ) != 0
+        ) {
+            Py_DECREF ( sel_list );
+            return NULL;
+        }
+    }
+
+    return sel_list;
+}
+
+
 static void lkconfig_SymbolViewObject_dealloc (
     lkconfig_SymbolViewObject* const self
 ) {
@@ -206,7 +251,15 @@ static PyMethodDef lkconfig_SymbolViewObject_methods[] = {
         (PyCFunction) lkconfig_SymbolViewObject_get_prompt,
         METH_NOARGS,
         PyDoc_STR (
-            "get_prompt() -- return a list of all prompt strings"
+            "get_prompt() -- returns a list of all prompt strings"
+        )
+    },
+    {
+        "get_selects",
+        (PyCFunction) lkconfig_SymbolViewObject_get_selects,
+        METH_NOARGS,
+        PyDoc_STR (
+            "get_selects() -- returns a list of all selects"
         )
     },
     { NULL }
