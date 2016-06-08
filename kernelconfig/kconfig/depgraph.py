@@ -79,39 +79,6 @@ class ConfigValueNode(object):
 # ---
 
 
-def merge_solutions(sol_list_a, sol_list_b):
-    def merge_sol_dict(a, b):
-        d = {}
-        for sym, values in a.items():
-            if sym in b:
-                entry = values & b[sym]
-            else:
-                entry = values  # ref
-
-            if entry:
-                d[sym] = entry
-            else:
-                return None
-        # --
-
-        for sym in b:
-            if sym not in d:
-                d[sym] = b[sym]  # ref
-        # --
-
-        return d
-    # ---
-
-    solutions = []
-    for sol_a, sol_b in itertools.product(sol_list_a, sol_list_b):
-        sol_res = merge_sol_dict(sol_a, sol_b)
-        if sol_res is not None:
-            solutions.append(sol_res)
-
-    return solutions
-# ---
-
-
 class ConfigGraph(loggable.AbstractLoggable):
 
     EXPR_VALUES_N = symbolexpr.Expr.EXPR_VALUES_N
@@ -294,6 +261,7 @@ class ConfigGraph(loggable.AbstractLoggable):
 
     def accumulate_upward_decisions(self, sym_group, decisions_at_this_level):
         _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
+        _merge_solutions = symbolexpr.merge_solutions
         want_expr_ym = self.EXPR_VALUES_YM
         want_expr_y = self.EXPR_VALUES_Y
 
@@ -352,7 +320,7 @@ class ConfigGraph(loggable.AbstractLoggable):
                 if accumulated_solutions is True:
                     accumulated_solutions = solutions
                 else:
-                    accumulated_solutions_next = merge_solutions(
+                    accumulated_solutions_next = _merge_solutions(
                         accumulated_solutions, solutions
                     )
                     if not accumulated_solutions_next:
