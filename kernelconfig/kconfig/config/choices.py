@@ -52,6 +52,7 @@ class ConfigChoices(_choices_abc.AbstractConfigChoices):
 
         dgraph = self.create_loggable(
             depgraph.ConfigGraph,
+            self.config.get_kconfig_symbols(),
             self.config, eff_decisions
         )
         dgraph.resolve()
