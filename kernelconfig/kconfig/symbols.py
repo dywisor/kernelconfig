@@ -22,7 +22,7 @@ class KconfigSymbols(collections.abc.Mapping):
     #     return list(self.iter_match_key(*args, **kwargs))
 
     def normalize_key(self, key):
-        return key
+        return key.upper()
 
     def __getitem__(self, key):
         if isinstance(key, _symbol_abc.AbstractKconfigSymbol):
@@ -68,7 +68,7 @@ class KconfigSymbols(collections.abc.Mapping):
             raise ValueError("symbol without a name")
         # --
 
-        return self._add_symbol(sym.name, sym)
+        return self._add_symbol(self.normalize_key(sym.name), sym)
     # ---
 
     def add_unknown_symbol(self, sym_value_type, sym_name):
