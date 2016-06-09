@@ -5,7 +5,8 @@ import logging
 
 import kernelconfig.kernel.info
 import kernelconfig.kconfig.symbolgen
-import kernelconfig.kconfig.config
+import kernelconfig.kconfig.config.data
+import kernelconfig.kconfig.config.choices
 
 
 def setup_console_logging(logger, outstream=None, log_level=logging.DEBUG):
@@ -49,10 +50,15 @@ if __name__ == "__main__":
         KconfigSymbolGenerator(kinfo).get_symbols()
     )
 
-    cfg = kernelconfig.kconfig.config.KernelConfig(kconfig_syms)
+    cfg = kernelconfig.kconfig.config.data.KernelConfig(kconfig_syms)
     cfg.read_config_file(
         arg_config.config or os.path.join(kinfo.srctree, ".config")
     )
-    cfg.write_config_file(
-        sys.stdout
-    )
+
+    with kernelconfig.kconfig.config.choices.ConfigChoices(cfg) as cc:
+        cc.option_module("CONFIG_E1000E")
+        cc.option_builtin_or_module("DVB_DDBRIDGE")
+        cc.option_append("CONFIG_CMDLINE", "panic=10")
+    # -- end with
+
+    cfg.write_config_file(kinfo.get_filepath("outconfig"))
