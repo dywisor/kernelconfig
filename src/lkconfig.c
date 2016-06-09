@@ -9,6 +9,7 @@
 #include "lkconfig_utilfuncs.c"
 #include "lkconfig_symbol.c"
 #include "lkconfig_expr.c"
+#include "lkconfig_conf.c"
 
 /* exceptions */
 static PyObject* lkconfigKconfigParseError;
@@ -17,6 +18,7 @@ static PyObject* lkconfigKconfigParseError;
 /* function sig */
 static PyObject* lkconfig_read_symbols ( PyObject* self, PyObject* args );
 static PyObject* lkconfig_get_symbols ( PyObject* self, PyObject* noargs );
+static PyObject* lkconfig_oldconfig ( PyObject* self, PyObject* args );
 
 PyMODINIT_FUNC PyInit_lkconfig (void);
 
@@ -51,6 +53,18 @@ static PyMethodDef lkconfig_MethodTable[] = {
             "Returns a list of kconfig symbols (as SymbolViewObject).\n"
             "\n"
             "Note: read_symbols() must be called before calling this function!\n"
+        )
+    },
+    {
+        "oldconfig",
+        lkconfig_oldconfig,
+        METH_VARARGS,
+        PyDoc_STR (
+            "oldconfig(input_file, output_file, decisions_dict)\n"
+            "\n"
+            "Runs oldconfig.\n"
+            "\n"
+            "Note: read_symbols() must be called before this function!\n"
         )
     },
     /* and returns a list of all symbols.\n"*/
@@ -180,6 +194,24 @@ static int lkconfig__conf_parse ( const char* const kconfig_file ) {
      * */
     conf_parse ( kconfig_file );
     return 0;
+}
+
+
+static PyObject* lkconfig_oldconfig ( PyObject* self, PyObject* args ) {
+    PyDictObject* conf_decisions = NULL;
+    const char* infile  = NULL;
+    const char* outfile = NULL;
+
+    if (
+        ! PyArg_ParseTuple (
+            args, "ssO!", &infile, &outfile, &PyDict_Type, &conf_decisions
+        )
+    ) {
+        return NULL;
+    }
+
+    lkconfig_conf_main ( infile, outfile, conf_decisions );
+    Py_RETURN_NONE;
 }
 
 
