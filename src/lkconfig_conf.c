@@ -12,15 +12,28 @@ struct lkconfig_conf_vars {
     PyObject*     conf_decisions;
 };
 
-static void lkconfig_conf__conf (
+static void lkconfig_conf_vars_clear_reply (
+    struct lkconfig_conf_vars* const cvars
+) {
+    cvars->conf_reply     = NULL;
+}
+
+static void lkconfig_conf_vars_unref_reply (
+    struct lkconfig_conf_vars* const cvars
+) {
+    lkconfig_conf_vars_clear_reply ( cvars );
+}
+
+
+static int lkconfig_conf__conf (
     struct lkconfig_conf_vars* const cvars, struct menu* const menu
 );
 
-static void lkconfig_conf__check_conf (
+static int lkconfig_conf__check_conf (
     struct lkconfig_conf_vars* const cvars, struct menu* const menu
 );
 
-static void lkconfig_conf_main (
+static int lkconfig_conf_main (
     const char* const config_file_in,
     const char* const config_file_out,
     PyDictObject* const conf_decisions
@@ -33,11 +46,51 @@ static void lkconfig_conf_main (
 
     do {
         cvars.conf_cnt = 0;
-        lkconfig_conf__check_conf ( &cvars, &rootmenu );
+        if ( lkconfig_conf__check_conf ( &cvars, &rootmenu ) < 0 ) {
+            return -1;
+        }
     } while ( cvars.conf_cnt );
 
     conf_write ( config_file_out );
+
+    return 0;
 }
+
+static int lkconfig_conf__conf_askvalue_tristate (
+    struct lkconfig_conf_vars* const cvars,
+    struct symbol* const sym,
+    const char* const def
+) {
+    PyObject* entry;
+    long decval;
+
+    lkconfig_conf_vars_clear_reply ( cvars );
+
+    if ( ! sym_is_changable(sym) ) {
+        return 0;
+    }
+
+    if ( sym->name ) {
+        entry = PyDict_GetItemString ( cvars->conf_decisions, sym->name );
+        /* borrowed ref */
+        if ( entry == NULL ) {
+            ;
+        } else if ( PyLong_Check ( entry ) ) {
+            decval = PyLong_AsLong ( entry );
+
+        } else {
+            PyErr_Format (
+                PyExc_ValueError,
+                "bad decision value for symbol %s", sym->name
+            );
+            return -1;
+        }
+    }
+
+    return 1;
+}
+
+
 
 static int lkconfig_conf__conf_askvalue (
     struct lkconfig_conf_vars* const cvars,
@@ -47,7 +100,7 @@ static int lkconfig_conf__conf_askvalue (
     PyObject* entry;
     const char* decision_value;
 
-    cvars->conf_reply = NULL;
+    lkconfig_conf_vars_clear_reply ( cvars );
 
     if ( ! sym_is_changable(sym) ) {
         return 0;
@@ -84,7 +137,7 @@ static int lkconfig_conf__conf_sym (
 
     oldval = sym_get_tristate_value(sym);
 
-    ret = lkconfig_conf__conf_askvalue (
+    ret = lkconfig_conf__conf_askvalue_tristate (
         cvars, sym, sym_get_string_value(sym)
     );
     if ( ret <= 0 ) { return ret; }
@@ -106,13 +159,23 @@ static int lkconfig_conf__conf_sym (
                 break;
 
             default:
+                lkconfig_conf_vars_unref_reply ( cvars );
+                PyErr_Format (
+                    PyExc_ValueError,
+                    "bad reply value for symbol %s", (sym->name || "???")
+                );
                 return -1;
         }
     }
+    lkconfig_conf_vars_unref_reply ( cvars );
 
     if ( sym_set_tristate_value ( sym, newval ) ) {
         return 0;
     } else {
+        PyErr_Format (
+            PyExc_ValueError,
+            "failed to tristate symbol %s", (sym->name || "???")
+        );
         return -1;
     }
 }
@@ -134,11 +197,16 @@ static int lkconfig_conf__conf_string (
         def = cvars->conf_reply;
     }
 
-    if ( sym_set_string_value ( sym, def ) ) {
-        return 0;
-    } else {
-        return -1;
+    ret = sym_set_string_value ( sym, def ) ? 0 : -1;
+    lkconfig_conf_vars_unref_reply ( cvars );
+
+    if ( ret < 0 ) {
+        PyErr_Format (
+            PyExc_ValueError,
+            "failed to string symbol %s", (sym->name || "???")
+        );
     }
+    return ret;
 }
 
 
@@ -185,7 +253,6 @@ static int lkconfig_conf__conf_choice (
     def_sym = sym_get_choice_value(sym);
     cnt = 0;
     def = 0;
-    cvars->conf_reply = NULL;
 
     for ( child = menu->list; child; child = child->next ) {
         if ( !menu_is_visible(child) ) {
@@ -208,11 +275,14 @@ static int lkconfig_conf__conf_choice (
 
     if ( !is_new ) { cnt = def; }
 
+    lkconfig_conf_vars_clear_reply ( cvars );
     /* TODO: get cvars->conf_reply */
 
     if ( cvars->conf_reply == NULL ) {
         cnt = def;
     }
+
+    lkconfig_conf_vars_unref_reply ( cvars );
 
 
 lkconfig_conf__conf_choice_childs:
@@ -227,25 +297,26 @@ lkconfig_conf__conf_choice_childs:
     }
 
     if ( !child ) {
+        PyErr_SetString ( PyExc_ValueError, "choice?" );
         return -1;
     }
 
     sym_set_choice_value ( sym, child->sym );
     for ( child = child->list; child; child = child->next ) {
-        lkconfig_conf__conf ( cvars, child );
+        if ( lkconfig_conf__conf ( cvars, child ) < 0 ) { return -1; }
     }
     return 1;
 }
 
 
-static void lkconfig_conf__conf (
+static int lkconfig_conf__conf (
     struct lkconfig_conf_vars* const cvars, struct menu* const menu
 ) {
     struct symbol* sym;
     struct menu*   child;
 
     if ( ! menu_is_visible(menu) ) {
-        return;
+        return 0;
     }
 
     sym  = menu->sym;
@@ -255,8 +326,8 @@ static void lkconfig_conf__conf (
     }
 
     if ( sym_is_choice(sym) ) {
-        lkconfig_conf__conf_choice ( cvars, menu );
-        if ( sym->curr.tri != mod ) { return; }
+        if ( lkconfig_conf__conf_choice ( cvars, menu ) < 0 ) { return -1; }
+        if ( sym->curr.tri != mod ) { return 0; }
         goto lkconfig_conf__conf_childs;
     }
 
@@ -264,30 +335,32 @@ static void lkconfig_conf__conf (
         case S_INT:
         case S_HEX:
         case S_STRING:
-            lkconfig_conf__conf_string ( cvars, menu );
+            if ( lkconfig_conf__conf_string ( cvars, menu ) < 0 ) { return -1; }
             break;
 
         default:
-            lkconfig_conf__conf_sym ( cvars, menu );
+            if ( lkconfig_conf__conf_sym ( cvars, menu ) < 0 ) { return -1; }
             break;
     }
 
 
 lkconfig_conf__conf_childs:
     for ( child = menu->list; child; child = child->next ) {
-        lkconfig_conf__conf ( cvars, child );
+        if ( lkconfig_conf__conf ( cvars, child ) < 0 ) { return -1; }
     }
+
+    return 0;
 }
 
 
-static void lkconfig_conf__check_conf (
+static int lkconfig_conf__check_conf (
     struct lkconfig_conf_vars* const cvars, struct menu* const menu
 ) {
     struct symbol* sym;
     struct menu*   child;
 
     if ( ! menu_is_visible(menu) ) {
-        return;
+        return 0;
     }
 
     sym = menu->sym;
@@ -301,11 +374,18 @@ static void lkconfig_conf__check_conf (
         ) {
             (cvars->conf_cnt)++;
             cvars->rootEntry = menu_get_parent_menu(menu);
-            lkconfig_conf__conf ( cvars, cvars->rootEntry );
+            if ( lkconfig_conf__conf ( cvars, cvars->rootEntry ) < 0 ) {
+                return -1;
+            }
+
         }
     }
 
     for ( child = menu->list; child; child = child->next ) {
-        lkconfig_conf__check_conf ( cvars, child );
+        if ( lkconfig_conf__check_conf ( cvars, child ) < 0 ) {
+            return -1;
+        }
     }
+
+    return 0;
 }
