@@ -518,10 +518,7 @@ class ConfigGraph(loggable.AbstractLoggable):
         #         apply that decision
         #
         #     else if sym depends on a decided symbol
-        #          or sym depends on a half-decided symbol
-        #          and the symbol is >controlling<
-        #
-        #         downwards-propagate "n","m" decision
+        #         leave symbol as-is, will be handled by oldconfig
         #
         #     else
         #         leave symbol as-is
@@ -585,32 +582,7 @@ class ConfigGraph(loggable.AbstractLoggable):
                         raise AssertionError("not resolved or no value candidates")
                     # -- end for
                 # -- end if already set
-
-            elif (
-                sym_value_node.value is not _TristateKconfigSymbolValue.n
-            ):
-                # propagate n,m
-                propagate_syms = set((
-                    dep_sym for dep_sym in self.dep_graph[sym]
-                    if (
-                        self.value_nodes[dep_sym].status
-                        >= ConfigValueDecisionState.half_decided
-                    )
-                ))
-
-                if propagate_syms:
-                    dep_eval = sym.evaluate_dir_dep(symbol_value_map)
-                    if not check_upper_bound(
-                        sym, sym_value_node.value, dep_eval
-                    ):
-                        self.logger.debug(
-                            "Propagating value %s to symbol %s (from %s)",
-                            dep_eval, sym.name, sym_value_node.value
-                        )
-                        sym_value_node.mark_value_propagated(dep_eval)
-
-                # -- end if propagate_syms
-            # -- end if sym decision or propagate?
+            # -- end if sym decision
         # -- end for sym
     # --- end of expand_decision_level_set_and_reduce (...) ---
 
