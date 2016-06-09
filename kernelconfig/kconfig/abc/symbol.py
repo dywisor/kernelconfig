@@ -116,6 +116,10 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
     def __hash__(self):
         return hash((self.__class__, self.name))
 
+    @abc.abstractclassmethod
+    def get_value_repr(self, value):
+        raise NotImplementedError()
+
     def __repr__(self):
         return "{c.__qualname__}<{s.name!s}>".format(c=self.__class__, s=self)
 
