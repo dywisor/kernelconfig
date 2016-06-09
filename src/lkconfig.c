@@ -18,7 +18,9 @@ static PyObject* lkconfigKconfigParseError;
 /* function sig */
 static PyObject* lkconfig_read_symbols ( PyObject* self, PyObject* args );
 static PyObject* lkconfig_get_symbols ( PyObject* self, PyObject* noargs );
-static PyObject* lkconfig_oldconfig ( PyObject* self, PyObject* args );
+static PyObject* lkconfig_oldconfig (
+    PyObject* self, PyObject* args, PyObject* kwargs
+);
 
 PyMODINIT_FUNC PyInit_lkconfig (void);
 
@@ -57,8 +59,8 @@ static PyMethodDef lkconfig_MethodTable[] = {
     },
     {
         "oldconfig",
-        lkconfig_oldconfig,
-        METH_VARARGS,
+        (PyCFunction) lkconfig_oldconfig,
+        METH_VARARGS | METH_KEYWORDS,
         PyDoc_STR (
             "oldconfig(input_file, output_file, decisions_dict)\n"
             "\n"
@@ -197,21 +199,29 @@ static int lkconfig__conf_parse ( const char* const kconfig_file ) {
 }
 
 
-static PyObject* lkconfig_oldconfig ( PyObject* self, PyObject* args ) {
-    PyDictObject* conf_decisions = NULL;
-    const char* infile  = NULL;
-    const char* outfile = NULL;
+static PyObject* lkconfig_oldconfig (
+    PyObject* self, PyObject* args, PyObject* kwargs
+) {
+    static const char* arg_kwlist[] = {
+        "infile", "outfile", "decisions", "logger", NULL
+    };
+
+    PyObject* logger              = NULL;
+    PyDictObject* conf_decisions  = NULL;
+    const char* infile            = NULL;
+    const char* outfile           = NULL;
     int ret;
 
     if (
-        ! PyArg_ParseTuple (
-            args, "ssO!", &infile, &outfile, &PyDict_Type, &conf_decisions
+        ! PyArg_ParseTupleAndKeywords (
+            args, kwargs, "ssO!|$O", (char**) arg_kwlist,
+            &infile, &outfile, &PyDict_Type, &conf_decisions, &logger
         )
     ) {
         return NULL;
     }
 
-    ret = lkconfig_conf_main ( infile, outfile, conf_decisions );
+    ret = lkconfig_conf_main ( infile, outfile, conf_decisions, logger );
     if ( ret < 0 ) {
         return NULL;
     } else {
