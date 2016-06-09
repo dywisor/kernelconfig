@@ -44,6 +44,9 @@ class AbstractLoggable(object, metaclass=abc.ABCMeta):
         )
     # --- end of __init__ (...) ---
 
+    def get_child_logger(self, *args, **kwargs):
+        return self.logger.getChild(*args, **kwargs)
+
     def create_loggable(self, loggable_cls, *args, **kwargs):
         kwargs.setdefault("parent_logger", self.logger)
         return loggable_cls(*args, **kwargs)
