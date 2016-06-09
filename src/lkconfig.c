@@ -201,6 +201,7 @@ static PyObject* lkconfig_oldconfig ( PyObject* self, PyObject* args ) {
     PyDictObject* conf_decisions = NULL;
     const char* infile  = NULL;
     const char* outfile = NULL;
+    int ret;
 
     if (
         ! PyArg_ParseTuple (
@@ -210,8 +211,12 @@ static PyObject* lkconfig_oldconfig ( PyObject* self, PyObject* args ) {
         return NULL;
     }
 
-    lkconfig_conf_main ( infile, outfile, conf_decisions );
-    Py_RETURN_NONE;
+    ret = lkconfig_conf_main ( infile, outfile, conf_decisions );
+    if ( ret < 0 ) {
+        return NULL;
+    } else {
+        Py_RETURN_NONE;
+    }
 }
 
 
