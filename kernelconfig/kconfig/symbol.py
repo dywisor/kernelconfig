@@ -75,6 +75,9 @@ class TristateKconfigSymbol(AbstractKconfigSymbol):
             )
     # ---
 
+    def get_lkconfig_value_repr(self, value):
+        return int(value)
+
 # --- end of TristateKconfigSymbol ---
 
 
@@ -150,6 +153,9 @@ class StringKconfigSymbol(AbstractKconfigSymbol):
         else:
             return TristateKconfigSymbolValue.n
 
+    def get_lkconfig_value_repr(self, value):
+        return value
+
 # --- end of StringKconfigSymbol ---
 
 
@@ -185,6 +191,12 @@ class IntKconfigSymbol(AbstractKconfigSymbol):
         else:
             return TristateKconfigSymbolValue.n
 
+    def get_lkconfig_value_repr(self, value):
+        if value is TristateKconfigSymbolValue.n:
+            return value
+        else:
+            return str(value)
+
 # --- end of IntKconfigSymbol ---
 
 
@@ -193,6 +205,13 @@ class HexKconfigSymbol(IntKconfigSymbol):
     type_name = "hex"
 
     VALUE_FMT_STR = "{name}={value:#x}"
+
+    def get_lkconfig_value_repr(self, value):
+        if value is TristateKconfigSymbolValue.n:
+            return value
+        else:
+            return hex(value)
+
 # --- end of HexKconfigSymbol ---
 
 
@@ -204,6 +223,10 @@ class UndefKconfigSymbol(StringKconfigSymbol):
     def normalize_and_validate(cls, value):
         raise ValueError(value)
     # --- end of normalize_and_validate (...) ---
+
+    def get_lkconfig_value_repr(self, value):
+        raise ValueError(value)
+
 # --- end of UndefKconfigSymbol ---
 
 

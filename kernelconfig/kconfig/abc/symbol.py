@@ -130,6 +130,26 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
     def __hash__(self):
         return hash((self.__class__, self.name))
 
+    @abc.abstractclassmethod
+    def get_lkconfig_value_repr(self, value):
+        """Converts the input value to a value suitable for interfacing
+        with lkconfig/oldconfig.
+
+        For tristate and boolean symbols, the result must be an int,
+        where 0, 1, 2 correspond to n, m, y, respectively.
+
+        For string, int and hex symbols, the result must be either int 0,
+        or a string.
+        In case of hex symbols, the string should include the leading "0x".
+
+        @param value:  symbol value (must be normalized/validated)
+        @type  value:  depends on symbol type
+
+        @return: lkconfig value representation
+        @rtype:  C{int} or C{str}
+        """
+        raise NotImplementedError()
+
     def __repr__(self):
         return "{c.__qualname__}<{s.name!s}>".format(c=self.__class__, s=self)
 
