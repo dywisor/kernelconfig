@@ -44,6 +44,9 @@ static PyObject* lkconfig_ExprViewObject_new_from_struct (
     const struct expr* kconfig_expr
 );
 
+static PyObject* lkconfig_SymbolViewObject_new_from_struct (
+    const struct symbol* const sym
+);
 
 /**
  * log function, va_list variant.
