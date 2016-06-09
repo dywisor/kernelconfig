@@ -61,12 +61,12 @@ class ConfigChoices(_choices_abc.AbstractConfigChoices):
         for sym, value in dgraph.iter_update_config():
             cfg_dict[sym] = value
 
-        return cfg_dict
+        return cfg_dict, set(dgraph.decisions)
     # --- end of resolve (...) ---
 
     def commit(self):
-        cfg_dict = self.resolve()
-        self.config.set_config_dict(cfg_dict)
+        cfg_dict, decision_syms = self.resolve()
+        self.config._incorporate_changes(cfg_dict, decision_syms)
     # --- end of commit (...) ---
 
     def get_or_create_decision_for_symbol(self, kconfig_symbol):

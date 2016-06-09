@@ -143,6 +143,9 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         self._config = self.CFG_DICT_CLS()
     # ---
 
+    def prepare(self):
+        pass
+
     def convert_option_to_symbol_name(self, option_name, lenient=True):
         """Converts an option name to a symbol name.
 
@@ -216,7 +219,10 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         return self._kconfig_symbols[sym_key]
     # ---
 
-    def set_config_dict(self, cfg_dict):
+    def _replace_config_dict(self, cfg_dict):
+        self._config = cfg_dict
+
+    def _incorporate_changes(self, cfg_dict, decision_syms):
         """Assign a new config dict to this object.
 
         Unsafe operation, no checks will be performed!
@@ -226,7 +232,7 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
 
         @return: None (implicit)
         """
-        self._config = cfg_dict
+        self._replace_config_dict(cfg_dict)
     # ---
 
     def iter_config(self):
@@ -362,7 +368,7 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         """
         cfg_dict = self.get_new_config_dict(update=update)
         self._read_config_files(cfg_dict, [(infile, filename)])
-        self._config = cfg_dict
+        self._replace_config_dict(cfg_dict)
     # --- end of read_config_file (...) ---
 
     def read_config_files(self, *infiles, update=False):
@@ -371,7 +377,7 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         """
         cfg_dict = self.get_new_config_dict(update=update)
         self._read_config_files(cfg_dict, infiles)
-        self._config = cfg_dict
+        self._replace_config_dict(cfg_dict)
     # --- end of read_config_files (...) ---
 
     def generate_config_lines(self):
@@ -384,6 +390,16 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         for sym, val in self.iter_config():
             yield sym.format_value(val, self.convert_symbol_name_to_option)
     # --- end of generate_config_lines (...) ---
+
+    def _write_config_file(self, outfile, filename=None, **kwargs):
+        self.logger.debug("Writing config file %r", filename or outfile)
+
+        fileio.write_text_file_lines(
+            outfile,
+            self.generate_config_lines(),
+            filename=filename, append_newline=True, **kwargs
+        )
+    # ---
 
     def write_config_file(self, outfile, filename=None, **kwargs):
         """Writes the current configuration to a file.
@@ -398,12 +414,7 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
 
         @return: None (implicit)
         """
-        fileio.write_text_file_lines(
-            outfile,
-            self.generate_config_lines(),
-            append_newline=True,
-            **kwargs
-        )
+        self._write_config_file(outfile, filename=filename, **kwargs)
     # --- end of write_config_file (...) ---
 
     def get_kconfig_symbols(self):
