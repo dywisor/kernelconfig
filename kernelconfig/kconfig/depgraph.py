@@ -93,7 +93,8 @@ class ConfigGraph(loggable.AbstractLoggable):
         self.weak_deps = {}      # <sym> weakly depends on <syms>
         self.dep_order = None
         self.value_nodes = None
-        self.decisions = decisions
+        self.input_decisions = decisions
+        self.decisions = None
         self._prepare(kconfig_symbols, default_config, decisions)
 
     def iter_update_config(self):
@@ -348,8 +349,9 @@ class ConfigGraph(loggable.AbstractLoggable):
     # --- end of _resolve_downwards_propagation (...) ---
 
     def resolve(self):
-        decisions = self._resolve_upwards_propagation(self.decisions)
+        decisions = self._resolve_upwards_propagation(self.input_decisions)
         self._resolve_downwards_propagation(decisions)
+        self.decisions = decisions
 
     def accumulate_solutions(self, sym_group, decisions_at_this_level):
         _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
