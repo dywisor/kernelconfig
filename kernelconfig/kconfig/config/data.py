@@ -4,10 +4,13 @@
 import collections
 import collections.abc
 import re
+import shutil
 
 from ...abc import loggable
 from ...util import fileio
+from ...util import tmpdir
 from .. import symbol
+from .. import lkconfig
 
 __all__ = ["Config", "KernelConfig"]
 
@@ -96,7 +99,7 @@ class ConfigFileReader(loggable.AbstractLoggable):
 # --- end of ConfigFileReader ---
 
 
-class Config(loggable.AbstractLoggable, collections.abc.Mapping):
+class _Config(loggable.AbstractLoggable, collections.abc.Mapping):
     """A kconfig-based configuration.
 
     @cvar CFG_DICT_CLS:  dict type or constructor, for storing config options
@@ -417,7 +420,109 @@ class Config(loggable.AbstractLoggable, collections.abc.Mapping):
         self._write_config_file(outfile, filename=filename, **kwargs)
     # --- end of write_config_file (...) ---
 
-# --- Config ---
+# --- _Config ---
+
+
+class Config(_Config):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._decision_symbols = None
+        self._tmpdir = None
+        self._tmpconfig = None
+        self._tmpconfig_load_required = False
+    # --- end of __init__ (...) ---
+
+    def get_tmpdir(self):
+        tdir = self._tmpdir
+        if tdir is None:
+            self.logger.debug("Creating temporary directory for config files")
+            tdir = tmpdir.Tmpdir(suffix=".kernelconfig")
+            self._tmpdir = tdir
+            self.logger.debug("Temporary directory is %r", tdir.get_filepath())
+        # --
+        return tdir
+    # --- end of get_tmpdir (...) ---
+
+    def _load_tmpconfig_if_needed(self):
+        if self._tmpconfig_load_required:
+            self.logger.debug("Loading temporary oldconfig")
+            cfg_dict = self.get_new_config_dict(update=False)
+            self._read_config_files(cfg_dict, [(self._tmpconfig, None)])
+            self._replace_config_dict(cfg_dict, tmpconfig_invalidate=False)
+            # decision symbols do not accumulate when configuring
+            # multiple times
+            self._decision_symbols = None
+            self._tmpconfig_load_required = False
+        # --
+    # ---
+
+    def prepare(self):
+        self._load_tmpconfig_if_needed()
+    # ---
+
+    def _replace_config_dict(self, cfg_dict, tmpconfig_invalidate=True):
+        if tmpconfig_invalidate:
+            self._tmpconfig = None
+            self._tmpconfig_load_required = False
+        # --
+
+        super()._replace_config_dict(cfg_dict)
+    # ---
+
+    def _incorporate_changes(self, cfg_dict, decision_syms):
+        super()._incorporate_changes(cfg_dict, decision_syms)
+        self._decision_symbols = decision_syms
+        self._write_oldconfig()
+    # ---
+
+    def _write_oldconfig(self):
+        if self._decision_symbols:
+            decisions = {
+                sym.name: sym.get_lkconfig_value_repr(self._config[sym])
+                for sym in self._decision_symbols
+            }
+        else:
+            decisions = {}
+        # --
+
+        tdir = self.get_tmpdir()
+        tmp_inconfig = tdir.get_filepath("inconfig")
+        tmp_outconfig = tdir.get_filepath("outconfig")
+
+        self._write_config_file(tmp_inconfig)
+
+        self.logger.debug("Running oldconfig, writing to %r", tmp_outconfig)
+        lkconfig.oldconfig(
+            tmp_inconfig, tmp_outconfig, decisions,
+            logger=self.get_child_logger("lkconfig.oldconfig")
+        )
+
+        self.logger.debug("Temporary oldconfig file is ready.")
+        self._tmpconfig = tmp_outconfig
+        self._tmpconfig_load_required = True
+    # --- end of _write_oldconfig (...) ---
+
+    def _write_oldconfig_if_needed(self):
+        if self._decision_symbols and not self._tmpconfig:
+            self._write_oldconfig()
+            assert self._tmpconfig
+    # --- end of _write_oldconfig_if_needed (...) ---
+
+    def write_config_file(self, outfile, filename=None, **kwargs):
+        self._write_oldconfig_if_needed()
+
+        if self._tmpconfig:
+            self.logger.debug(
+                "Copying temporary oldconfig file to %r",
+                filename or outfile
+            )
+            shutil.copyfile(self._tmpconfig, outfile)
+        else:
+            self._write_config_file(outfile, filename=filename, **kwargs)
+    # ---
+
+# --- end of Config ---
 
 
 class KernelConfig(Config):
