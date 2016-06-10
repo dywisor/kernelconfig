@@ -28,6 +28,7 @@ distutils.core.setup(
         "kernelconfig.kconfig",
         "kernelconfig.kconfig.abc",
         "kernelconfig.kconfig.config",
+        "kernelconfig.lang",
         "kernelconfig.util",
     ]
 )
