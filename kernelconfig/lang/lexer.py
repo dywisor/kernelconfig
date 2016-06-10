@@ -132,7 +132,8 @@ if __name__ == "__main__":
             l.input(arg)
             while True:
                 tok = l.token()
-                if not tok: break
+                if not tok:
+                    break
                 print(tok)
         # --
     # ---

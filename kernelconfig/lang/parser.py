@@ -12,7 +12,6 @@ else:
 __all__ = ["KernelConfigLangParser"]
 
 
-
 class KernelConfigLangParser(object):
 
     tokens = tuple(lexer.KernelConfigLangLexer.tokens)
