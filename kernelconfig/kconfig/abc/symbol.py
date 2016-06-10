@@ -29,11 +29,6 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
                     May be None.
     @type rev_dep:  C{None} or undef
 
-    and optionally select dependencies
-    @ivar selects:  the symbol's select dependencies ("selects").
-                    May be None.
-    @type selects:  C{None} or undef
-
 
     Additionally, a class-wide variables exists for str-formatting the
     option in case of "is not set" values:
@@ -41,7 +36,7 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
     @type VALUE_NOT_SET_FMT_STR: C{str}
     """
 
-    __slots__ = ["__weakref__", "name", "dir_dep", "rev_dep", "selects"]
+    __slots__ = ["__weakref__", "name", "dir_dep", "rev_dep"]
 
     VALUE_NOT_SET_FMT_STR = "# {name} is not set"
 
@@ -106,12 +101,11 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
         raise NotImplementedError()
     # ---
 
-    def __init__(self, name, dir_dep=None, rev_dep=None, selects=None):
+    def __init__(self, name, dir_dep=None, rev_dep=None):
         super().__init__()
         self.name = name
         self.dir_dep = dir_dep
         self.rev_dep = rev_dep
-        self.selects = selects
 
     def __hash__(self):
         return hash((self.__class__, self.name))
