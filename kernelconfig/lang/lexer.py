@@ -18,13 +18,23 @@ class KernelConfigLangLexer(object):
 
     reserved = {
         "disable":           "OP_DISABLE",
+        "n":                 "OP_DISABLE",
+
         "module":            "OP_MODULE",
-        "builtin-or-module": "OP_BUILTIN_OR_MODULE",
+        "m":                 "OP_MODULE",
+
         "builtin":           "OP_BUILTIN",
+        "y":                 "OP_BUILTIN",
+
+        "builtin-or-module": "OP_BUILTIN_OR_MODULE",
+        "ym":                "OP_BUILTIN_OR_MODULE",
+
         "set":               "OP_SET_TO",
         "append":            "OP_APPEND",
         "add":               "OP_ADD",
+
         "include":           "OP_INCLUDE",
+
         "if":                "KW_IF",
         "unless":            "KW_UNLESS",
     }
@@ -32,7 +42,7 @@ class KernelConfigLangLexer(object):
     tokens = [
         "STR",
         "CMD_END",
-    ] + list(reserved.values())
+    ] + list(set(reserved.values()))
 
     t_ignore = ' \t'
 
