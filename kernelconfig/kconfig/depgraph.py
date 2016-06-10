@@ -454,7 +454,9 @@ class ConfigGraph(loggable.AbstractLoggable):
                             # --
                         # --
                     else:
-                        raise AssertionError("not resolved or no value candidates")
+                        raise AssertionError(
+                            "not resolved or no value candidates"
+                        )
                     # -- end for
                 # -- end if already set
             # -- end if sym decision
