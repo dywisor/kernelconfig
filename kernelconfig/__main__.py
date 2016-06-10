@@ -7,6 +7,7 @@ import kernelconfig.kernel.info
 import kernelconfig.kconfig.symbolgen
 import kernelconfig.kconfig.config.data
 import kernelconfig.kconfig.config.choices
+import kernelconfig.lang.interpreter
 
 
 def setup_console_logging(logger, outstream=None, log_level=logging.DEBUG):
@@ -55,10 +56,17 @@ if __name__ == "__main__":
         arg_config.config or os.path.join(kinfo.srctree, ".config")
     )
 
-    with kernelconfig.kconfig.config.choices.ConfigChoices(cfg) as cc:
-        cc.option_module("CONFIG_E1000E")
-        cc.option_builtin_or_module("DVB_DDBRIDGE")
-        cc.option_append("CONFIG_CMDLINE", "panic=10")
-    # -- end with
+    cc = kernelconfig.kconfig.config.choices.ConfigChoices(cfg)
+
+    cl = cc.create_loggable(
+        kernelconfig.lang.interpreter.KernelConfigLangInterpreter, cc
+    )
+    cl.process_str("ym CONFIG_E1000E")
+
+    cc.option_module("CONFIG_E1000E")
+    cc.option_builtin_or_module("DVB_DDBRIDGE")
+    cc.option_append("CONFIG_CMDLINE", "panic=10")
+
+    cc.commit()
 
     cfg.write_config_file(kinfo.get_filepath("outconfig"))
