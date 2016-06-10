@@ -6,7 +6,6 @@ import collections.abc
 import operator
 import itertools
 
-from ..abc import loggable
 from . import symbol
 
 
