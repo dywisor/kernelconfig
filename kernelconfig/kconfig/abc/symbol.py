@@ -54,6 +54,14 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
 
     @classmethod
     def normalize_and_validate_set(cls, value_set):
+        """Converts a sequence of values to their normalized form.
+
+        @param value_set:  iterable containing hashable values
+        @type  value_set:  C{set}
+
+        @return:  2-tuple (bad values, normalized values)
+        @rtype:   2-tuple (C{list}, C{set})
+        """
         badvals = []
         normval_set = set()
         for value in value_set:
@@ -70,6 +78,19 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
 
     @abc.abstractmethod
     def evaluate_dir_dep(self, symbol_value_map):
+        """
+        Given a symbol => value map,
+        calculates the boolean value of the dir_dep expression of this symbol.
+
+        If the symbol has no dir_deps, returns tristate "y".
+        Reinterprets the expression value based on the symbol type.
+
+        @param symbol_value_map:  (incomplete) symbol to value mapping
+        @type  symbol_value_map:  C{dict} :: L{AbstractKconfigSymbol} => _
+
+        @return: tristate value
+        @rtype:  L{TristateKconfigSymbolValue}
+        """
         raise NotImplementedError()
 
     def format_value_is_not_set(self, name_convert=None):
