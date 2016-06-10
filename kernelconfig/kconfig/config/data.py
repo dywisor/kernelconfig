@@ -479,7 +479,7 @@ class Config(_Config):
     def _write_oldconfig(self):
         if self._decision_symbols:
             decisions = {
-                sym.name: sym.get_value_repr(self._config[sym])
+                sym.name: sym.get_lkconfig_value_repr(self._config[sym])
                 for sym in self._decision_symbols
             }
         else:
