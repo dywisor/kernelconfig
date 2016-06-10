@@ -25,6 +25,7 @@ LN = ln
 LNS = $(LN) -s
 
 X_PEP8 = pep8
+PEP8_EXCLUDE = parsetab.py
 X_PYFLAKES = pyflakes
 X_GREP = grep
 GREP_CHECK_OPTS = -n --color
@@ -130,7 +131,7 @@ check:
 	$(call f_grep_check_recursive,[kK]C[oO][nN][fF][iI][gG])
 # and the usual suspects
 # setup.py does not need to be pep8-compliant
-	$(X_PEP8) $(_PYMOD_DIRS)
+	$(X_PEP8) $(_PYMOD_DIRS) $(foreach x,$(PEP8_EXCLUDE),--exclude '$(x)')
 	$(X_PYFLAKES) $(_SETUP_PY) $(_PYMOD_DIRS)
 
 
