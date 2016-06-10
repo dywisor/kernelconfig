@@ -420,9 +420,6 @@ class _Config(loggable.AbstractLoggable, collections.abc.Mapping):
         self._write_config_file(outfile, filename=filename, **kwargs)
     # --- end of write_config_file (...) ---
 
-    def get_kconfig_symbols(self):
-        return self._kconfig_symbols
-
 # --- _Config ---
 
 

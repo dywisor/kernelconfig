@@ -4,7 +4,6 @@
 import enum
 import itertools
 
-from .. import tarjan
 import toposort
 
 from ..abc import loggable
@@ -87,15 +86,14 @@ class ConfigGraph(loggable.AbstractLoggable):
     EXPR_VALUES_Y = symbolexpr.Expr.EXPR_VALUES_Y
     EXPR_VALUES_YM = symbolexpr.Expr.EXPR_VALUES_YM
 
-    def __init__(self, kconfig_symbols, default_config, decisions, **kwargs):
+    def __init__(self, default_config, decisions, **kwargs):
         super().__init__(**kwargs)
         self.dep_graph = {}
-        self.weak_deps = {}      # <sym> weakly depends on <syms>
         self.dep_order = None
         self.value_nodes = None
         self.input_decisions = decisions
         self.decisions = None
-        self._prepare(kconfig_symbols, default_config, decisions)
+        self._prepare(default_config, decisions)
 
     def iter_update_config(self):
         # sort output
@@ -120,7 +118,6 @@ class ConfigGraph(loggable.AbstractLoggable):
     def expand_graph(self, kconfig_symbols):
         empty_set = set()
         dep_graph = self.dep_graph  # ref
-        weak_deps = self.weak_deps  # ref
 
         syms_in_need_of_expansion = set(kconfig_symbols)
         while syms_in_need_of_expansion:
@@ -128,101 +125,18 @@ class ConfigGraph(loggable.AbstractLoggable):
             for sym in syms_in_need_of_expansion:
                 if sym.dir_dep is not None:
                     sym_deps = sym.dir_dep.get_dependent_symbols()
-                else:
-                    sym_deps = empty_set  # ref
 
-                if sym.selects is not None:
-                    sym_sels = sym.selects.get_dependent_symbols()
-                else:
-                    sym_sels = empty_set  # ref
-
-
-                if sym_deps or sym_sels:
-                    dep_graph[sym] = (sym_deps | sym_sels)
+                    dep_graph[sym] = sym_deps
                     syms_next.update(sym_deps)
-
-                    if sym_sels:
-                        weak_deps[sym] = sym_sels - sym_deps
-                        syms_next.update(sym_sels)
-                    else:
-                        weak_deps[sym] = empty_set  # ref
 
                 else:
                     dep_graph[sym] = empty_set  # ref
-                    weak_deps[sym] = empty_set  # ref
                 # --
             # -- end for
 
             syms_in_need_of_expansion = syms_next.difference(dep_graph)
         # -- end while
     # --- end of expand_graph (...) ---
-
-    def _break_dep_graph_cycles(self):
-        dep_graph_old = self.dep_graph
-        dep_graph_new = {}
-        weak_deps = self.weak_deps
-
-        def find_unbreak_cycle_symbol(cycle):
-            # find a symbol with no hard dependencies
-            for sym in cycle:
-                sym_deps = dep_graph_old[sym]
-                sym_weakdeps = weak_deps[sym]
-
-                has_no_hard_deps = True
-                for conflicting_sym in cycle:
-                    if conflicting_sym is sym:
-                        pass
-
-                    elif conflicting_sym in sym_weakdeps:
-                        pass
-
-                    elif conflicting_sym in sym_deps:
-                        has_no_hard_deps = False
-                        break
-                # --
-
-                if has_no_hard_deps:
-                    return sym
-            # -- end for
-
-            raise NotImplementedError("symbol dep cycle", cycle)
-        # ---
-
-        # this could also be used for toposorting the dep graph,
-        #  but resolve() operates on symbol groups, not single symbols
-        for cycle_candidate in (
-            tarjan.strongly_connected_components(dep_graph_old)
-        ):
-            if len(cycle_candidate) > 1:
-                cycle = set(cycle_candidate)
-
-                while cycle:
-                    # find a symbol that only weakly depends
-                    # on the other candidates,
-                    # remove it
-
-                    unbreak_sym = find_unbreak_cycle_symbol(cycle)
-                    cycle.remove(unbreak_sym)
-
-                    assert unbreak_sym not in dep_graph_new
-                    dep_graph_new[unbreak_sym] = (
-                        dep_graph_old[unbreak_sym] - cycle
-                    )
-                # -- end while
-
-            elif cycle_candidate:
-                assert cycle_candidate[0] not in dep_graph_new
-                dep_graph_new[cycle_candidate[0]] = (
-                    dep_graph_old[cycle_candidate[0]]
-                )
-
-            else:
-                raise AssertionError("empty components")
-            # --
-        # --
-
-        self.dep_graph = dep_graph_new
-    # --- end of _break_dep_graph_cycles (...) ---
 
     def _create_deporder(self):
         return list(toposort.toposort(self.dep_graph))
@@ -250,9 +164,9 @@ class ConfigGraph(loggable.AbstractLoggable):
         return {sym: create_node(sym) for sym in self.dep_graph}
     # ---
 
-    def _prepare(self, kconfig_symbols, default_config, decision_symbols):
-        self.expand_graph(kconfig_symbols)
-        self._break_dep_graph_cycles()
+    def _prepare(self, default_config, decision_symbols):
+        self.expand_graph(default_config)
+        self.expand_graph(decision_symbols)
         self.dep_order = self._create_deporder()
         self.value_nodes = self._create_value_nodes(default_config)
     # ---
@@ -286,21 +200,6 @@ class ConfigGraph(loggable.AbstractLoggable):
                     first_grp = False
                 # --
 
-                upward_decisions = {
-                    sym: val
-                    for sym, val in decisions_to_expand.items()
-                    if sym not in sym_group
-                }
-
-                modified_decisions_at_this_level, decisions_to_expand = \
-                    self.expand_decision_level_upward(
-                        k, sym_group,
-                        upward_decisions, decisions_at_this_level
-                    )
-
-                if modified_decisions_at_this_level is not None:
-                    decisions_at_this_level = modified_decisions_at_this_level
-
                 # __debug__ FIXME - just use update()
                 for sym, val in decisions_at_this_level.items():
                     if sym in decisions:
@@ -308,6 +207,16 @@ class ConfigGraph(loggable.AbstractLoggable):
                     # --
                     decisions[sym] = val
                 # --
+
+                upward_decisions = {
+                    sym: val
+                    for sym, val in decisions_to_expand.items()
+                    if sym not in sym_group
+                }
+
+                decisions_to_expand = self.expand_decision_level_upward(
+                    k, sym_group, upward_decisions, decisions_at_this_level
+                )
             # --
         else:
             self.logger.debug("Stopping upwards propagation at top level")
@@ -390,67 +299,34 @@ class ConfigGraph(loggable.AbstractLoggable):
             if sym_value is _TristateKconfigSymbolValue.n:
                 pass
 
+            elif sym.dir_dep is None:
+                pass
+
             else:
-                if sym.dir_dep is not None:
-                    if symbol.is_tristate_symbol(sym):
-                        if sym_value is _TristateKconfigSymbolValue.y:
-                            want_expr_values = want_expr_y
-                        else:
-                            want_expr_values = want_expr_ym
-
+                if symbol.is_tristate_symbol(sym):
+                    if sym_value is _TristateKconfigSymbolValue.y:
+                        want_expr_values = want_expr_y
                     else:
-                        # also: sym_value is tristate "m"
                         want_expr_values = want_expr_ym
-                    # --
 
-                    dep_solvable, dep_solutions = sym.dir_dep.find_solution(
-                        want_expr_values
-                    )
-
-                    if not dep_solvable:
-                        raise ConfigUnresolvableError("symbol deps", sym.name)
                 else:
-                    dep_solvable = True
-                    dep_solutions = True
+                    # also: sym_value is tristate "m"
+                    want_expr_values = want_expr_ym
                 # --
 
-                if sym.selects is not None:
-                    sel_solvable, sel_solutions = sym.selects.find_solution(
-                        want_expr_ym
-                    )
+                dep_solvable, dep_solutions = sym.dir_dep.find_solution(
+                    want_expr_values
+                )
 
-                    if not sel_solvable:
-                        raise ConfigUnresolvableError(
-                            "symbol selects", sym.name
-                        )
+                if not dep_solvable:
+                    raise ConfigUnresolvableError("symbol deps", sym.name)
+
+                if accumulated_solutions is True:
+                    accumulated_solutions = dep_solutions
                 else:
-                    sel_solvable = True
-                    sel_solutions = True
-                # --
-
-
-                if dep_solutions is True:
-                    solutions = sel_solutions
-                elif sel_solutions is True:
-                    solutions = dep_solutions
-                else:
-                    solutions = _merge_solutions(
-                        dep_solutions, sel_solutions
-                    )
-                    if not solutions:
-                        raise ConfigUnresolvableError(
-                            "symbol deps/selects", sym.name
-                        )
-                    # --
-                # --
-
-                if solutions is True:
-                    pass
-                elif accumulated_solutions is True:
-                    accumulated_solutions = solutions
-                else:
+                    assert dep_solutions is not True
                     accumulated_solutions_next = _merge_solutions(
-                        accumulated_solutions, solutions
+                        accumulated_solutions, dep_solutions
                     )
                     if not accumulated_solutions_next:
                         raise ConfigUnresolvableError(
@@ -605,13 +481,9 @@ class ConfigGraph(loggable.AbstractLoggable):
         elif solutions is True:
             # no additional decisions
             upward_solution = {}
-            modified_decisions_at_this_level = decisions_at_this_level
 
         else:
-            modified_decisions_at_this_level, upward_solution = \
-                self.pick_solution(
-                    decisions_at_this_level, upward_decisions, solutions
-                )
+            upward_solution = self.pick_solution(upward_decisions, solutions)
 
             if not upward_solution and upward_decisions:
                 raise AssertionError(
@@ -621,12 +493,10 @@ class ConfigGraph(loggable.AbstractLoggable):
             # --
         # --
 
-        return (modified_decisions_at_this_level, upward_solution)
+        return upward_solution
     # --- end of expand_decision_level_upward (...) ---
 
-    def pick_solution(
-        self, decisions_at_this_level, upward_decisions, solutions
-    ):
+    def pick_solution(self, upward_decisions, solutions):
         vset_no = {symbol.TristateKconfigSymbolValue.n, }
 
         def create_decisions(solution):
@@ -635,7 +505,6 @@ class ConfigGraph(loggable.AbstractLoggable):
             #
             #  lower weight means less impact (at the upper level)
             #
-            dec_here = None
             dec = upward_decisions.copy()
             change_count = 0
 
@@ -643,31 +512,7 @@ class ConfigGraph(loggable.AbstractLoggable):
                 sym_value_node = self.value_nodes[sym]
 
                 # is there an existing decision for sym?
-                # - and it affects this level?
-                if sym in decisions_at_this_level:
-                    if dec_here is None:
-                        dec_here = {}
-
-                    dec_values_before = (
-                        dec_here[sym] if sym in dec_here
-                        else decisions_at_this_level[sym]
-                    )
-                    dec_values = dec_values_before & values
-                    if not dec_values:
-                        self.logger.debug(
-                            (
-                                'Discarding decision-conflicting selects '
-                                'solution %r, conflicts with %s (%r)'
-                            ), solution, sym.name, dec_values_before
-                        )
-                        return (None, None, None)
-
-                    elif dec_values_before - dec_values:
-                        dec_here[sym] = dec_values
-                    # --
-
-                # - and it affects an upper level?
-                elif sym in dec:
+                if sym in dec:
                     # must be a further restriction
                     dec_values = dec[sym] & values
                     if not dec_values:
@@ -677,7 +522,7 @@ class ConfigGraph(loggable.AbstractLoggable):
                                 ', conflicts with %s (%r)'
                             ), solution, sym.name, dec[sym]
                         )
-                        return (None, None, None)
+                        return (None, None)
                     # --
 
                     dec[sym] = dec_values
@@ -700,7 +545,7 @@ class ConfigGraph(loggable.AbstractLoggable):
                         "Discarding decision-conflicting solution %r",
                         solution
                     )
-                    return (None, None, None)
+                    return (None, None)
 
                 else:
                     dec_values = values - vset_no
@@ -709,7 +554,7 @@ class ConfigGraph(loggable.AbstractLoggable):
                         self.logger.debug(
                             "Discarding n decision %r", solution
                         )
-                        return (None, None, None)
+                        return (None, None)
                     # --
 
                     dec[sym] = dec_values
@@ -717,7 +562,7 @@ class ConfigGraph(loggable.AbstractLoggable):
                 # --
             # -- end for
 
-            return (change_count, dec_here, dec)
+            return (change_count, dec)
         # --- end of create_decisions (...) ---
 
         decision_solutions = []
@@ -728,7 +573,7 @@ class ConfigGraph(loggable.AbstractLoggable):
         # -- end for solutions
 
         if not decision_solutions:
-            return (None, None)
+            return None
         else:
             # pick a solution
             # possible measurements:
@@ -741,7 +586,7 @@ class ConfigGraph(loggable.AbstractLoggable):
             #
             #  * the level at which recursion needs to start
             #
-            return sorted(decision_solutions, key=lambda xv: xv[0])[0][1:]
+            return sorted(decision_solutions, key=lambda xv: xv[0])[0][1]
     # --- end of pick_solution (...) ---
 
 # --- end of ConfigGraph ---
