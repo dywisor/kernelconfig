@@ -2,7 +2,6 @@
 # -*- coding: utf-8 -*-
 
 import enum
-import itertools
 
 import toposort
 
