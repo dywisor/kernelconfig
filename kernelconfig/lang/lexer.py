@@ -7,6 +7,7 @@ import ply.lex
 
 __all__ = ["KernelConfigLangLexer"]
 
+
 class KernelConfigLangLexError(SyntaxError):
 
     def __init__(self, lineno, lexpos, message):

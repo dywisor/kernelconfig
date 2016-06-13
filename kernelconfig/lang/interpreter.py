@@ -6,10 +6,21 @@ import collections
 import os
 
 from ..abc import loggable
+from . import cond
 from . import parser
 
 
 __all__ = ["KernelConfigLangInterpreter"]
+
+
+class KernelConfigLangInterpreterError(Exception):
+    pass
+
+
+class KernelConfigLangInterpreterCondOpNotSupported(
+    KernelConfigLangInterpreterError
+):
+    pass
 
 
 class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
@@ -22,11 +33,44 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
     @type _parser:            L{KernelConfigLangParser}
     """
 
-    def __init__(self, **kwargs):
+    DEFAULT_COND_RESULT_BUFFER_SIZE = 1
+
+    def __init__(self, cond_result_buffer_size=True, **kwargs):
         super().__init__(**kwargs)
         self._file_input_queue = collections.deque()
-        self._parser = parser.KernelConfigLangParser()
+        self._parser = self.create_loggable(
+            parser.KernelConfigLangParser, logger_name="Parser"
+        )
+
+        if cond_result_buffer_size is True:
+            cond_result_buffer_size = self.DEFAULT_COND_RESULT_BUFFER_SIZE
+
+        self._conditional_result_buffer = collections.deque(
+            maxlen=cond_result_buffer_size
+        )
+
     # --- end of __init__ (...) ---
+
+    def peek_cond_result(self):
+        """Returns the value of the most recent conditional expression.
+
+        @return:  True or False
+        @rtype:   C{bool}
+        """
+        return self._conditional_result_buffer[-1]
+    # ---
+
+    def push_cond_result(self, cond_value):
+        """Appends a value to the conditional expression result buffer.
+
+        @param cond_value:
+        @type  cond_value:  C{bool}
+
+        @return:  cond_value
+        """
+        self._conditional_result_buffer.append(cond_value)
+        return cond_value
+    # ---
 
     def get_parser(self):
         """
@@ -50,6 +94,15 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
         """
         self._file_input_queue.clear()
     # --- end of _clear_file_input_queue (...) ---
+
+    def soft_reset(self):
+        self._conditional_result_buffer.clear()
+    # ---
+
+    def reset(self):
+        self.soft_reset()
+        self._clear_file_input_queue()
+    # ---
 
     def assert_empty_file_input_queue(self):
         """
@@ -78,6 +131,7 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
 
         @return:  None (implicit)
         """
+        self.logger.debug("Adding %r to the input file queue", infile)
         self._file_input_queue.append(infile)
     # --- end of add_input_file (...) ---
 
@@ -142,6 +196,130 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
         raise NotImplementedError()
     # --- end of process_command (...) ---
 
+    def evaluate_conditional(self, conditional, context, source=None):
+        """Evaluates a conditional expression.
+
+        @param   conditional:  the "conditional"
+                               a 2-tuple (cond value (un)negated?, cond expr)
+                               where cond_expr is a nested list structure
+                               where each list contains 3 elements
+                               cond_type, cond_func, cond_args
+                               (and the recursion may appear in cond_args).
+
+        @type    conditional:  2-tuple (C{bool}, C{list})
+
+        @param   context:      dict-like structure that provides functions
+                               for context-sensitive conditions
+        @type    context:      dict-like :: KernelConfigOp -> callable c,
+                               c :: cond_func, cond_args -> 2-tuple of C{bool}
+
+
+        @keyword source:       additional information about the conditional's
+                               origin. May be and defaults to None.
+        @type    source:       undef or C{None}
+
+        @return:               2-tuple (is dynamic, value)
+                               a conditional is dynamic if any condition
+                               uses implicit args (e.g. KW_PLACEHOLDER).
+        @rtype:                2-tuple (C{bool}, C{bool})
+        """
+        def eval_subret(cond_exprv):
+            sub_retv = []
+            sub_retv_dynamic = False
+            for subcexpr in cond_exprv:
+                sub_dynamic, sub_ret = dfs_inner(subcexpr)
+                if sub_dynamic:
+                    sub_retv_dynamic = True
+                sub_retv.append(sub_ret)
+            # --
+
+            return (sub_retv_dynamic, sub_retv)
+        # ---
+
+        def dfs_inner(cexpr, *, _KernelConfigOp=parser.KernelConfigOp):
+            nonlocal context
+            nonlocal source
+
+            cond_type, cond_func, cond_args = cexpr
+
+            if cond_type in context:
+                return context[cond_type](cond_func, cond_args)
+
+            elif cond_type is _KernelConfigOp.condop_const:
+                if cond_args is True or cond_args is False:
+                    return (False, cond_args)
+
+                elif cond_args is None:
+                    try:
+                        # whether cond_result was dynamic or not,
+                        # it this point it is considered const
+                        return (False, self.peek_cond_result())
+                    except IndexError:
+                        self.logger.warning(
+                            'Referencing previous conditional,'
+                            ' but there is none. Assuming true.'
+                        )
+                        return (False, True)
+
+                # elif isinstance(cond_args, int):  previous cond by index
+
+                else:
+                    self.logger.error(
+                        "Unknown const condition for %s context: %r",
+                        (
+                            context.get_context_desc()
+                            if hasattr(context, "get_context_desc")
+                            else "<unknown>"
+                        ),
+                        cond_args
+                    )
+
+                    raise KernelConfigLangInterpreterCondOpNotSupported(
+                        "unknown const cond expr: %r" % cond_args
+                    )
+                # --
+
+            elif cond_type is _KernelConfigOp.condop_operator_star_func:
+                subdyn, subret = eval_subret(cond_args)
+                return (subdyn, cond_func(*subret))
+
+            elif cond_type is _KernelConfigOp.condop_operator_func:
+                subdyn, subret = eval_subret(cond_args)
+                return (subdyn, cond_func(subret))
+
+            else:
+                self.logger.error(
+                    "Unknown condition for %s context: %r (%r)",
+                    (
+                        context.get_context_desc()
+                        if hasattr(context, "get_context_desc")
+                        else "<unknown>"
+                    ),
+                    getattr(cond_type, "name", cond_type),
+                    cond_args
+                )
+
+                raise KernelConfigLangInterpreterCondOpNotSupported(
+                    "unknown condition %r: %r" % (cond_type, cond_args)
+                )
+        # --- end of evaluate_conditional (...) ---
+
+        if conditional is None:
+            cond_dynamic = False
+            cond_result = True
+            positive_cond = True
+        else:
+            positive_cond, cond_expr = conditional
+            cond_dynamic, cond_result = dfs_inner(cond_expr)
+        # --
+
+        self.push_cond_result(cond_result)
+        if positive_cond:
+            return (cond_dynamic, cond_result)
+        else:
+            return (cond_dynamic, not cond_result)
+    # --- end of evaluate_conditional (...) ---
+
     def process_structured_command(self, structured_command):
         """Splits a structured command into its command and conditional parts
         and calls process_command().
@@ -179,6 +357,9 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
         @return:  True or None if successful, False if not
         @rtype:   C{bool} or C{None}
         """
+        if cmdlist is None:
+            return False
+
         for cmdv in cmdlist:
             ret = self.process_structured_command(cmdv)
             if ret is not None and not ret:
@@ -286,7 +467,7 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
         """
         cmdlist = self.get_parser().parse(text)
         if cmdlist is None:
-            raise NotImplementedError("error while loading str", text)
+            self.logger.error("Error while parsing str")
 
         return cmdlist
     # --- end of _parse_str (...) ---
@@ -306,7 +487,8 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
         for infile in infiles:
             cmdlist = p.parse_file(infile)
             if cmdlist is None:
-                raise NotImplementedError("error while loading file", infile)
+                self.logger.error("Error while parsing file %r", infile)
+                return None
 
             combined_cmdlist.extend(cmdlist)
         # --
@@ -324,6 +506,8 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         self.config_choices = None
         self._choice_op_dispatchers = None
         self._choice_str_op_dispatchers = None
+        self._config_option_cond_context = None
+        self._include_file_cond_context = cond.IncludeFileConditionContext()
         self.bind_config_choices(config_choices)
 
     def bind_config_choices(self, config_choices):
@@ -334,6 +518,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         if config_choices is None:
             self._choice_op_dispatchers = {}
             self._choice_str_op_dispatchers = {}
+            self._config_option_cond_context = None
 
         else:
             self._choice_op_dispatchers = {
@@ -350,6 +535,10 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 _KernelConfigOp.op_append: config_choices.option_append,
                 _KernelConfigOp.op_add: config_choices.option_add
             }
+
+            self._config_option_cond_context = (
+                cond.ConfigOptionConditionContext(config_choices)
+            )
         # ---
     # ---
 
@@ -361,17 +550,26 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
     def process_command(self, cmdv, conditional):
         _KernelConfigOp = parser.KernelConfigOp
 
-        if conditional is not None:
-            self.logger.error(
-                "DROPPED condition, assuming true: %r", conditional
-            )
-        # --
-
         cmd_arg = cmdv[0]
 
         if cmd_arg is _KernelConfigOp.op_include:
-            include_file = self.locate_include_file(cmdv[1])
-            if not include_file:
+            include_file = self.lookup_include_file(cmdv[1])
+            try:
+                cond_dynamic, cond_eval = self.evaluate_conditional(
+                    conditional,
+                    self._include_file_cond_context.bind(include_file)
+                )
+            except KernelConfigLangInterpreterCondOpNotSupported:
+                return False
+
+            if not cond_eval:
+                self.logger.debug(
+                    "Include directive disabled by unmet conditions: %r",
+                    include_file or cmdv[1]
+                )
+                return True
+
+            elif not include_file:
                 self.logger.error(
                     "include file %s does not exist", cmdv[1]
                 )
@@ -385,18 +583,61 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
             # dispatcher X options
             dispatcher = self._choice_op_dispatchers[cmd_arg]
 
+            # When processing multiple options,
+            # try to reuse the conditional part.
+            # This is not possible if it contains "placeholder" conditions
+            # such as a plain "exists" condition.
+            cached_cond = None
             for option in cmdv[1]:
-                if not dispatcher(option):
+                if cached_cond is None:
+                    try:
+                        cond_dynamic, cond_eval = self.evaluate_conditional(
+                            conditional,
+                            self._config_option_cond_context.bind(option)
+                        )
+                    except KernelConfigLangInterpreterCondOpNotSupported:
+                        return False
+
+                    if not cond_dynamic:
+                        cached_cond = cond_eval
+                    # --
+
+                else:
+                    # FIXME: push one cond_eval per directive,
+                    #         and not one cond_eval per option
+                    self.push_cond_result(cached_cond)
+                    cond_eval = cached_cond
+                # --
+
+                if not cond_eval:
+                    pass
+
+                elif not dispatcher(option):
                     return False
+            # -- end for
 
             return True
 
         elif cmd_arg in self._choice_str_op_dispatchers:
             # dispatcher X option X value
             dispatcher = self._choice_str_op_dispatchers[cmd_arg]
-            return dispatcher(cmdv[1], cmdv[2])
+            option = cmdv[1]
+
+            try:
+                cond_dynamic, cond_eval = self.evaluate_conditional(
+                    conditional,
+                    self._config_option_cond_context.bind(option)
+                )
+            except KernelConfigLangInterpreterCondOpNotSupported:
+                return False
+
+            if not cond_eval:
+                return True
+            else:
+                return dispatcher(option, cmdv[2])
 
         else:
+            self.logger.error("Unknown command %r", cmd_arg)
             raise NotImplementedError("unknown cmd_arg", cmd_arg)
     # --- end of process_command (...) ---
 

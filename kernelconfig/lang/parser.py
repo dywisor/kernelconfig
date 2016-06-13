@@ -96,7 +96,6 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
         # --
         return [cond_type, cond_func, cond_args]
 
-
     def p_lang(self, p):
         '''lang : command_list'''
         p[0] = p[1]
