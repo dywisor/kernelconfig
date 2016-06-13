@@ -7,6 +7,20 @@ import ply.lex
 
 __all__ = ["KernelConfigLangLexer"]
 
+class KernelConfigLangLexError(SyntaxError):
+
+    def __init__(self, lineno, lexpos, message):
+        self.lexpos = lexpos
+        self.lineno = lineno
+        super().__init__(message)
+# ---
+
+
+class KernelConfigLangLexInvalidCharError(KernelConfigLangLexError):
+    def __init__(self, lineno, lexpos, invalid_char):
+        super().__init__(lineno, lexpos, "invalid char %r" % invalid_char)
+# ---
+
 
 class KernelConfigLangLexer(object):
     """
@@ -108,7 +122,9 @@ class KernelConfigLangLexer(object):
         return self.emit_reset_cmd_end(t)
 
     def t_error(self, t):
-        raise SyntaxError((t.lexer.lineno, t.value[0]))
+        raise KernelConfigLangLexInvalidCharError(
+            t.lineno, t.lexpos, t.value[0]
+        )
 
     def __init__(self):
         super().__init__()
