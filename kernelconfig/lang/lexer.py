@@ -64,15 +64,45 @@ class KernelConfigLangLexer(object):
 
     @classmethod
     def unescape_quoted_str(cls, s):
+        """This method replaces escape sequences in a str with their
+        unescaped value.
+
+        @param s:  input str
+        @type  s:  C{str}
+
+        @return:   output str
+        @rtype:    C{str}
+        """
         return cls.regexp_escape_seq.sub(r'\1', s[1:-1])
 
     @classmethod
     def unquote_tok(cls, t):
+        """
+        This method unquotes the value of a token and sets its type to "STR".
+
+        @param t:  token
+        @type  t:  LexToken
+
+        @return:   input token, modified
+        @rtype:    LexToken
+        """
         t.value = cls.unescape_quoted_str(t.value)
         t.type = "STR"
         return t
 
     def emit_cmd_end(self, t):
+        """Changes the input token to a CMD_END token,
+        and suppresses repeated tokens of this type.
+
+        Token methods ("t_") that produce such a token should wrap their
+        return value with a call to this method.
+
+        @param t:  token
+        @type  t:  LexToken
+
+        @return:   input token, modified
+        @rtype:    LexToken or C{None}
+        """
         if self.last_tok_was_cmd_sep:
             return None
         else:
@@ -83,6 +113,19 @@ class KernelConfigLangLexer(object):
     # ---
 
     def emit_reset_cmd_end(self, t):
+        """
+        Resets the "suppress repeated CMD_END" state var
+        and returns the input token.
+
+        Token methods ("t_") that produce a not-None, not-CMD_END token
+        should wrap their return value with a call to this method.
+
+        @param t:  token
+        @type  t:  LexToken
+
+        @return:   input token, unmodified
+        @rtype:    LexToken
+        """
         self.last_tok_was_cmd_sep = False
         return t
 
