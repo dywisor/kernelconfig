@@ -51,12 +51,45 @@ class KernelConfigLangLexer(object):
 
         "if":                "KW_IF",
         "unless":            "KW_UNLESS",
+
+        "exist":             "KW_EXISTS",
+        "exists":            "KW_EXISTS",
+        "hardware-match":    "KW_HWMATCH",
+        "hw":                "KW_HWMATCH",
+
+        "true":              "KW_TRUE",
+        "false":             "KW_FALSE",
+
+        # '!=':                "NE",
+        # '>=':                "GE",
+        # '<=':                "LE",
+        # '>':                 "GT",
+        # '<':                 "LT",
+        # '==':                "EQ_CMP",
+        '=':                 "EQ",
+        ':=':                "COL_EQ",
+        '+=':                "PLUS_EQ",
+        '|=':                "BITOR_EQ",
+
+        '&&':                "AND",
+        "and":               "AND",
+        '||':                "OR",
+        "or":                "OR",
+        '!':                 "NOT",
+        "not":               "NOT",
+
+        "_":                 "KW_PLACEHOLDER"
     }
 
-    tokens = [
-        "STR",
-        "CMD_END",
-    ] + list(set(reserved.values()))
+    tokens = (
+        [
+            "STR",
+            "CMD_END",
+            "LPAREN",
+            "RPAREN",
+        ]
+        + list(set(reserved.values()))
+    )
 
     t_ignore = ' \t'
 
@@ -150,6 +183,30 @@ class KernelConfigLangLexer(object):
     def t_SQSTR(self, t):
         r"'([\\].|[^'\\])*'"
         return self.emit_reset_cmd_end(self.unquote_tok(t))
+
+    def t_LPAREN(self, t):
+        r'\('
+        return self.emit_reset_cmd_end(t)
+
+    def t_RPAREN(self, t):
+        r'\)'
+        return self.emit_reset_cmd_end(t)
+
+    def t_op(self, t):
+        r'[\|\+\:][\=]?'
+        # r'[\<\>\=\!\|\+\:][\=]?'   # NE, GE, LE, GT, LT, EQ_CMP
+        t.type = self.reserved[t.value]
+        return self.emit_reset_cmd_end(t)
+
+    def t_op_and(self, t):
+        r'\&\&'
+        t.type = self.reserved[t.value]
+        return self.emit_reset_cmd_end(t)
+
+    def t_op_or(self, t):
+        r'\|\|'
+        t.type = self.reserved[t.value]
+        return self.emit_reset_cmd_end(t)
 
     def t_STR(self, t):
         r'[a-zA-Z0-9\_\-\+\.\/]+'
