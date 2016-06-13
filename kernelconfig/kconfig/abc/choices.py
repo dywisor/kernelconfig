@@ -268,6 +268,46 @@ class AbstractConfigChoices(loggable.AbstractLoggable):
         """
         return config_option.add(value, source=source)
 
+    @abc.abstractmethod
+    def has_option(self, config_option):
+        """Checks whether a config option with the given name exists.
+
+        @param   config option:  option name
+        @type    config_option:  usually C{str}
+
+        @return:  True if the option exists, False otherwise
+        @rtype:   C{bool}
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def find_option(self, approx_config_option):
+        """Checks whether a config option with the given name exists.
+        If not, tries to find options whose names are close to the requested
+        name.
+
+        The result is a list of candidates,
+        with one item if an exact match has been found,
+        a variable number of name candidates ordered by 'distance'
+        if close matches have been found, and an empty list of not.
+
+        Derived classes that do not implement approximate matching should
+        check whether the requested option exists and return a one item list
+        in that case, and an empty list otherwise.
+        This implementation is also available via super().find_solution(...).
+
+        @param   approx_config option:  approximate option name
+        @type    approx_config_option:  usually C{str}
+
+        @return:  list of candidates, with zero or more items
+        @rtype:   C{list} of C{str}
+        """
+        if self.has_option(approx_config_option):
+            return [approx_config_option]
+        else:
+            return []
+    # --- end of find_option (...) ---
+
     def _log_forbidden_value(self, value, source=None):
         self.logger.error("%r value is forbidden", value)
         return False

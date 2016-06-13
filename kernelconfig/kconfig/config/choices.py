@@ -123,4 +123,20 @@ class ConfigChoices(_choices_abc.AbstractConfigChoices):
         return self.config.normalize_key(config_option)
     # --- end of get_symbol (...) ---
 
+    def has_option(self, config_option):
+        try:
+            self.get_symbol(config_option)
+        except KeyError:
+            return False
+        else:
+            return True
+
+    def find_option(self, approx_config_option):
+        try:
+            sym = self.get_symbol(approx_config_option)
+        except KeyError:
+            return []
+        else:
+            return [sym.name]
+
 # --- end of ConfigChoices ---
