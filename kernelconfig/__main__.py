@@ -59,7 +59,9 @@ if __name__ == "__main__":
     cc = kernelconfig.kconfig.config.choices.ConfigChoices(cfg)
 
     cl = cc.create_loggable(
-        kernelconfig.lang.interpreter.KernelConfigLangInterpreter, cc
+        kernelconfig.lang.interpreter.KernelConfigLangInterpreter,
+        kinfo,
+        cc
     )
     cl.process_str("ym CONFIG_E1000E")
 
