@@ -578,14 +578,20 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
 
 class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
 
-    def __init__(self, config_choices, **kwargs):
+    def __init__(self, source_info, config_choices, **kwargs):
         super().__init__(**kwargs)
+        self.source_info = None
         self.config_choices = None
         self._choice_op_dispatchers = None
         self._choice_str_op_dispatchers = None
         self._config_option_cond_context = None
         self._include_file_cond_context = cond.IncludeFileConditionContext()
+        self._cmp_vars = None
+
         self.bind_config_choices(config_choices)
+        self.bind_source_info(source_info)
+        self.bind_cmp_vars()
+    # --- end of __init__ (...) ---
 
     def bind_config_choices(self, config_choices):
         _KernelConfigOp = parser.KernelConfigOp
@@ -617,6 +623,60 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 cond.ConfigOptionConditionContext(config_choices)
             )
         # ---
+    # ---
+
+    def bind_source_info(self, source_info):
+        self.source_info = source_info
+    # ---
+
+    def bind_cmp_vars(self):
+        cmp_vars = {}
+
+        def add_cmp_var(name, value, str_constructor):
+            nonlocal cmp_vars
+
+            key = name.lower()
+
+            assert key not in cmp_vars
+            cmp_vars[key] = (value, str_constructor)
+            return key
+        # ---
+
+        self._cmp_vars = cmp_vars
+
+        source_info = self.source_info
+        if source_info is not None:
+            if hasattr(source_info, "kernelversion"):
+                # otherwise, it is not a KernelInfo object
+                add_cmp_var(
+                    "kver",
+                    source_info.kernelversion,
+                    source_info.kernelversion.__class__.new_from_version_str
+                )
+
+                add_cmp_var(
+                    "kmaj", source_info.kernelversion.version, int
+                )
+
+                add_cmp_var(
+                    "kmin", source_info.kernelversion.sublevel, int
+                )
+
+                add_cmp_var(
+                    "kpatch", source_info.kernelversion.patchlevel, int
+                )
+            # -- end hasattr kernelversion
+        # -- end if source info
+    # --- end of bind_cmp_vars (...) ---
+
+    def lookup_cmp_operand(self, arg):
+        lowarg = arg.lower()
+        try:
+            entry = self._cmp_vars[lowarg]
+        except KeyError:
+            return None
+        else:
+            return entry
     # ---
 
     def lookup_load_file(self, load_file, *, _osp_realpath=os.path.realpath):
