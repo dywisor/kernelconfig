@@ -57,19 +57,72 @@ or a ``unless``\-condition with the opposite meaning.
 
 Overall, the following $things$ can be checked:
 
-* existence of config options or include files
+* existence of config options or include files with the ``exists`` or ``exist``
+  keyword
+
+  It accepts up to one arg. The meaning of this condition
+  depends on whether the command it appears in is
+  a *kconfig instruction* or a *load-file instruction*.
+
+  If used with no arg or the placeholder arg ``_``,
+  it checks for existence of the config option
+  or the file currently being processed.
+
+  Otherwise, existence of the supplied arg is checked.
+
+  A statement of the form
+
+  .. code:: text
+
+     builtin A B C if exists
+
+  would enable any or all of the config options `A`, `B` and/or `C` if
+  they exist, and is equivalent to the longer and overly explicit variant:
+
+  .. code:: text
+
+     builtin A if exists A
+     builtin B if exists B
+     builtin C if exists C
+
 
 * kernel version
 
-* ``true``/``false``
+  The kernelversion can be compared, either as a whole, or partially:
 
-* hardware modalias match
+  .. code:: text
+
+    builtin B if kver == 4.7.0            # full kernel version (a.b.c...)
+    builtin A if kver >= 4.2              #  can also be given partially
+    builtin C if kmaj < 5                 # the "version" of the kernel version
+    builtin D if kmaj == 4 && kmin != 3   # the "sublevel" of the kernel version
+    builtin E if kpatch == 0              # the "patchlevel" of the version
+
+
+* hardware modalias match with the ``hardware-match``, ``hw`` keywords
 
   .. Note::
 
      Future extension. Recognized, but the interpreter will complain about it.
 
-* the truth value of the previous instruction's condition
+
+* ``true``/``false``
+
+
+* the truth value of the previous instruction's condition can be
+  accessed with the placeholder expression ``_``
+
+  .. code:: text
+
+     builtin A if false       # Disabled, sets _ to false
+                              #
+     builtin B unless _       # Enabled, because "unless false" is true.
+                              # However, the value of the condition is false
+                              # and thus _ is set to false.
+                              #
+     builtin D E if exists    # This sets _ twice,
+                              # once to "exists D", and then to "exists E".
+
 
 Conditions can be negated or combined with:
 
@@ -82,8 +135,6 @@ Conditions can be negated or combined with:
     not COND
     COND and COND
     COND or  COND
-
-
 
 
 
