@@ -196,6 +196,62 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
         raise NotImplementedError()
     # --- end of process_command (...) ---
 
+    @abc.abstractmethod
+    def lookup_cmp_operand(self, arg):
+        """
+        @return:  None if arg is not a cmp variable,
+                  else 2-tuple (operand, str-to-operand converter)
+
+        @rtype:   C{None} or 2-tuple (C{object}, callable a :: str -> object)
+        """
+        raise NotImplementedError()
+
+    def evaluate_cmp(self, cmp_func, cmp_args, source=None):
+        assert len(cmp_args) == 2
+
+        loperv = self.lookup_cmp_operand(cmp_args[0])
+        roperv = self.lookup_cmp_operand(cmp_args[1])
+
+        if loperv is None:
+            if roperv is None:
+                self.logger.error(
+                    (
+                        'Uncomparable operands - '
+                        'at least one most be a variable: %r'
+                    ),
+                    cmp_args
+                )
+                raise KernelConfigLangInterpreterCondOpNotSupported(
+                    "Uncomparable operands (no-var): %r" % cmp_args
+                )
+
+            else:
+                loper = roperv[1](cmp_args[0])
+                roper = roperv[0]
+
+        elif roperv is None:
+            loper = loperv[0]
+            roper = loperv[1](cmp_args[1])
+
+        else:
+            loper = loperv[0]
+            roper = roperv[0]
+
+        try:
+            cmp_ret = cmp_func(loper, roper)
+        except TypeError:
+            self.logger.error(
+                "Uncomparable operands - type error: %r",
+                (loper, roper)
+            )
+            raise KernelConfigLangInterpreterCondOpNotSupported(
+                "Uncomparable operands (type-err): %r" % cmp_args
+            ) from None
+        # --
+
+        return cmp_ret
+    # --- end of evaluate_cmp (...) ---
+
     def evaluate_conditional(self, conditional, context, source=None):
         """Evaluates a conditional expression.
 
@@ -290,16 +346,19 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
                 subdyn, subret = eval_subret(cond_args)
                 return (subdyn, cond_func(subret))
 
+            elif cond_type is _KernelConfigOp.condop_operator_cmp_func:
+                return self.evaluate_cmp(cond_func, cond_args, source=source)
+
             else:
                 self.logger.error(
-                    "Unknown condition for %s context: %r (%r)",
+                    "Unknown condition for %s context: %r (%r, %r)",
                     (
                         context.get_context_desc()
                         if hasattr(context, "get_context_desc")
                         else "<unknown>"
                     ),
                     getattr(cond_type, "name", cond_type),
-                    cond_args
+                    cond_func, cond_args
                 )
 
                 raise KernelConfigLangInterpreterCondOpNotSupported(
