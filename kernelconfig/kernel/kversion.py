@@ -38,8 +38,13 @@ class KernelVersionRegexp(object):
 
     _REGEXP_VERSION_STR = r'''
         (?P<version>{d})
-        (?:[.](?P<patchlevel>{d})(?:[.](?P<sublevel>{d}))?)?
-        (?:{ever})
+            (?:
+                [.](?P<patchlevel>{d})
+                (?:
+                    [.](?P<sublevel>{d})
+                    (?:{ever})
+                )?
+            )?
     '''.format(d=r'(?:$|[0-9]+)', ever=_REGEXP_EXTRAVERSION_STR)
 
     RE_EXTRAVERSION_STR = re.compile(
