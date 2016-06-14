@@ -61,12 +61,12 @@ class KernelConfigLangLexer(object):
         "true":              "KW_TRUE",
         "false":             "KW_FALSE",
 
-        # '!=':                "NE",
-        # '>=':                "GE",
-        # '<=':                "LE",
-        # '>':                 "GT",
-        # '<':                 "LT",
-        # '==':                "EQ_CMP",
+        '!=':                "NE",
+        '>=':                "GE",
+        '<=':                "LE",
+        '>':                 "GT",
+        '<':                 "LT",
+        '==':                "EQ_CMP",
         '=':                 "EQ",
         ':=':                "COL_EQ",
         '+=':                "PLUS_EQ",
@@ -194,8 +194,7 @@ class KernelConfigLangLexer(object):
         return self.emit_reset_cmd_end(t)
 
     def t_op(self, t):
-        r'[\|\+\:][\=]?'
-        # r'[\<\>\=\!\|\+\:][\=]?'   # NE, GE, LE, GT, LT, EQ_CMP
+        r'[\<\>\=\!\|\+\:][\=]?'
         t.type = self.reserved[t.value]
         return self.emit_reset_cmd_end(t)
 

@@ -64,7 +64,7 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
     precedence = (
         (
             "nonassoc",
-            # "NE", "GE", "LE", "GT", "LT", "EQ_CMP",
+            "NE", "GE", "LE", "GT", "LT", "EQ_CMP",
             "EQ", "COL_EQ", "PLUS_EQ", "BITOR_EQ"
         ),
         ("right", "NOT"),
@@ -78,13 +78,13 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
             "AND":    all,
             "OR":     any,
             "NOT":    operator.__not__,
-            # "NE":     operator.__ne__,
-            # "GE":     operator.__ge__,
-            # "LE":     operator.__le__,
-            # "GT":     operator.__gt__,
-            # "LT":     operator.__lt__,
-            # "EQ":     operator.__eq__,
-            # "EQ_CMP": operator.__eq__
+            "NE":     operator.__ne__,
+            "GE":     operator.__ge__,
+            "LE":     operator.__le__,
+            "GT":     operator.__gt__,
+            "LT":     operator.__lt__,
+            "EQ":     operator.__eq__,
+            "EQ_CMP": operator.__eq__
         }
     )
 
@@ -335,20 +335,20 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
             [p[1], p[3]]
         )
 
-#    def p_conditional_expr_cmp(self, p):
-#        '''cond_expr : STR NE STR
-#                     | STR GE STR
-#                     | STR LE STR
-#                     | STR GT STR
-#                     | STR LT STR
-#                     | STR EQ_CMP STR
-#                     | STR EQ STR
-#        '''
-#        p[0] = self.build_cond_expr(
-#            KernelConfigOp.condop_operator_cmp_func,
-#            self.op_map[p[2]],
-#            [p[1], p[3]]
-#        )
+    def p_conditional_expr_cmp(self, p):
+        '''cond_expr : STR NE     STR
+                     | STR GE     STR
+                     | STR LE     STR
+                     | STR GT     STR
+                     | STR LT     STR
+                     | STR EQ_CMP STR
+                     | STR EQ     STR
+        '''
+        p[0] = self.build_cond_expr(
+            KernelConfigOp.condop_operator_cmp_func,
+            self.op_map[p[2]],
+            [p[1], p[3]]
+        )
 
     def p_error(self, p):
         self.parse_error = 1
