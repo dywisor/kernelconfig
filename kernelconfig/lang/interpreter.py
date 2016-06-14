@@ -243,9 +243,12 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
             cond_type, cond_func, cond_args = cexpr
 
             if cond_type in context:
-                return context[cond_type](cond_func, cond_args)
+                rval = context[cond_type](cond_func, cond_args)
+                if rval is not None:
+                    return rval
+            # --
 
-            elif cond_type is _KernelConfigOp.condop_const:
+            if cond_type is _KernelConfigOp.condop_const:
                 if cond_args is True or cond_args is False:
                     return (False, cond_args)
 
