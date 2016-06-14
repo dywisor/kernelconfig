@@ -207,6 +207,21 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
         raise NotImplementedError()
 
     def evaluate_cmp(self, cmp_func, cmp_args, source=None):
+        def create_operand(arg, constructor, reference_arg):
+            try:
+                oper = constructor(arg)
+            except (ValueError, TypeError):
+                self.logger.error(
+                    "Failed to create comparison operand for %r from %r",
+                    reference_arg, arg
+                )
+                raise KernelConfigLangInterpreterCondOpNotSupported(
+                    "Uncomparable operands (constructor error): %r" % arg
+                )
+            else:
+                return oper
+        # ---
+
         assert len(cmp_args) == 2
 
         loperv = self.lookup_cmp_operand(cmp_args[0])
@@ -226,12 +241,12 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
                 )
 
             else:
-                loper = roperv[1](cmp_args[0])
+                loper = create_operand(cmp_args[0], roperv[1], roperv[0])
                 roper = roperv[0]
 
         elif roperv is None:
             loper = loperv[0]
-            roper = loperv[1](cmp_args[1])
+            roper = create_operand(cmp_args[1], loperv[1], loperv[0])
 
         else:
             loper = loperv[0]
@@ -249,7 +264,7 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
             ) from None
         # --
 
-        return cmp_ret
+        return (False, cmp_ret)
     # --- end of evaluate_cmp (...) ---
 
     def evaluate_conditional(self, conditional, context, source=None):
