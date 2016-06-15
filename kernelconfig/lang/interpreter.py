@@ -505,7 +505,7 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
 
             self.add_input_file(filepath)
         # -- end for
-        self._process_file_input_queue()
+        return self._process_file_input_queue()
     # --- end of process_files (...) ---
 
     def process_file(self, infile):
