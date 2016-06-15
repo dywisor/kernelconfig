@@ -51,6 +51,20 @@ class SourceInfo(loggable.AbstractLoggable):
             return self.srctree
     # --- end of get_filepath (...) ---
 
+    def check_srctree(self):
+        """Checks whether the srctree directory is present
+        and could be an entity of the sources being processed.
+
+        @return:  True or False
+        @rtype:   C{bool}
+        """
+        return (
+            self.srctree and os.path.isdir(self.srctree)
+            and os.path.isfile(self.get_toplevel_kconfig_filepath())
+
+        )
+    # --- end of check_srctree (...) ---
+
     @abc.abstractmethod
     def get_toplevel_kconfig_filepath(self):
         """Returns the path to the top-level Kconfig file.
