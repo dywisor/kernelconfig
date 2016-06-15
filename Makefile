@@ -69,6 +69,7 @@ PHONY += pyclean
 pyclean:
 	$(call f_sanity_check_output_dir,$(_PYMOD_DIRS))
 	find $(_PYMOD_DIRS) -name '*.py[co]' -delete -print
+	find $(_PYMOD_DIRS) -name '__pycache__' -type d -delete -print
 
 PHONY += distclean
 distclean: clean pyclean
