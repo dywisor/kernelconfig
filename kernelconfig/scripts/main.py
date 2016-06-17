@@ -85,8 +85,14 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             )
         )
 
-        parser.add_argument("-q", "--quiet", default=0, action="count")
-        parser.add_argument("-v", "--verbose", default=0, action="count")
+        parser.add_argument(
+            "-q", "--quiet", default=0, action="count",
+            help="be less verbose (can be specified more than once)"
+        )
+        parser.add_argument(
+            "-v", "--verbose", default=0, action="count",
+            help="be more verbose (can specified more than once)"
+        )
     # --- end of _setup_arg_parser_args (...) ---
 
     def init_arg_parser(self):
