@@ -23,11 +23,25 @@ class ArgTypes(object):
             return arg
         raise self.exc_type("arg must not be empty")
 
+    def _arg_expanduser(self, arg):
+        if arg and arg[0] == "~":
+            if len(arg) < 2 or arg[1] == os.path.sep:
+                # HOME needs to be set
+                #  otherwise, expanduser replaces '~' with '/'
+                assert os.getenv("HOME")
+                return os.path.expanduser(arg)
+            else:
+                raise argparse.ArgumentTypeError(
+                    "cannot expand ~ for other users: %r" % arg
+                )
+        else:
+            return arg
+
     def arg_realpath(self, arg):
-        return os.path.realpath(self.arg_nonempty(arg))
+        return os.path.realpath(self._arg_expanduser(self.arg_nonempty(arg)))
 
     def arg_fspath(self, arg):
-        return os.path.abspath(self.arg_nonempty(arg))
+        return os.path.abspath(self._arg_expanduser(self.arg_nonempty(arg)))
 
     def arg_existing_file(self, arg):
         fspath = self.arg_realpath(arg)
