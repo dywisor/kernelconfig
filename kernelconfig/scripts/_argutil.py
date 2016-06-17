@@ -3,6 +3,7 @@
 
 import argparse
 import os
+import re
 import stat
 
 
@@ -16,6 +17,11 @@ class ArgTypes(object):
         super().__init__()
         self.exc_type = (
             self.DEFAULT_EXC_TYPE if exc_type is None else exc_type
+        )
+        # abspath {"/*", "~*"}, relpath {".", "..", "./*", "../*"}
+        #  empty str should be checked before using this regexp
+        self.re_nonspecial_path = re.compile(
+            r'^(?:{sep}|[~]|[.]{{1,2}}(?:$|{sep}))'.format(sep=os.path.sep)
         )
 
     def arg_nonempty(self, arg):
@@ -58,6 +64,15 @@ class ArgTypes(object):
         # S_IFCHR, S_IFBLK, S_IFREG, S_IFIFO, S_IFSOCK -- ok!
         return fspath
     # --- end of arg_existing_file (...) ---
+
+    def arg_existing_file_special_relpath(self, arg):
+        if not arg:
+            raise self.exc_type("arg must not be empty")
+        elif self.re_nonspecial_path.match(arg):
+            return (False, self.arg_existing_file(arg))
+        else:
+            return (True, arg)
+    # --- end of arg_existing_file_special_relpath (...) ---
 
     def arg_existing_dir(self, arg):
         fspath = self.arg_realpath(arg)
