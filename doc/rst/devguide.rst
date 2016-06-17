@@ -1,7 +1,7 @@
 Config Generation
 =================
 
-This section describes the procedure of generating kernel configurations.
+This chapter describes the procedure of generating kernel configurations.
 It starts with an informal characterization of the various data objects
 involved in the process, and the modus operandi,
 followed by a more detailed view on select aspects.
@@ -174,8 +174,8 @@ Choices and Decisions
 
 
 ``ConfigChoices`` is the Python-level interface for modifying kernel
-configurations. It receives a number of modification requests and stores
-them in a *decisions dict*.
+configurations. It receives a number of modification requests
+and stores them in a temporary *decisions dict*.
 
 A request is of the form ``want <value> for <config option>`` or
 ``want any of <values> for <config option>``.
@@ -244,3 +244,150 @@ Config Resolving
 
 :Input: ``Config``, decisions dict
 :Output: resolved ``Config``
+
+.. Note::
+
+    The pseudo-code examples in this section are not an exact transcript
+    of the actual code, but rather give an idea of how it generally works.
+
+Resolving a working configuration is split into several phases.
+
+At first, a graph is created where the vertices are Kconfig symbols
+that appear in ``Config`` or the *decisions dict*,
+either directly or indirectly via dependencies,
+and the edges represent a "possibly depends on" relationship.
+
+This graph is then topologically sorted into groups,
+where each symbol can only depend on symbols from upper-level groups.
+
+Then, the *decisions dict* gets expanded: starting at the
+lowest symbol group level,
+determine which upper-level symbols need to be set as well,
+and repeat that for each upper level:
+
+.. code:: text
+
+   expand-decisions(input_decisions):
+        decisions_solution := empty dict {};
+        need_expansion     := input_decisions;
+
+        FOR each symbol_group IN reversed order LOOP
+            -- the set of symbols from symbol_group that need to be expanded
+            symbols_to_expand := symbol_group & need_expansion;
+
+            -- at this point, symbols_to_expand have already been decided
+            --  (the solution finding below affects upper-level symbols only)
+            --
+            merge symbols_to_expand with decisions_solution;
+
+            --  list of solutions for the current symbol group
+            --
+            --    Each solution is a dict that maps symbols from
+            --    upper-level groups to acceptable values
+            --
+            --    Initially there is only one solution,
+            --    which contains all symbols from need_expansion
+            --    except for symbols that are also in symbol_group
+            --    (need_expansion - symbol_group)
+            --    This solution may be empty, which simply means "no change".
+            --
+            --    If the list of solutions itself is empty,
+            --    then there are no solutions and expand-decisions fails.
+            --
+            --    Similarily, if any symbol in a solutions dict is mapped
+            --    to any empty value set, then the solution is invalid.
+            --
+            group_solutions := list of dict [need_expansion];
+
+            FOR symbol in symbols_to_expand LOOP
+                IF requested symbol value is not tristate "n" THEN
+                    -- otherwise, there are no dependencies to be expanded
+
+                    IF symbol is a tristate symbol THEN
+                        symbol_solutions := get solutions for the symbol's
+                                            dependencies so that the
+                                            symbol's dir_dep evaluates to
+                                            >= requested symbol value;
+                    ELSE
+                        symbol_solutions := get solutions for the symbol's
+                                            dependencies so that the
+                                            symbol's dir_dep evaluates to
+                                            >= tristate "m";
+                    END IF;
+
+                    IF there are no symbol_solutions THEN
+                        error;
+                    END IF;
+
+                    merge symbol_solutions with group_solutions,
+                    elimininate invalid solutions
+
+                    IF there are no group_solutions THEN
+                        error;
+                    END IF;
+
+                END IF;
+            END FOR LOOP;
+
+            -- pick one solution from group_solutions that
+            --  appears to have the least impact on the configuration
+            group_solution := pick one out of group_solutions;
+
+            --  update need_expansion with symbols/values from group_solution
+            need_expansion := group_solution;
+
+        END FOR LOOP;
+
+        RETURN decisions_solution;
+
+
+In a second iteration, the symbols get set to their decided values:
+
+.. code:: text
+
+    set-decisions(decisions):
+        partial_config := empty dict {};
+
+        FOR each symbol_group LOOP
+
+            FOR each symbol IN symbol_group LOOP
+
+                IF there is a decision for symbol THEN
+                    verify that decision can be applied;
+                    partial_config[symbol] = value from decisions[symbol];
+                END IF;
+
+            END FOR LOOP;
+
+        END FOR LOOP;
+
+        RETURN partial_config;
+
+
+The existing configuration is then updated with ``partial_config``,
+and expanded again in an oldconfig-like procedure:
+
+.. code:: text
+
+    informed-oldconfig(config, decisions)
+        changed := TRUE;
+        WHILE changed LOOP
+            changed := FALSE;
+
+            --  find symbols that have become visibile, but have no value
+            new_symbols := find NEW symbols;
+
+            FOR each symbol IN new_symbols LOOP
+                IF there is a decision for symbol THEN
+                    --  decision value is tristate "n"
+                    config[symbol] := decision value;
+                ELSE
+                    config[symbol] := default value;
+                END IF;
+
+                changed := TRUE;
+            END FOR LOOP;
+
+        END WHILE LOOP;
+
+        RETURN config;
