@@ -12,6 +12,8 @@ import kernelconfig.scripts._argutil
 import kernelconfig.kernel.info
 import kernelconfig.kconfig.config.gen
 import kernelconfig.util.fs
+import kernelconfig.util.multidir
+import kernelconfig.util.settings
 
 
 class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
@@ -20,7 +22,16 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         super().__init__(prog)
         self.arg_parser = None
         self.arg_types = None
+        # initialized after arg parsing:
+        self.confdir = None
     # --- end of __init__ (...) ---
+
+    def init_confdir(self):
+        self.confdir = (
+            kernelconfig.util.multidir.MultiDirEntry.
+            new_config_dir("kernelconfig")
+        )
+    # --- end of init_confdir (...) ---
 
     def _setup_arg_parser_args(self, parser, arg_types):
         with_default = lambda h, d=None: (
@@ -51,6 +62,17 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                 "path to the unpacked kernel sources directory", "\".\""
             )
         )
+
+        parser.add_argument(
+            "-s", "--settings", dest="settings_file", metavar="<file>",
+            default=argparse.SUPPRESS,
+            type=arg_types.arg_existing_file_special_relpath,
+            help=with_default(
+                "settings file", "\"default\""
+                # explain relpath lookup
+            )
+        )
+
         # --
 
         # "--config" is an option and not a positional arg
@@ -112,6 +134,29 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         self.arg_parser = parser
     # --- end of init_arg_parser (...) ---
 
+    def load_settings_file(self, settings_arg):
+        if not settings_arg:
+            return (None, None)
+
+        need_lookup, filename = settings_arg
+
+        if need_lookup:
+            settings_file = self.confdir.get_file_path(filename)
+        else:
+            settings_file = filename
+
+        if not settings_file:
+            if self.arg_parser is None:
+                raise FileNotFoundError(filename)
+            else:
+                self.arg_parser.error("settings file %r not found" % filename)
+        # --
+
+        return (
+            kernelconfig.util.settings.read_settings_file(settings_file)
+        )
+    # --- end of load_settings_file (...) ---
+
     def do_main(self, arg_config):
         # logging
         log_levels = [
@@ -131,6 +176,14 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         self.zap_log_handlers()
         self.setup_console_logging(log_level)
+
+        # confdir
+        self.init_confdir()
+
+        # load settings file
+        settings, settings_conf_mod_requests = (
+            self.load_settings_file(arg_config.get("settings_file"))
+        )
 
         # source info
         source_info = self.create_loggable(
@@ -180,6 +233,14 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             interpreter = config_gen.get_config_choices_interpreter()
             if not interpreter.process_files(arg_config["featureset_files"]):
                 self.print_err("Error occurred while loading \"macros\" files")
+                return False
+        # --
+
+        if settings_conf_mod_requests:
+            interpreter = config_gen.get_config_choices_interpreter()
+            if not interpreter.process_str(
+                "\n".join(settings_conf_mod_requests)
+            ):
                 return False
         # --
 
