@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
+import argparse
 import os
 import subprocess
 import sys
@@ -18,13 +19,15 @@ def check_pydeps():
         sys.stderr.write("'PLY' module is missing.")
 
 
-def run_setup_py(setup_file, build_dir, build_pym_dir):
-    subprocess.check_call(
-        [
-            sys.executable, setup_file, "-q", "build",
-            "-b", build_dir, "--build-lib", build_pym_dir
-        ]
-    )
+def run_setup_py(setup_file, build_dir, build_pym_dir, force=False):
+    cmdv = [
+        sys.executable, setup_file, "-q", "build",
+        "-b", build_dir, "--build-lib", build_pym_dir
+    ]
+    if force:
+        cmdv.append("--force")
+
+    subprocess.check_call(cmdv)
 
 
 def main():
@@ -32,12 +35,33 @@ def main():
 
     check_pydeps()
 
-    # get the project root directory
-    script_file = os.path.realpath(sys.argv[0])
-    if not script_file:
-        sys.exit(1)
+    arg_parser = argparse.ArgumentParser(
+        "kernelconfig main wrapper", add_help=False
+    )
 
-    prjroot = os.path.dirname(script_file)
+    arg_parser.add_argument("--wrapper-help", action="help")
+    arg_parser.add_argument(
+        "--wrapper-prjroot", dest="prjroot", default=None
+    )
+    arg_parser.add_argument(
+        "--wrapper-build-base", dest="build_base", default=None
+    )
+    arg_parser.add_argument(
+        "--rebuild", default=False, action="store_true"
+    )
+
+    arg_config, main_argv = arg_parser.parse_known_args()
+
+    prjroot = arg_config.prjroot
+    if not prjroot:
+        # get the project root directory
+        script_file = os.path.realpath(sys.argv[0])
+        if not script_file:
+            sys.exit(1)
+
+        prjroot = os.path.dirname(script_file)
+    # --
+
     get_prjfile = lambda *a: os.path.join(prjroot, *a)
 
     # identify the root directory / check for representative dirs/files
@@ -48,10 +72,13 @@ def main():
     if not os.path.isfile(setup_file):
         sys.exit(9)
 
-    # get build directory
-    py_build_root = (
-        os.environ.get("PY_BUILDDIR") or get_prjfile("build")
-    )
+    py_build_root = arg_config.build_base
+    if not py_build_root:
+        # get build directory
+        py_build_root = (
+            os.environ.get("PY_BUILDDIR") or get_prjfile("build")
+        )
+    # --
 
     py_build_dir = os.path.join(
         py_build_root,
@@ -60,7 +87,9 @@ def main():
     )
     py_build_pym = os.path.join(py_build_dir, "pym")
 
-    run_setup_py(setup_file, py_build_dir, py_build_pym)
+    run_setup_py(
+        setup_file, py_build_dir, py_build_pym, force=arg_config.rebuild
+    )
 
     # add py_build_pym to sys.path, with higher priority than $PWD
     #  (which is important if $PWD is prjroot,
@@ -69,7 +98,7 @@ def main():
 
     # run the real main script
     import kernelconfig.scripts.main
-    kernelconfig.scripts.main.KernelConfigMainScript.run_main()
+    kernelconfig.scripts.main.KernelConfigMainScript.run_main(argv=main_argv)
 # --- end of main (...) ---
 
 if __name__ == "__main__":
