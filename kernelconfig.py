@@ -17,17 +17,20 @@ def check_pydeps():
         import ply.lex
     except ImportError:
         sys.stderr.write("'PLY' module is missing.")
+# ---
 
 
-def run_setup_py(setup_file, build_dir, build_pym_dir, force=False):
+def run_setup_py(prjroot, setup_file, build_dir, build_pym_dir, force=False):
     cmdv = [
         sys.executable, setup_file, "-q", "build",
-        "-b", build_dir, "--build-lib", build_pym_dir
+        "-b", build_dir, "--build-lib", build_pym_dir,
+        "--standalone"
     ]
     if force:
         cmdv.append("--force")
 
-    subprocess.check_call(cmdv)
+    subprocess.check_call(cmdv, cwd=prjroot)
+# ---
 
 
 def main():
@@ -88,13 +91,18 @@ def main():
     py_build_pym = os.path.join(py_build_dir, "pym")
 
     run_setup_py(
-        setup_file, py_build_dir, py_build_pym, force=arg_config.rebuild
+        prjroot, setup_file,
+        py_build_dir, py_build_pym, force=arg_config.rebuild
     )
 
     # add py_build_pym to sys.path, with higher priority than $PWD
     #  (which is important if $PWD is prjroot,
-    #  because the Python/C-based mdoules are not in $PWD/kernelconfig)
+    #  because the Python/C-based modules are not in $PWD/kernelconfig)
     sys.path[:0] = [py_build_pym]
+
+    # make the prjroot available via os.environ,
+    #  important for relpath file lookups
+    os.environ["KERNELCONFIG_PRJROOT"] = prjroot
 
     # run the real main script
     import kernelconfig.scripts.main
