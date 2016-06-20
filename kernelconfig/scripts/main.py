@@ -9,6 +9,7 @@ __all__ = ["KernelConfigMainScript"]
 
 import kernelconfig.scripts._base
 import kernelconfig.scripts._argutil
+import kernelconfig.installinfo
 import kernelconfig.kernel.info
 import kernelconfig.kconfig.config.gen
 import kernelconfig.util.fs
@@ -22,16 +23,8 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         super().__init__(prog)
         self.arg_parser = None
         self.arg_types = None
-        # initialized after arg parsing:
-        self.confdir = None
+        self.install_info = kernelconfig.installinfo.get_install_info().copy()
     # --- end of __init__ (...) ---
-
-    def init_confdir(self):
-        self.confdir = (
-            kernelconfig.util.multidir.MultiDirEntry.
-            new_config_dir("kernelconfig")
-        )
-    # --- end of init_confdir (...) ---
 
     def _setup_arg_parser_args(self, parser, arg_types):
         with_default = lambda h, d=None: (
@@ -141,7 +134,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         need_lookup, filename = settings_arg
 
         if need_lookup:
-            settings_file = self.confdir.get_file_path(filename)
+            settings_file = self.install_info.get_settings_file(filename)
         else:
             settings_file = filename
 
@@ -152,6 +145,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                 self.arg_parser.error("settings file %r not found" % filename)
         # --
 
+        self.logger.info("Reading settings from %s", settings_file)
         return (
             kernelconfig.util.settings.read_settings_file(settings_file)
         )
@@ -176,9 +170,6 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         self.zap_log_handlers()
         self.setup_console_logging(log_level)
-
-        # confdir
-        self.init_confdir()
 
         # load settings file
         settings, settings_conf_mod_requests = (
