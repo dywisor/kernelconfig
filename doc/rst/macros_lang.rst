@@ -275,12 +275,54 @@ Load-File Instructions
 ``include FILE``
     Load and process instructions from another file.
 
+    The ``FILE`` may be an absolute or relative filesystem path.
+    Absolute paths are processed as-is,
+    whereas relative paths are looked up in the include-file directories.
+
+    Relative paths can contain wildcard characters `*`, `?`,
+    and are subject to non-recursive glob expansion over all directories.
+
+    A statement of the form::
+
+        include pkg/*
+
+    would load all files that are in *any* ``pkg`` subdirectory
+    of *any* include-file directory.
+
+    Assuming the default include-file directories
+    and the following files structure,
+    above command would  load ``B`` and ``C`` from the home directory,
+    and ``E`` from ``/etc``::
+
+        /home/user/.config/kernelconfig/include/A
+        /home/user/.config/kernelconfig/include/pkg/B
+        /home/user/.config/kernelconfig/include/pkg/C
+        /etc/kernelconfig/include/D
+        /etc/kernelconfig/include/pkg/B
+        /etc/kernelconfig/include/pkg/E
+        /etc/kernelconfig/include/pkg/F/G
+
+    * neither ``A`` nor ``D``,
+      because they are not matched by the pattern
+
+    * not ``B`` from ``/etc``,
+      because it is overshadowed by the file in ``/home``
+
+    * not ``F``, because it is a directory
+
+    * not ``F/G``, because the glob-expansion is non-recursive
+      and therefore it is not matched by the pattern
+
+    If there are no files matching ``pkg/*``, the command would fail.
+    If that is not desired, an ``exists`` condition should be appended::
+
+        include pkg/* if exists
+
     Files are not loaded directly when the ``include`` statements gets
     processed, but instead are accumulated and loaded after processing all
     other commands.
 
-    .. NOTE::
+    .. Note::
 
-        Future extension:
-        When used with a relative file path,
-        the file will be looked up in $some_dir.
+        Absolute filesystem paths do not get glob-expanded.
+        This might change in future.
