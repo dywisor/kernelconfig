@@ -652,6 +652,20 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         return None
     # --- end of get_file_path (...) ---
 
+    def get_child(self, filename, check_exist=False):
+        if check_exist:
+            entry = self.get_entry(filename)
+            return entry.copy() if entry else None
+
+        else:
+            entry = self.create_new_sub_entry()
+            norm_filename = self.normalize_filename(filename)
+            entry.add_pathv(
+                (os.path.join(path, norm_filename) for path in self.paths)
+            )
+            return entry
+    # --- end of get_child (...) ---
+
 # --- end of MultiDirEntryBase ---
 
 
