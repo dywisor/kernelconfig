@@ -152,15 +152,18 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
 
     @abc.abstractmethod
     def lookup_include_file(self, include_file):
-        """Locates a file for the "include" command.
+        """Locates files for the "include" command.
 
-        Should return None (or an empty str) if no file found.
+        The include file is possibly subject to glob-expansion
+        and thus the number of returned files varies.
+
+        Should return None (or an empty list) if no file found.
 
         @param include_file:  "key", e.g. file name
         @type  include_file:  C{str}
 
-        @return:  filepath or C{None}
-        @rtype:   C{str} or C{None}
+        @return:  C{None} or filepath list
+        @rtype:   C{None} or C{list} of C{str}
         """
         raise NotImplementedError()
     # --- end of lookup_include_file (...) ---
@@ -730,14 +733,12 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
             include_files_filtered = []
 
             cached_cond = None
-            for include_item in include_files_in:
+            for include_file in include_files_in:
                 if cached_cond is None:
                     try:
                         cond_dynamic, cond_eval = self.evaluate_conditional(
                             conditional,
-                            self._include_file_cond_context.bind(
-                                include_item[-1]
-                            )
+                            self._include_file_cond_context.bind(include_file)
                         )
                     except KernelConfigLangInterpreterCondOpNotSupported:
                         return False
@@ -750,10 +751,10 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 # --
 
                 if cond_eval:
-                    # -- self.add_input_file(include_item[-1]) -- below
-                    include_files_to_load.append(include_item)
+                    # -- self.add_input_file(include_file) -- below
+                    include_files_to_load.append(include_file)
                 else:
-                    include_files_filtered.append(include_item)
+                    include_files_filtered.append(include_file)
             # --
 
             if include_files_to_load:
@@ -763,7 +764,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                     if include_files_filtered:
                         self.logger.debug(
                             "Include directive partially disabled: %r",
-                            [name for name, _ in include_files_filtered]
+                            include_files_filtered
                         )
                     # --
 
@@ -771,8 +772,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                         if num_include_files < 5:
                             self.logger.debug(
                                 "Include directive matched %d files: %r",
-                                num_include_files,
-                                [name for name, _ in include_files_to_load]
+                                num_include_files, include_files_to_load
                             )
                         else:
                             self.logger.debug(
@@ -784,8 +784,8 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                     del num_include_files
                 # -- end if debug-log
 
-                for include_item in include_files_to_load:
-                    self.add_input_file(include_item[-1])
+                for include_file in include_files_to_load:
+                    self.add_input_file(include_file)
 
             elif include_files_filtered:
                 self.logger.debug(

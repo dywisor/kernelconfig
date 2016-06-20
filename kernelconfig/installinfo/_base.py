@@ -107,8 +107,9 @@ class DefaultInstallInfo(InstallInfoBase):
         return self.settings_dirs.get_file_path(filename)
 
     def get_include_files(self, filename_pattern):
-        return sorted(
-            self.include_file_dirs.iglob_check_type(filename_pattern),
-            key=lambda kv: kv[0]
-        )
+        return sorted((
+            path for rel, path in self.include_file_dirs.iglob_check_type(
+                filename_pattern
+            )
+        ))
 # --- end of DefaultInstallInfo ---
