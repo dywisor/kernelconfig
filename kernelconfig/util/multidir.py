@@ -122,6 +122,15 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
             self.add_pathv(pathv)
     # --- end of __init__ (...) ---
 
+    def copy(self):
+        """Creates and returns a copy of this multi dir entry.
+
+        The paths (but not the path list) will be shared between
+        the original and the copy.
+        """
+        return self.__class__(pathv=self.paths)
+    # --- end of copy (...) ---
+
     def __bool__(self):
         return bool(self.paths)
     # --- end of __bool__ (...) ---
