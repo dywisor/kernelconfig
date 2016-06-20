@@ -29,8 +29,10 @@ def _lazy_constructor(attr_name, attr_constructor_name=None):
 
 class ConfigGenerator(loggable.AbstractLoggable):
 
-    def __init__(self, source_info, **kwargs):
+    def __init__(self, install_info, source_info, **kwargs):
         super().__init__(**kwargs)
+
+        self.install_info = install_info
 
         self.source_info = source_info
         self.source_info.set_logger(parent_logger=self.logger)
@@ -61,7 +63,7 @@ class ConfigGenerator(loggable.AbstractLoggable):
     def _create_config_choices_interpreter(self):
         return self.create_loggable(
             interpreter.KernelConfigLangInterpreter,
-            self.source_info, self.get_config_choices()
+            self.install_info, self.source_info, self.get_config_choices()
         )
 
     get_kconfig_symbols = _lazy_constructor("_kconfig_symbols")

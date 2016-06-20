@@ -578,8 +578,9 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
 
 class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
 
-    def __init__(self, source_info, config_choices, **kwargs):
+    def __init__(self, install_info, source_info, config_choices, **kwargs):
         super().__init__(**kwargs)
+        self.install_info = install_info
         self.source_info = None
         self.config_choices = None
         self._choice_op_dispatchers = None

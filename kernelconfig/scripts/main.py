@@ -211,7 +211,8 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         # config creation
         # * init
         config_gen = self.create_loggable(
-            kernelconfig.kconfig.config.gen.ConfigGenerator, source_info
+            kernelconfig.kconfig.config.gen.ConfigGenerator,
+            self.install_info, source_info
         )
 
         config = config_gen.get_config()
