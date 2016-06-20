@@ -9,6 +9,7 @@ PN := $(_PRJNAME)
 
 S := $(_PRJROOT)
 O := $(S)
+SRC_FILESDIR := $(S:/=)/files
 SRC_DOCDIR := $(S:/=)/doc
 _BUILD_DIR := $(O:/=)/build
 _PYMOD_DIRS := $(addprefix $(S:/=)/,$(_PRJNAME))
@@ -27,6 +28,7 @@ LNS = $(LN) -s
 X_PEP8 = pep8
 PEP8_EXCLUDE = parsetab.py
 X_PYFLAKES = pyflakes
+PYFLAKES_EXTRA_FILES = $(wildcard $(SRC_FILESDIR)/installinfo/*.py)
 X_GREP = grep
 GREP_CHECK_OPTS = -n --color
 X_EPYDOC = epydoc
@@ -133,7 +135,7 @@ check:
 # and the usual suspects
 # setup.py does not need to be pep8-compliant
 	$(X_PEP8) $(_PYMOD_DIRS) $(foreach x,$(PEP8_EXCLUDE),--exclude '$(x)')
-	$(X_PYFLAKES) $(_SETUP_PY) $(_PYMOD_DIRS)
+	$(X_PYFLAKES) $(_SETUP_PY) $(_PYMOD_DIRS) $(PYFLAKES_EXTRA_FILES)
 
 
 PHONY += print-lkc-files
