@@ -209,7 +209,7 @@ class KernelConfigLangLexer(object):
         return self.emit_reset_cmd_end(t)
 
     def t_STR(self, t):
-        r'[a-zA-Z0-9\_\-\+\.\/]+'
+        r'[a-zA-Z0-9\_\-\+\.\/\*]+'
         slow = t.value.lower()
         try:
             stype = self.reserved[slow]
