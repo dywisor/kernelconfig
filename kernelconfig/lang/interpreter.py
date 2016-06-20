@@ -3,6 +3,7 @@
 
 import abc
 import collections
+import logging
 import os
 
 from ..abc import loggable
@@ -683,7 +684,16 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
     def lookup_load_file(self, load_file, *, _osp_realpath=os.path.realpath):
         return _osp_realpath(load_file)
 
-    lookup_include_file = lookup_load_file
+    def lookup_include_file(self, include_file):
+        norm_include_file = os.path.normpath(include_file)
+
+        if not os.path.isabs(norm_include_file):
+            return self.install_info.get_include_files(norm_include_file)
+        elif os.path.isfile(norm_include_file):
+            return [norm_include_file]
+        else:
+            return None
+    # --- end of lookup_include_file (...) ---
 
     def process_command(self, cmdv, conditional):
         _KernelConfigOp = parser.KernelConfigOp
@@ -691,30 +701,105 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         cmd_arg = cmdv[0]
 
         if cmd_arg is _KernelConfigOp.op_include:
-            include_file = self.lookup_include_file(cmdv[1])
-            try:
-                cond_dynamic, cond_eval = self.evaluate_conditional(
-                    conditional,
-                    self._include_file_cond_context.bind(include_file)
-                )
-            except KernelConfigLangInterpreterCondOpNotSupported:
-                return False
+            include_files_in = self.lookup_include_file(cmdv[1])
 
-            if not cond_eval:
-                self.logger.debug(
-                    "Include directive disabled by unmet conditions: %r",
-                    include_file or cmdv[1]
-                )
-                return True
+            if not include_files_in:
+                try:
+                    cond_dynamic, cond_eval = self.evaluate_conditional(
+                        conditional,
+                        self._include_file_cond_context.bind(None)
+                    )
+                except KernelConfigLangInterpreterCondOpNotSupported:
+                    return False
 
-            elif not include_file:
-                self.logger.error(
-                    "include file %s does not exist", cmdv[1]
-                )
-                return False
+                if not cond_eval:
+                    self.logger.debug(
+                        "Include directive disabled by unmet conditions: %r",
+                        cmdv[1]
+                    )
+                    return True
+
+                else:
+                    self.logger.error(
+                        "include file %s does not exist", cmdv[1]
+                    )
+                    return False
+            # -- end if no files found
+
+            include_files_to_load = []
+            include_files_filtered = []
+
+            cached_cond = None
+            for include_item in include_files_in:
+                if cached_cond is None:
+                    try:
+                        cond_dynamic, cond_eval = self.evaluate_conditional(
+                            conditional,
+                            self._include_file_cond_context.bind(
+                                include_item[-1]
+                            )
+                        )
+                    except KernelConfigLangInterpreterCondOpNotSupported:
+                        return False
+
+                    if not cond_dynamic:
+                        cached_cond = cond_eval
+                else:
+                    self.push_cond_result(cached_cond)
+                    cond_eval = cached_cond
+                # --
+
+                if cond_eval:
+                    # -- self.add_input_file(include_item[-1]) -- below
+                    include_files_to_load.append(include_item)
+                else:
+                    include_files_filtered.append(include_item)
             # --
 
-            self.add_input_file(include_file)
+            if include_files_to_load:
+                if self.logger.isEnabledFor(logging.DEBUG):
+                    num_include_files = len(include_files_to_load)
+
+                    if include_files_filtered:
+                        self.logger.debug(
+                            "Include directive partially disabled: %r",
+                            [name for name, _ in include_files_filtered]
+                        )
+                    # --
+
+                    if num_include_files > 1:
+                        if num_include_files < 5:
+                            self.logger.debug(
+                                "Include directive matched %d files: %r",
+                                num_include_files,
+                                [name for name, _ in include_files_to_load]
+                            )
+                        else:
+                            self.logger.debug(
+                                "Include directive matched %d files",
+                                num_include_files
+                            )
+                    # -- end if
+
+                    del num_include_files
+                # -- end if debug-log
+
+                for include_item in include_files_to_load:
+                    self.add_input_file(include_item[-1])
+
+            elif include_files_filtered:
+                self.logger.debug(
+                    "Include directive disabled by unmet conditions: %r",
+                    include_files_filtered
+                )
+
+            else:
+                raise AssertionError((
+                    'non-empty include_files_in implies '
+                    'non-empty include_files_to_load|include_files_filtered'
+                ))
+            # --
+
             return True
 
         elif cmd_arg in self._choice_op_dispatchers:
