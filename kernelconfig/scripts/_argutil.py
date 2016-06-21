@@ -6,6 +6,8 @@ import os
 import re
 import stat
 
+from ..util import fspath
+
 
 __all__ = ["ArgTypes", "UsageAction"]
 
@@ -18,10 +20,11 @@ class ArgTypes(object):
         self.exc_type = (
             self.DEFAULT_EXC_TYPE if exc_type is None else exc_type
         )
-        # abspath {"/*", "~*"}, relpath {".", "..", "./*", "../*"}
+        # abspath {"~*"}, relpath {".", "..", "./*", "../*"}
         #  empty str should be checked before using this regexp
+        #  absolute paths are checked with os.path.isabs
         self.re_nonspecial_path = re.compile(
-            r'^(?:{sep}|[~]|[.]{{1,2}}(?:$|{sep}))'.format(sep=os.path.sep)
+            r'^(?:[~]|[.]{{1,2}}(?:$|{sep}))'.format(sep=os.path.sep)
         )
 
     def arg_nonempty(self, arg):
@@ -30,18 +33,7 @@ class ArgTypes(object):
         raise self.exc_type("arg must not be empty")
 
     def _arg_expanduser(self, arg):
-        if arg and arg[0] == "~":
-            if len(arg) < 2 or arg[1] == os.path.sep:
-                # HOME needs to be set
-                #  otherwise, expanduser replaces '~' with '/'
-                assert os.getenv("HOME")
-                return os.path.expanduser(arg)
-            else:
-                raise argparse.ArgumentTypeError(
-                    "cannot expand ~ for other users: %r" % arg
-                )
-        else:
-            return arg
+        return fspath.expand_home_dir(arg) if arg else arg
 
     def arg_realpath(self, arg):
         return os.path.realpath(self._arg_expanduser(self.arg_nonempty(arg)))
@@ -50,9 +42,9 @@ class ArgTypes(object):
         return os.path.abspath(self._arg_expanduser(self.arg_nonempty(arg)))
 
     def arg_existing_file(self, arg):
-        fspath = self.arg_realpath(arg)
+        filepath = self.arg_realpath(arg)
         try:
-            sb = os.stat(fspath)
+            sb = os.stat(filepath)
         except OSError:
             raise self.exc_type("file does not exist: %s" % arg) from None
 
@@ -62,22 +54,22 @@ class ArgTypes(object):
         # --
 
         # S_IFCHR, S_IFBLK, S_IFREG, S_IFIFO, S_IFSOCK -- ok!
-        return fspath
+        return filepath
     # --- end of arg_existing_file (...) ---
 
     def arg_existing_file_special_relpath(self, arg):
         if not arg:
             raise self.exc_type("arg must not be empty")
-        elif self.re_nonspecial_path.match(arg):
+        elif os.path.isabs(arg) or self.re_nonspecial_path.match(arg):
             return (False, self.arg_existing_file(arg))
         else:
             return (True, arg)
     # --- end of arg_existing_file_special_relpath (...) ---
 
     def arg_existing_dir(self, arg):
-        fspath = self.arg_realpath(arg)
-        if os.path.isdir(fspath):
-            return fspath
+        filepath = self.arg_realpath(arg)
+        if os.path.isdir(filepath):
+            return filepath
         raise self.exc_type("not a dir: %s" % arg)
     # --- end of arg_existing_dir (...) ---
 
