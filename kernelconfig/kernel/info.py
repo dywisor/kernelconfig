@@ -6,6 +6,7 @@ import os
 import re
 
 from ..abc import loggable
+from ..util import fspath
 from . import kversion
 
 __all__ = ["SourceInfo", "KernelInfo"]
@@ -41,14 +42,7 @@ class SourceInfo(loggable.AbstractLoggable):
         @return:  absolute filesystem path
         @rtype:   C{str}
         """
-        norm_relpath = (
-            os.path.normpath(relpath.strip(os.path.sep))
-            if relpath else None
-        )
-        if norm_relpath and norm_relpath != ".":
-            return os.path.join(self.srctree, norm_relpath)
-        else:
-            return self.srctree
+        return fspath.join_relpath(self.srctree, relpath)
     # --- end of get_filepath (...) ---
 
     def check_srctree(self):
