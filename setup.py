@@ -1,10 +1,11 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-import os.path
+import os
 import distutils.core
 import distutils.command.build
 import distutils.command.build_py
+
 
 class ProjectSetup(object):
     PRJ_NAME = "kernelconfig"
@@ -19,23 +20,55 @@ class ProjectSetup(object):
         return [cls.pym_name(sub_mod) for sub_mod in sub_mods]
 
     @classmethod
-    def setup(cls):
+    def get_ext_modules(cls):
+        lkconfig_src = "src"
+
+        # get_lkconfig_src(name):  lkconfig_src "/" name
+        get_lkconfig_src = lambda n, *, s=lkconfig_src: os.path.join(s, n)
+
+        lkc_src_from_env = os.getenv("LKCONFIG_LKC")
+        if lkc_src_from_env:
+            lkc_src = os.path.realpath(lkc_src_from_env)
+        else:
+            lkc_src = get_lkconfig_src("lkc")
+
+        # get_lkc_src(name):  lkc_src "/" name
+        get_lkc_src = lambda n, *, s=lkc_src: os.path.join(s, n)
+
+        if os.path.isabs(lkc_src):  # equiv if lkc_src_from_env
+            _get_lkc_src_include = get_lkc_src
+        else:
+            _get_lkc_src_include = lambda n, *, b=lkconfig_src: \
+                os.path.relpath(get_lkc_src(n), b)
+        # --
+
+        # get_lkc_src_include(name):  "\"" lkc_src "/" name "\""
+        get_lkc_src_include = lambda n: "\"%s\"" % _get_lkc_src_include(n)
+
         kernelconfig_lkconfig_pyext = distutils.core.Extension(
             cls.pym_name("kconfig.lkconfig"),
             sources = (
                 [
-                    "src/lkconfig.c",
-                    "src/lkc/zconf.tab.c",
+                    get_lkconfig_src("lkconfig.c"),
+                    get_lkc_src("zconf.tab.c"),
                 ]
             ),
-            extra_compile_args = ["-Wall"]
+            extra_compile_args = ["-Wall"],
+            define_macros = [
+                ("LKCONFIG_LKC", get_lkc_src_include("lkc.h"))
+            ]
         )
 
+        return [kernelconfig_lkconfig_pyext]
+    # ---
+
+    @classmethod
+    def setup(cls):
         distutils.core.setup(
             name        = cls.PRJ_NAME,
             version     = "0.1",
             license     = "GPLv2",
-            ext_modules = [kernelconfig_lkconfig_pyext],
+            ext_modules = cls.get_ext_modules(),
             packages    = cls.pym_names(
                 None,
                 "abc",
