@@ -397,7 +397,7 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         """
         if (
             self._scandir_cache_complete
-            and os.path.sep not in norm_filename
+            and fspath.is_name(norm_filename)
             and (
                 not glob_kw.get("recursive") or "**" not in norm_filename
             )
@@ -577,7 +577,7 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         except KeyError:
             pass
 
-        if os.path.sep in norm_filename:
+        if not fspath.is_name(norm_filename):
             cacheable = False
         elif self._scandir_cache_complete:
             return None
@@ -643,7 +643,7 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
             return None
         # --
 
-        if self._scandir_cache_complete and os.path.sep not in norm_filename:
+        if self._scandir_cache_complete and fspath.is_name(norm_filename):
             return None
 
         for filepath, stat_info in self._iget_all_paths(norm_filename):
