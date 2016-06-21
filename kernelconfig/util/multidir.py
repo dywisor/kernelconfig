@@ -8,6 +8,8 @@ import glob
 import os
 import stat
 
+from . import fspath
+
 __all__ = ["MultiDirEntry", "MultiDirDequeEntry"]
 
 
@@ -172,7 +174,7 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         @return:  normalized file name
         @rtype:   C{str}
         """
-        return os.path.normpath(filename).strip(os.path.sep)
+        return fspath.normalize_relpath(filename)
     # --- end of normalize_filename (...) ---
 
     def clear_cache(self):
@@ -196,13 +198,13 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         self._scandir_cache_complete = False
     # --- end of _cache_invalidate_path (...) ---
 
-    def do_stat(self, fspath):
+    def do_stat(self, filepath):
         """A 'fault-tolerant' os.stat variant.
 
         @return: stat_result if successful, None on OSError
         """
         try:
-            return os.stat(fspath)
+            return os.stat(filepath)
         except OSError:
             return None
     # --- end of do_stat (...) ---
