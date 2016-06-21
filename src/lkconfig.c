@@ -1,9 +1,3 @@
-#include <Python.h>
-#include "structmember.h"
-#include "lkc/lkc.h"
-
-
-
 #include "lkconfig_objdef.h"
 
 #include "lkconfig_utilfuncs.c"
