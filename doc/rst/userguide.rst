@@ -61,7 +61,7 @@ It uses the ``default`` `settings`_ and creates a ``.config`` file.
 
 .. Important::
 
-    Until *curated sources* are not implemented,
+    Until *curated sources* are implemented,
     it is necessary the create an input ``.config`` file before running
     kernelconfig, e.g. with ``make defconfig``.
 
