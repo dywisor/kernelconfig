@@ -7,6 +7,7 @@ import os
 
 __all__ = [
     "strip_relpath", "normalize_relpath",
+    "join_relpath", "join_relpaths", "join_relpaths_v",
     "dirprefix", "dirsuffix", "dirproduct",
     "get_home_dir", "get_user_config_dir",
 ]
@@ -24,6 +25,81 @@ def normalize_relpath(relpath, *, _osp_normpath=os.path.normpath):
     """
     return _osp_normpath(strip_relpath(relpath))
 # --- end of normalize_relpath (...) ---
+
+
+def normalize_relpath_if_nonempty(relpath):
+    """Same as normalize_relpath(), but returns None for 'empty' relpaths."""
+    return normalize_relpath(relpath) if relpath else None
+# --- end of normalize_relpath_if_nonempty (...) ---
+
+
+def join_relpath(dirpath, relpath, *, _osp_join=os.path.join):
+    """Interprets 'relpath' relative to (dirpath + "/")
+    and returns its absolute path.
+
+    The relpath may be empty or None, in which case the dirpath is returned.
+
+    @param dirpath:  directory path
+    @type  dirpath:  C{str}
+    @param relpath:  path relative to dirpath, may be None or False
+    @type  relpath:  C{str} or C{None} or anything "false"
+
+    @return:  absolute path
+    @rtype:   C{str}
+    """
+    norm_relpath = normalize_relpath_if_nonempty(relpath)
+
+    if norm_relpath and norm_relpath != ".":
+        return _osp_join(dirpath, relpath)
+    else:
+        return dirpath
+# --- end of join_relpath (...) ---
+
+
+def join_relpaths_v(
+    dirpath, relpath_elements, *,
+    _osp_join=os.path.join, _osp_normpath=os.path.normpath
+):
+    """
+    Interprets the first relpath relative to (dirpath + "/")
+    and all subsequent relpaths relative to their predecessor.
+
+    The 'relpath_elements' argument may be None or empty,
+    in which case 'dirpath' is returned.
+
+    The resulting path is normalized so that ".." references get eliminated.
+
+    join_relpaths_v(D, [a, b]) ===
+       os.path.normpath(join_relpath(join_relpath(D, a), b))
+
+    @param dirpath:           directory path
+    @type  dirpath:           C{str}
+    @param relpath_elements:  None or list of relpath elements that should
+                              be append to dirpath
+    @type  relpath_elements:  C{None} or C{list} of C{str}
+
+    @return:  absolute path
+    @rtype:   C{str}
+    """
+
+    if not relpath_elements:
+        return _osp_normpath(dirpath)
+
+    parts = [
+        w for w in map(normalize_relpath_if_nonempty, relpath_elements) if w
+    ]
+
+    if parts:
+        return _osp_normpath(_osp_join(dirpath, *parts))
+    else:
+        return _osp_normpath(dirpath)
+# --- end of join_relpaths_v (...) ---
+
+
+def join_relpaths(dirpath, *relpath_elements):
+    """var-args variant of join_relpaths_v()."""
+    return join_relpaths_v(dirpath, *relpath_elements)
+# --- end of join_relpaths (...) ---
 
 
 def dirprefix(dirpath, names, *, _osp_join=os.path.join):
