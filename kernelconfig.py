@@ -33,7 +33,31 @@ def run_setup_py(prjroot, setup_file, build_dir, build_pym_dir, force=False):
 # ---
 
 
+def setup_lkconfig_lkc_env_var(arg_config, *, varname="LKCONFIG_LKC"):
+    if hasattr(arg_config, "lkc_src"):
+        os.environ[varname] = arg_config.lkc_src
+
+    elif varname in os.environ:
+        pass
+
+# %%%autoset LKC_SRC from srctree
+#    elif getattr(arg_config, "srctree", None):
+#        lkc_src = os.path.join(arg_config.srctree, "scripts", "kconfig")
+#        if os.path.isdir(lkc_src):
+#            os.environ[varname] = lkc_src
+# ---
+
+
 def main():
+    def arg_is_dir(arg):
+        if arg:
+            fspath = os.path.realpath(arg)
+            if os.path.isdir(fspath):
+                return fspath
+        # --
+        raise argparse.ArgumentTypeError()
+    # ---
+
     prjname = "kernelconfig"
 
     check_pydeps()
@@ -50,10 +74,26 @@ def main():
         "--wrapper-build-base", dest="build_base", default=None
     )
     arg_parser.add_argument(
+        "--wrapper-lkc",  dest="lkc_src",
+        default=argparse.SUPPRESS,
+        type=lambda w: (arg_is_dir(w) if w else "")
+    )
+# %%%autoset LKC_SRC from srctree
+#    arg_parser.add_argument(
+#        "-k", "--kernel", dest="srctree",
+#        default=argparse.SUPPRESS, type=arg_is_dir
+#    )
+
+    arg_parser.add_argument(
         "--rebuild", default=False, action="store_true"
     )
 
     arg_config, main_argv = arg_parser.parse_known_args()
+# %%%autoset LKC_SRC from srctree
+#    if hasattr(arg_config, "srctree"):
+#        # push back deduplicated --kernel, -k
+#        main_argv.extend(["-k", arg_config.srctree])
+
 
     prjroot = arg_config.prjroot
     if not prjroot:
@@ -89,6 +129,8 @@ def main():
         "{v.major}.{v.minor}.{v.micro}".format(v=sys.version_info)
     )
     py_build_pym = os.path.join(py_build_dir, "pym")
+
+    setup_lkconfig_lkc_env_var(arg_config)
 
     run_setup_py(
         prjroot, setup_file,
