@@ -437,7 +437,7 @@ if __name__ == "__main__":
 
         for arg in sys.argv[1:]:
             if arg:
-                if arg[0] == os.path.sep:
+                if os.path.isabs(arg):
                     result = p.parse_file(arg)
                 else:
                     result = p.parse(arg if arg[0] != "@" else arg[1:])
