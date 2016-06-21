@@ -6,11 +6,20 @@ import os
 
 
 __all__ = [
+    "is_name",
     "strip_relpath", "normalize_relpath",
     "join_relpath", "join_relpaths", "join_relpaths_v",
     "dirprefix", "dirsuffix", "dirproduct",
     "get_home_dir", "expand_home_dir", "get_user_config_dir",
 ]
+
+
+def is_name(relpath, *, _osp_sep=os.path.sep):
+    """Returns True if the given relpath is just a name,
+    i.e. contains no slashes, and False otherwise.
+    """
+    return _osp_sep not in relpath
+# --- end of is_name (...) ---
 
 
 def strip_relpath(relpath, *, _osp_sep=os.path.sep):
