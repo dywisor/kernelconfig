@@ -9,7 +9,7 @@ __all__ = [
     "strip_relpath", "normalize_relpath",
     "join_relpath", "join_relpaths", "join_relpaths_v",
     "dirprefix", "dirsuffix", "dirproduct",
-    "get_home_dir", "get_user_config_dir",
+    "get_home_dir", "expand_home_dir", "get_user_config_dir",
 ]
 
 
@@ -191,6 +191,20 @@ def get_home_dir(user=None):
 
     return home_dir
 # --- end of get_home_dir (...) ---
+
+
+def expand_home_dir(path):
+    """
+    Similiar to os.path.expanduser(),
+    but ensures that expansion actually worked.
+    """
+    if not path or path[0] != "~":
+        return path
+
+    home_ref, sep, rem = path.partition(os.path.sep)
+    home_dir = get_home_dir(home_ref[1:])
+    return home_dir if not sep else (home_dir + sep + rem)
+# --- end of expand_home_dir (...) ---
 
 
 if os.name == "posix":  # sys.platform.startswith("linux")
