@@ -4,7 +4,7 @@
 #include <Python.h>
 #include "structmember.h"
 
-#include "lkc/lkc.h"
+#include "lkconfig_lkc.h"
 
 #define LKCONFIG_PYMOD_NAME  "kernelconfig.kconfig.lkconfig"
 
