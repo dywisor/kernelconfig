@@ -85,7 +85,8 @@ def main():
 #    )
 
     arg_parser.add_argument(
-        "--rebuild", default=False, action="store_true"
+        "--wrapper-rebuild", dest="rebuild",
+        default=False, action="store_true"
     )
 
     arg_config, main_argv = arg_parser.parse_known_args()
