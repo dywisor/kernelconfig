@@ -8,6 +8,9 @@ import shutil
 import tempfile
 import weakref
 
+from . import fspath
+
+
 __all__ = ["Tmpdir"]
 
 
@@ -28,14 +31,7 @@ class _Tmpdir(object):
         self._path = tempfile.mkdtemp(**kwargs)
 
     def get_filepath(self, relpath=None):
-        norm_relpath = (
-            os.path.normpath(relpath.strip(os.path.sep))
-            if relpath else None
-        )
-        if norm_relpath and norm_relpath != ".":
-            return os.path.join(self._path, norm_relpath)
-        else:
-            return self._path
+        return fspath.join_relpath(self._path, relpath)
     # ---
 
     def copyfile(self, relpath, dst):
@@ -44,8 +40,8 @@ class _Tmpdir(object):
     # ---
 
     def rmfile(self, relpath):
-        fspath = self.get_filepath(relpath)
-        os.unlink(fspath)
+        filepath = self.get_filepath(relpath)
+        os.unlink(filepath)
 
     def rmfile_ifexist(self, relpath):
         try:
