@@ -58,36 +58,90 @@ def main():
         raise argparse.ArgumentTypeError()
     # ---
 
+    with_default = lambda h, d=None: (
+        "%s\n (default: %s)" % (h, ("%(default)s" if d is None else d))
+    )
+
     prjname = "kernelconfig"
 
     check_pydeps()
+    # Note: "all unknown args passed to main" is not strictly correct,
+    #       the argparse consumes all options that are a substring
+    #       of any known arg.
+    #       So, anything starting with "--w" will be parsed and
+    #       might produce a usage error.
+    #
+    #       In Python >= 3.5, it is possible to disable this behavior.
+    #
+    #       FIXME: investigate whether there's sth. equivalent for 3.4
+    #
+    arg_parser_kwargs = {}
+    if sys.hexversion >= 0x3050000:
+        arg_parser_kwargs["allow_abbrev"] = False
 
     arg_parser = argparse.ArgumentParser(
-        "kernelconfig main wrapper", add_help=False
+        description=(
+            'kernelconfig standalone wrapper\n'
+            '\n'
+            'Runs \'setup.py build\' and then the main script.\n'
+            'All unknown arguments are passed to the main script.\n'
+            '\n'
+            'Example usage: %(prog)s -k /usr/src/linux\n'
+        ),
+        add_help=False,
+        formatter_class=argparse.RawTextHelpFormatter,
+        **arg_parser_kwargs
     )
 
-    arg_parser.add_argument("--wrapper-help", action="help")
     arg_parser.add_argument(
-        "--wrapper-prjroot", dest="prjroot", default=None
+        "--wrapper-help", action="help",
+        help="show this help message and exit"
     )
     arg_parser.add_argument(
-        "--wrapper-build-base", dest="build_base", default=None
+        "--wrapper-prjroot", dest="prjroot", default=None,
+        help=with_default(
+            "path to the project's root directory",
+            "dir containing this script"
+        )
+    )
+    arg_parser.add_argument(
+        "--wrapper-build-base", dest="build_base", default=None,
+        help=with_default(
+            "build files root directory",
+            "$PY_BUILDDIR or <PRJROOT>/build"
+        )
     )
     arg_parser.add_argument(
         "--wrapper-lkc",  dest="lkc_src",
         default=argparse.SUPPRESS,
-        type=lambda w: (arg_is_dir(w) if w else "")
+        type=lambda w: (arg_is_dir(w) if w else ""),
+        help=with_default(
+            "lkc source directory",
+            "$LKCONFIG_LKC or <PRJROOT>/src/lkc"
+        )
     )
 # %%%autoset LKC_SRC from srctree
 #    arg_parser.add_argument(
 #        "-k", "--kernel", dest="srctree",
-#        default=argparse.SUPPRESS, type=arg_is_dir
+#        default=argparse.SUPPRESS, type=arg_is_dir,
+#        help=(
+#            'path to the unpacked kernel sources directory,\n'
+#            'used for getting LKC_SRC automatically,\n'
+#            'will be forwarded to the main script'
+#        )
 #    )
 
     arg_parser.add_argument(
         "--wrapper-rebuild", dest="rebuild",
-        default=False, action="store_true"
+        default=False, action="store_true",
+        help=with_default(
+            "force rebuilding of all Python modules", "disabled"
+        )
     )
+
+    # add "..." to the end of the usage string,
+    # indicating how to specify args for the real main script
+    arg_parser.usage = "%s ...\n\n" % arg_parser.format_usage().rstrip()
 
     arg_config, main_argv = arg_parser.parse_known_args()
 # %%%autoset LKC_SRC from srctree
