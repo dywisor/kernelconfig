@@ -142,6 +142,19 @@ class DefaultInstallInfo(InstallInfoBase):
 
     CONFDIR_NAME = "kernelconfig"
 
+    @classmethod
+    add_confdir_suffix(cls, dirpaths):
+        """
+        Suffixes each dir in dirpaths with "/" + project-specific confdir name.
+
+        @param dirpaths:  directory paths
+        @type  dirpaths:  C{list} of C{str}
+
+        @return:  directory paths suffixed with ("/" + CONFDIR_NAME)
+        @rtype:   C{list} of C{str}
+        """
+        self.add_dirsuffix(dirpaths, cls.CONFDIR_NAME)
+
     @abc.abstractclassmethod
     def new_instance(cls, sys_config_dir, sys_data_dir):
         """
