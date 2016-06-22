@@ -130,15 +130,22 @@ $(_BUILD_DIR)/uml/%.png: $(_BUILD_DIR)/uml/%.dot
 
 
 
-PHONY += check
-check:
+PHONY += check-typo
+check-typo:
 # name it Kconfig, or kconfig where lowercase is appropriate
 	$(call f_grep_check_recursive,[kK]C[oO][nN][fF][iI][gG])
-# and the usual suspects
+
+PHONY += check-pep8
+check-pep8:
 # setup.py does not need to be pep8-compliant
 	$(X_PEP8) $(_PYMOD_DIRS) $(foreach x,$(PEP8_EXCLUDE),--exclude '$(x)')
+
+PHONY += check-pyflakes
+check-pyflakes:
 	$(X_PYFLAKES) $(_SETUP_PY) $(_PYMOD_DIRS) $(PYFLAKES_EXTRA_FILES)
 
+PHONY += check
+check: $(addprefix check-,typo pep8 pyflakes)
 
 PHONY += print-lkc-files
 print-lkc-files:
