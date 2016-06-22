@@ -128,7 +128,9 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
     # --- end of init_arg_parser (...) ---
 
     def load_settings_file(self, settings_arg):
-        if not settings_arg:
+        if settings_arg is None:
+            settings_arg = (True, "default")
+        elif not settings_arg:
             return (None, None)
 
         need_lookup, filename = settings_arg
