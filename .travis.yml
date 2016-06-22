@@ -1,0 +1,28 @@
+language: python
+
+env:
+    global:
+        - LK_SRC_URI=https://raw.githubusercontent.com/torvalds/linux/master
+
+    matrix:
+        - CC=gcc
+        - CC=clang
+
+python:
+    - "3.4"
+    - "3.5"
+
+install:
+    - pip install -r requirements.txt
+    - pip install pyflakes
+    - pip install pep8
+
+before_script:
+    - make fetch-lkc
+    - make check-typo check-pep8 || true
+    - make check-pyflakes
+    - python ./setup.py build --standalone --build-base ./build --build-lib ./build/pym
+
+script:
+    - export KERNELCONFIG_PRJROOT="${PWD}"
+    - cd ./build/pym
