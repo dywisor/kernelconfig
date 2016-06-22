@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import os
+import subprocess
+import sys
 import distutils.core
 import distutils.command.build
 import distutils.command.build_py
@@ -131,9 +133,42 @@ class genfiles_build_py(distutils.command.build_py.build_py):
         self.copy_file(self.get_install_info_infile(), install_info_file)
         self.byte_compile([install_info_file])
 
+    def build_parsetab(self):
+        # COULDFIX: it would be possible to create parsetab.py
+        #           without running a second Python interpreter process,
+        #           but the relative imports make it quite tricky
+        #
+        #           (-- importlib.machinery.SourceLoader)
+        #
+        mkparsetab_script = os.path.join(
+            os.path.dirname(sys.argv[0]),
+            "build-scripts",
+            "create-parsetab.py"
+        )
+
+        parsetab_dir = os.path.join(
+            self.build_lib, ProjectSetup.PYM_NAME, "lang"
+        )
+        parsetab_file = os.path.join(parsetab_dir, "parsetab.py")
+
+        self.execute(
+            subprocess.check_call,
+            [
+                [
+                    sys.executable,
+                    mkparsetab_script,
+                    self.build_lib,
+                    ProjectSetup.pym_name("lang.parser")
+                ]
+            ],
+            msg="creating parsetab"
+        )
+        self.byte_compile([parsetab_file])
+
     def run(self):
         self.build_generated_files()
         super().run()
+        self.build_parsetab()
 # ---
 
 
