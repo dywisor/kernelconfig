@@ -427,13 +427,19 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
 # --- end of KernelConfigLangParser ---
 
 
+def build_parser():
+    p = KernelConfigLangParser()
+    p.build()
+    return p
+# --- end of build_parser (...) ---
+
+
 if __name__ == "__main__":
     def main():
         import os.path
         import sys
 
-        p = KernelConfigLangParser()
-        p.build()
+        p = build_parser()
 
         for arg in sys.argv[1:]:
             if arg:
