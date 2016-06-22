@@ -7,6 +7,7 @@ import logging
 import os
 
 from ..abc import loggable
+from ..util import filequeue
 from . import cond
 from . import parser
 
@@ -38,7 +39,7 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
 
     def __init__(self, cond_result_buffer_size=True, **kwargs):
         super().__init__(**kwargs)
-        self._file_input_queue = collections.deque()
+        self._file_input_queue = filequeue.FileInputQueue()
         self._parser = self.create_loggable(
             parser.KernelConfigLangParser, logger_name="Parser"
         )
@@ -114,7 +115,7 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
 
         @return:  None (implicit)
         """
-        if self._file_input_queue:
+        if not self._file_input_queue.empty():
             raise AssertionError("unclean interpreter state")
     # --- end of assert_empty_file_input_queue (...) ---
 
@@ -126,14 +127,24 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
               depending on whether it is an "include" command-type
               or process_file()-type input file.
 
+        @raises filequeue.DuplicateItemKey:  passed through from
+                                             filequeue.FileInputQueue.put
 
         @param infile:  input file
         @type  infile:  C{str}
 
-        @return:  None (implicit)
+        @return:  True if input file has been added, else False
+        @rtype:   C{bool}
         """
-        self.logger.debug("Adding %r to the input file queue", infile)
-        self._file_input_queue.append(infile)
+        if self._file_input_queue.put(infile):
+            self.logger.debug("Added %r to the input file queue", infile)
+            return True
+        else:
+            self.logger.debug(
+                "Not adding %r to the input file queue: already enqueued",
+                infile
+            )
+            return False
     # --- end of add_input_file (...) ---
 
     def get_realpath(self, filepath, *, _osp_realpath=os.path.realpath):
@@ -458,16 +469,17 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
         @return:  True if successful, False if not
         @rtype:   C{bool}
         """
-        while self._file_input_queue:
-            # self._file_input_queue.popleft() a.s.o.
-            cmdlist = self._parse_files(self._file_input_queue)
-            self._clear_file_input_queue()
+        while True:
+            try:
+                input_file = self._file_input_queue.get()
+            except filequeue.Empty:
+                return True
+
+            cmdlist = self._parse_files([input_file])
             ret = self._process_one_cmdlist(cmdlist)
             if not ret:
                 return ret
         # --
-
-        return True
     # --- end of _process_file_input_queue (...) ---
 
     def process_cmdlist(self, cmdlist):
@@ -493,6 +505,8 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
 
         Immediately returns False on the first unsuccessful command.
 
+        @raises filequeue.DuplicateItemKey:
+
         @param infiles:  iterable of input files
         @type  infiles:  iterable of C{str}
 
@@ -507,7 +521,7 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
                 raise FileNotFoundError(infile)
             # --
 
-            self.add_input_file(filepath)
+            self.add_input_file(filepath)  # raises DuplicateItemKey
         # -- end for
         return self._process_file_input_queue()
     # --- end of process_files (...) ---
@@ -785,7 +799,10 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 # -- end if debug-log
 
                 for include_file in include_files_to_load:
-                    self.add_input_file(include_file)
+                    try:
+                        self.add_input_file(include_file)
+                    except filequeue.DuplicateItemKey:
+                        return False
 
             elif include_files_filtered:
                 self.logger.debug(
