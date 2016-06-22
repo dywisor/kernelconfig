@@ -151,18 +151,20 @@ class genfiles_build_py(distutils.command.build_py.build_py):
         )
         parsetab_file = os.path.join(parsetab_dir, "parsetab.py")
 
-        self.execute(
-            subprocess.check_call,
-            [
+        if self.force or not os.access(parsetab_file, os.F_OK):
+            self.execute(
+                subprocess.check_call,
                 [
-                    sys.executable,
-                    mkparsetab_script,
-                    self.build_lib,
-                    ProjectSetup.pym_name("lang.parser")
-                ]
-            ],
-            msg="creating parsetab"
-        )
+                    [
+                        sys.executable,
+                        mkparsetab_script,
+                        self.build_lib,
+                        ProjectSetup.pym_name("lang.parser")
+                    ]
+                ],
+                msg="creating parsetab"
+            )
+        # --
         self.byte_compile([parsetab_file])
 
     def run(self):
