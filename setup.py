@@ -77,9 +77,14 @@ class ProjectSetup(object):
                 "kconfig",
                 "kconfig.abc",
                 "kconfig.config",
-                "lang",
                 "scripts",
                 "util"
+            ),
+            py_modules = cls.pym_names(
+                "lang.lexer",
+                "lang.parser",
+                "lang.interpreter",
+                "lang.cond"
             ),
             cmdclass={
                 "build": genfiles_build,
