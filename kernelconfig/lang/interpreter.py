@@ -8,6 +8,7 @@ import os
 
 from ..abc import loggable
 from ..util import filequeue
+from ..util import objcache
 from . import cond
 from . import parser
 
@@ -595,9 +596,21 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
 
 
 class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
+    """
+    @ivar object_cache:       a cache of recently used objects,
+                              so that repeated str-to-object conversions
+                              can be circumvented
+    @type object_cache:       L{ObjectCache}
+    """
 
-    def __init__(self, install_info, source_info, config_choices, **kwargs):
+    def __init__(
+        self, install_info, source_info, config_choices, *,
+        object_cache_size=32, **kwargs
+    ):
         super().__init__(**kwargs)
+        self.object_cache = objcache.ObjectCache(
+            maxsize=object_cache_size, typed=True
+        )
         self.install_info = install_info
         self.source_info = None
         self.config_choices = None
@@ -663,6 +676,8 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
 
         self._cmp_vars = cmp_vars
 
+        int_oper = self.object_cache.wraps(int)
+
         source_info = self.source_info
         if source_info is not None:
             if hasattr(source_info, "kernelversion"):
@@ -670,19 +685,22 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 add_cmp_var(
                     "kver",
                     source_info.kernelversion,
-                    source_info.kernelversion.__class__.new_from_version_str
+                    self.object_cache.wraps(
+                        source_info.kernelversion.__class__.
+                        new_from_version_str
+                    )
                 )
 
                 add_cmp_var(
-                    "kmaj", source_info.kernelversion.version, int
+                    "kmaj", source_info.kernelversion.version, int_oper
                 )
 
                 add_cmp_var(
-                    "kmin", source_info.kernelversion.sublevel, int
+                    "kmin", source_info.kernelversion.sublevel, int_oper
                 )
 
                 add_cmp_var(
-                    "kpatch", source_info.kernelversion.patchlevel, int
+                    "kpatch", source_info.kernelversion.patchlevel, int_oper
                 )
             # -- end hasattr kernelversion
         # -- end if source info
