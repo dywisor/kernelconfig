@@ -1,0 +1,17 @@
+[source]
+
+[options]
+#
+# builtin           <opt> [<opt>...]
+# module            <opt> [<opt>...]
+# builtin-or-module <opt> [<opt>...]
+# disable           <opt> [<opt>...]
+#
+# set    <opt> "<value>"
+# add    <opt> "<value>"
+# append <opt> "<value>"
+#
+# include <feature>
+# include <feature-dir>/*
+# include /path/to/file
+#
