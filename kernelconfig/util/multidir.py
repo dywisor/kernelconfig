@@ -37,11 +37,9 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
     A typical use case is looking up files
     in $HOME/.config/<name> and /etc/<name>,
     and either using both or preferring the file in $HOME.
-    Multi dir entries of this usage type can be instantiated
-    with MultiDirEntry.new_config_dir(<name>).
 
-    This is the base class for such entries.
-    It implements most the multi dir functionality,
+    This is the base class for multi dir entries.
+    It implements most the functionality,
     but leaves the type of the path list open (as long as it's list-like).
 
     @cvar PATH_LIST_TYPE: list type for the filesystem paths.
@@ -76,42 +74,6 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
     def _add_path_to_tail(self, path):
         """Adds 'path' to the end of the paths list."""
         raise NotImplementedError()
-
-    # FIXME: move get_*_config_dir() to a separate module and be more generic.
-    #        for example, sys_confroot is not necessarily "/etc"
-
-    @classmethod
-    def get_user_config_dir_path(cls, name, user_confroot=None):
-        if user_confroot is None:
-            user_confroot = os.path.expanduser("~/.config")
-            assert user_confroot != "/.config", "empty $HOME"
-        # --
-
-        return os.path.join(user_confroot, name)
-    # --- end of get_user_config_dir_path (...) ---
-
-    @classmethod
-    def get_system_config_dir_path(cls, name, sys_confroot=None):
-        if sys_confroot is None:
-            sys_confroot = "/etc"
-        # --
-
-        return os.path.join(sys_confroot, name)
-    # --- end of get_system_config_dir_path (...) ---
-
-    @classmethod
-    def new_config_dir(cls, name, sys_confroot=None, user_confroot=None):
-        return cls(
-            [
-                cls.get_user_config_dir_path(
-                    name, user_confroot=user_confroot
-                ),
-                cls.get_system_config_dir_path(
-                    name, sys_confroot=sys_confroot
-                )
-            ]
-        )
-    # --- end of new_config_dir (...) ---
 
     def __init__(self, pathv=None):
         super().__init__()
