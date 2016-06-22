@@ -37,13 +37,15 @@ X_PYREVERSE = pyreverse
 PYREVERSE_OPTS = -p '$(_PRJNAME)' -fALL
 X_DOT = dot
 DOT_OPTS =
+X_WGET = wget
+WGET_OPTS =
 
 PRJ_LKC_SRC = $(_PRJROOT)/src/lkc
 
 # a list of files to import from the kernel sources
 LKC_FILE_NAMES  = $(addsuffix .h,expr list lkc lkc_proto)
 LKC_FILE_NAMES += $(addsuffix .c,confdata expr menu symbol util)
-LKC_FILE_NAMES += $(addsuffix .c,$(addprefix zconf.,tab hash lex))
+LKC_FILE_NAMES += $(addsuffix .c_shipped,$(addprefix zconf.,tab hash lex))
 
 define _f_sanity_check_output_dir
 	test -n '$(1)'
@@ -159,7 +161,23 @@ import-lkc: $(LK_SRC)
 	{ set -e; \
 		for fname in $(LKC_FILE_NAMES); do \
 			$(CPV) -- "$(LK_SRC)/scripts/kconfig/$${fname}" \
-				"$(PRJ_LKC_SRC)/$${fname}"; \
+				"$(PRJ_LKC_SRC)/$${fname%_shipped}"; \
+		done; \
+	}
+endif
+
+ifeq ("","$(LK_SRC_URI)")
+fetch-lkc:
+	$(error LK_SRC_URI is not set)
+
+else
+fetch-lkc:
+	$(MKDIRP) -- $(PRJ_LKC_SRC)
+	$(X_WGET) $(WGET_OPTS) '$(LK_SRC_URI)/COPYING' -O '$(PRJ_LKC_SRC)/COPYING'
+	{ set -e; \
+		for fname in $(LKC_FILE_NAMES); do \
+			$(X_WGET) $(WGET_OPTS) "$(LK_SRC_URI)/scripts/kconfig/$${fname}" \
+				-O "$(PRJ_LKC_SRC)/$${fname%_shipped}"; \
 		done; \
 	}
 endif
