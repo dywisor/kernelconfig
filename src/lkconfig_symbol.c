@@ -86,6 +86,52 @@ static PyObject* lkconfig_SymbolViewObject_get_rev_dep (
     }
 }
 
+
+static int lkconfig_SymbolViewObject__create_prompt_and_append_to_list (
+    PyObject* const l, const struct property* const prompt
+) {
+    PyObject* text;
+    PyObject* eview;
+    PyObject* prompt_tuple;
+
+    text = NULL;
+    if ( prompt->text != NULL ) {
+        text = PyUnicode_FromString ( prompt->text );
+        if ( text == NULL ) { return -1; }
+    }
+
+    eview = NULL;
+    if ( prompt->visible.expr != NULL ) {
+        eview = lkconfig_ExprViewObject_new_from_struct (
+            prompt->visible.expr
+        );
+
+        if ( eview == NULL ) {
+            Py_XDECREF ( text );
+            return -1;
+        }
+    }
+
+    if ( (text == NULL) && (eview == NULL) ) {
+        /* then prompt is of no interest */
+        return 0;
+    }
+
+    lkconfig_set_and_ref_if_null ( &text,  Py_None );
+    lkconfig_set_and_ref_if_null ( &eview, Py_None );
+
+    /*
+     * Py_BuildValue w/ "N" could leak
+     *  https://bugs.python.org/issue26168
+     * */
+    prompt_tuple = Py_BuildValue( "(OO)", text, eview );
+    Py_DECREF ( text );
+    Py_DECREF ( eview );
+
+    return lkconfig_list_append_steal_ref ( l, prompt_tuple );
+}
+
+
 static PyObject* lkconfig_SymbolViewObject_get_prompt (
     lkconfig_SymbolViewObject* const self, PyObject* const args
 ) {
@@ -95,12 +141,11 @@ static PyObject* lkconfig_SymbolViewObject_get_prompt (
     prompt_list = PyList_New(0);
 
     if ( prompt_list != NULL ) {
-        for_all_properties ( self->kconfig_sym, prompt, P_PROMPT ) {
+        for_all_prompts ( self->kconfig_sym, prompt ) {
             if ( prompt->text != NULL ) {
                 if (
-                    lkconfig_list_append_steal_ref (
-                        prompt_list,
-                        PyUnicode_FromString ( prompt->text )
+                    lkconfig_SymbolViewObject__create_prompt_and_append_to_list (
+                        prompt_list, prompt
                     ) != 0
                 ) {
                     Py_DECREF ( prompt_list );
@@ -236,11 +281,12 @@ static PyMethodDef lkconfig_SymbolViewObject_methods[] = {
         )
     },
     {
-        "get_prompt",
+        "get_prompts",
         (PyCFunction) lkconfig_SymbolViewObject_get_prompt,
         METH_NOARGS,
         PyDoc_STR (
-            "get_prompt() -- returns a list of all prompt strings"
+            "get_prompts() -- returns a list of 2-tuples"
+            " (prompt string, prompt visibility ExpressionView)"
         )
     },
     {
