@@ -104,7 +104,9 @@ static int lkconfig_logv (
     msg = PyUnicode_FromFormatV ( format, vargs );
     if ( msg == NULL ) { return -1; }
 
-    logret = PyObject_CallMethod ( logger, meth_names[log_level], "O", msg );
+    logret = PyObject_CallMethod (
+        logger, (char*) (meth_names[log_level]), "O", msg
+    );
 
     Py_DECREF ( msg );
 
