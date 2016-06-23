@@ -236,6 +236,8 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
     @ivar _dir_deps:    a symbol -> dir_dep mapping,
                         used for linking symbols to Expr objects
     @type _dir_deps:    C{dict} :: L{AbstractKconfigSymbol} => L{Expr}
+    @ivar _vis_deps:    a symbol -> vis_dep mapping
+    @type _vis_deps:    C{dict} :: L{AbstractKconfigSymbol} => L{Expr}
     """
 
     SYMBOL_TYPE_TO_CLS_MAP = {
@@ -265,6 +267,7 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
         self.source_info = source_info
         self._symbols = symbols.KconfigSymbols()
         self._dir_deps = {}
+        self._vis_deps = {}
     # --- end of __init__ (...) ---
 
     def read_lkc_symbols(self):
@@ -339,6 +342,7 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
 
         kconfig_symbols = self._symbols
         dir_deps = self._dir_deps
+        vis_deps = self._vis_deps
 
         for sym_view in self.get_lkc_symbols():
             sym_cls = get_symbol_cls(sym_view.s_type)
@@ -346,9 +350,13 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
             if sym_view.name:
                 # do not create nameless symbols
                 sym = sym_cls(sym_view.name)
+                sym_prompts = sym_view.get_prompts()
 
                 kconfig_symbols.add_symbol(sym)
                 dir_deps[sym] = expr_builder.create(sym_view.get_dir_dep())
+                vis_deps[sym] = expr_builder.createv_or(
+                    (p[1] for p in sym_prompts)
+                )
             # --
         # --
     # --- end of _prepare_symbols (...) ---
@@ -373,6 +381,7 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
 
             symbol_names_missing = set()
             expand_dep_dict(self._dir_deps, symbol_names_missing)
+            expand_dep_dict(self._vis_deps, symbol_names_missing)
             return symbol_names_missing
         # ---
 
@@ -416,6 +425,9 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
         # simplify and assign dir_dep to symbols
         for sym, dep_expr in self._dir_deps.items():
             sym.dir_dep = None if dep_expr is None else dep_expr.simplify()
+
+        for sym, vis_expr in self._vis_deps.items():
+            sym.vis_dep = None if vis_expr is None else vis_expr.simplify()
     # --- end of _link_deps (...) ---
 
     def get_symbols(self):
