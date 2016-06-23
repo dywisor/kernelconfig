@@ -424,14 +424,19 @@ class ConfigGraph(loggable.AbstractLoggable):
         _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
         _is_tristate_symbol = symbol.is_tristate_symbol
 
-        def check_upper_bound(sym, sym_value, dep_value):
-            return (
-                dep_value and (
-                    not _is_tristate_symbol(sym)
-                    or dep_value >= sym_value
-                )
-            )
-        # ---
+        def check_tristate_within_range(sym, sym_vis_dep_val, new_val):
+            if not sym_vis_dep_val:
+                return False
+
+            elif (
+                not _is_tristate_symbol(sym)
+                and new_val == _TristateKconfigSymbolValue.m
+            ):
+                return False
+
+            else:
+                return new_val <= sym_vis_dep_val
+        # --- end of check_tristate_within_range (...) ---
 
         def iter_pick_tristate_decision_value(value_candidates):
             if _TristateKconfigSymbolValue.m in value_candidates:
@@ -505,6 +510,7 @@ class ConfigGraph(loggable.AbstractLoggable):
                         decision_iter = iter(decisions[sym])
                     # --
 
+                    dep_eval = None
                     for sym_value in decision_iter:
                         if sym_value is _TristateKconfigSymbolValue.n:
                             self.logger.debug("Disabling %s", sym.name)
@@ -512,9 +518,15 @@ class ConfigGraph(loggable.AbstractLoggable):
                             break
 
                         else:
-                            dep_eval = sym.evaluate_dir_dep(symbol_value_map)
+                            if dep_eval is None:
+                                dep_eval = sym.evaluate_vis_dep(
+                                    symbol_value_map
+                                )
+                            # --
 
-                            if check_upper_bound(sym, sym_value, dep_eval):
+                            if check_tristate_within_range(
+                                sym, dep_eval, sym_value
+                            ):
                                 self.logger.debug(
                                     "Setting %s to %s", sym.name, sym_value
                                 )
@@ -525,14 +537,16 @@ class ConfigGraph(loggable.AbstractLoggable):
                                 self.logger.debug(
                                     (
                                         'Cannot set symbol %s to %s, '
-                                        'dir_deps evaluated to %s'
+                                        'vis_deps evaluated to %s'
                                     ), sym.name, sym_value, dep_eval
                                 )
                             # --
                         # --
                     else:
                         raise AssertionError(
-                            "not resolved or no value candidates"
+                            "not resolved or no value candidates: {}".format(
+                                sym.name
+                            )
                         )
                     # -- end for
                 # -- end if already set
