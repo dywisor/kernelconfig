@@ -43,7 +43,45 @@ class TristateKconfigSymbolValue(enum.IntEnum):
 # --- end of TristateKconfigSymbolValue ---
 
 
-class TristateKconfigSymbol(AbstractKconfigSymbol):
+class _KconfigSymbol(AbstractKconfigSymbol):
+    __slots__ = []
+
+    VALUE_FMT_STR = "{name}={value!s}"
+
+    DEP_VALUE_REINTERPRET_MAP = {}
+    DEP_VALUE_REINTERPRET_M_AS_Y = {
+        TristateKconfigSymbolValue.m: TristateKconfigSymbolValue.y
+    }
+
+    def evaluate_dir_dep(self, symbol_value_map):
+        if self.dir_dep is None:
+            trival = TristateKconfigSymbolValue.y
+        else:
+            trival = self.dir_dep.evaluate(symbol_value_map)
+
+        return self.DEP_VALUE_REINTERPRET_MAP.get(trival, trival)
+    # --- end of evaluate_dir_dep (...) ---
+
+    @classmethod
+    def get_value_fmt_arg(cls, value):
+        return value
+
+    def format_value(self, value, name_convert=None):
+        if not value:
+            return self.format_value_is_not_set(name_convert=name_convert)
+        else:
+            return self.VALUE_FMT_STR.format(
+                name=(
+                    self.name if name_convert is None
+                    else name_convert(self.name)
+                ),
+                value=self.get_value_fmt_arg(value)
+            )
+
+# --- end of _KconfigSymbol ---
+
+
+class TristateKconfigSymbol(_KconfigSymbol):
     __slots__ = []
     type_name = "tristate"
 
@@ -57,25 +95,6 @@ class TristateKconfigSymbol(AbstractKconfigSymbol):
             raise ValueError(value)
     # ---
 
-    def evaluate_dir_dep(self, symbol_value_map):
-        if self.dir_dep is None:
-            return TristateKconfigSymbolValue.y
-        else:
-            return self.dir_dep.evaluate(symbol_value_map)
-
-    def format_value(self, value, name_convert=None):
-        if not value:
-            return self.format_value_is_not_set(name_convert=name_convert)
-        else:
-            return "{name}={value!s}".format(
-                name=(
-                    self.name if name_convert is None
-                    else name_convert(self.name)
-                ),
-                value=value
-            )
-    # ---
-
     def get_lkconfig_value_repr(self, value):
         return int(value)
 
@@ -85,6 +104,8 @@ class TristateKconfigSymbol(AbstractKconfigSymbol):
 class BooleanKconfigSymbol(TristateKconfigSymbol):
     __slots__ = []
     type_name = "boolean"
+
+    DEP_VALUE_REINTERPRET_MAP = _KconfigSymbol.DEP_VALUE_REINTERPRET_M_AS_Y
 
     @classmethod
     def normalize_and_validate(cls, value):
@@ -96,20 +117,16 @@ class BooleanKconfigSymbol(TristateKconfigSymbol):
         return normval
     # --- end of normalize_and_validate (...) ---
 
-    def evaluate_dir_dep(self, symbol_value_map):
-        dep_eval = super().evaluate_dir_dep(symbol_value_map)
-        if dep_eval is TristateKconfigSymbolValue.m:
-            dep_eval = TristateKconfigSymbolValue.y
-        return dep_eval
-
 # --- end of BooleanKconfigSymbol ---
 
 
-class StringKconfigSymbol(AbstractKconfigSymbol):
+class StringKconfigSymbol(_KconfigSymbol):
     __slots__ = []
     type_name = "string"
 
     VALUE_FMT_STR = "{name}=\"{value!s}\""
+
+    DEP_VALUE_REINTERPRET_MAP = _KconfigSymbol.DEP_VALUE_REINTERPRET_M_AS_Y
 
     # apparently, the only char that actually gets escaped in Makefile
     # variables is #, the (un)escaping of quotes ("') is done by the shell
@@ -133,26 +150,9 @@ class StringKconfigSymbol(AbstractKconfigSymbol):
         return value  # which will be converted to str when necessary
     # --- end of normalize_and_validate (...) ---
 
-    def format_value(self, value, name_convert=None):
-        if value is None:
-            return self.format_value_is_not_set(name_convert=name_convert)
-        else:
-            return self.VALUE_FMT_STR.format(
-                name=(
-                    self.name if name_convert is None
-                    else name_convert(self.name)
-                ),
-                value=self.escape_value(value)
-            )
-    # ---
-
-    def evaluate_dir_dep(self, symbol_value_map):
-        if self.dir_dep is None:
-            return TristateKconfigSymbolValue.y
-        elif self.dir_dep.evaluate(symbol_value_map):
-            return TristateKconfigSymbolValue.y
-        else:
-            return TristateKconfigSymbolValue.n
+    @classmethod
+    def get_value_fmt_arg(cls, value):
+        return cls.escape_value(value)
 
     def get_lkconfig_value_repr(self, value):
         return value
@@ -160,37 +160,18 @@ class StringKconfigSymbol(AbstractKconfigSymbol):
 # --- end of StringKconfigSymbol ---
 
 
-class IntKconfigSymbol(AbstractKconfigSymbol):
+class IntKconfigSymbol(_KconfigSymbol):
     __slots__ = []
     type_name = "int"
 
     VALUE_FMT_STR = "{name}={value:d}"
 
+    DEP_VALUE_REINTERPRET_MAP = _KconfigSymbol.DEP_VALUE_REINTERPRET_M_AS_Y
+
     @classmethod
     def normalize_and_validate(cls, value):
         return int(value)
     # --- end of normalize_and_validate (...) ---
-
-    def format_value(self, value, name_convert=None):
-        if value is None:
-            return self.format_value_is_not_set(name_convert=name_convert)
-        else:
-            return self.VALUE_FMT_STR.format(
-                name=(
-                    self.name if name_convert is None
-                    else name_convert(self.name)
-                ),
-                value=value
-            )
-    # ---
-
-    def evaluate_dir_dep(self, symbol_value_map):
-        if self.dir_dep is None:
-            return TristateKconfigSymbolValue.y
-        elif self.dir_dep.evaluate(symbol_value_map):
-            return TristateKconfigSymbolValue.y
-        else:
-            return TristateKconfigSymbolValue.n
 
     def get_lkconfig_value_repr(self, value):
         if value is TristateKconfigSymbolValue.n:
