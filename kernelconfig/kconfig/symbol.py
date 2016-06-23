@@ -62,6 +62,27 @@ class _KconfigSymbol(AbstractKconfigSymbol):
         return self.DEP_VALUE_REINTERPRET_MAP.get(trival, trival)
     # --- end of evaluate_dir_dep (...) ---
 
+    def iter_evaluate_vis_dep(self, symbol_value_map):
+        reval = lambda v, _d=self.DEP_VALUE_REINTERPRET_MAP.get: _d(v, v)
+
+        if not self.vis_deps:
+            yield reval(TristateKconfigSymbolValue.y)
+
+        for vis_dep in self.vis_deps:
+            yield reval(vis_dep.evaluate(symbol_value_map))
+    # --- end of iter_evaluate_vis_dep (...) ---
+
+    def evaluate_vis_dep(self, symbol_value_map):
+        trivals = set()
+        for trival in self.iter_evaluate_vis_dep(symbol_value_map):
+            if trival is TristateKconfigSymbolValue.y:
+                return trival
+
+            trivals.add(trival)
+        # --
+        return max(trivals)
+    # --- end of evaluate_vis_dep (...) ---
+
     @classmethod
     def get_value_fmt_arg(cls, value):
         return value

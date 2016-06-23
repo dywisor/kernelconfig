@@ -20,9 +20,14 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
     @ivar type_name: short word describing the type. no spaces allowed
     @type type_name: C{str}
 
-    and optionally dependencies on other symbols
+    optionally dependencies on other symbols,
     @ivar dir_dep:  the symbol's dependencies ("depends on"). May be None.
     @type dir_dep:  C{None} or undef
+
+    and optionally visibility dependencies on other symbols
+    @ivar vis_deps:  the symbol's visiblity dependencies as list
+                      (visibilty of the symbol's prompts, one dep per prompt)
+    @type vis_deps:  C{None} or C{list} of undef
 
 
     Additionally, a class-wide variables exists for str-formatting the
@@ -31,7 +36,7 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
     @type VALUE_NOT_SET_FMT_STR: C{str}
     """
 
-    __slots__ = ["__weakref__", "name", "dir_dep"]
+    __slots__ = ["__weakref__", "name", "dir_dep", "vis_deps"]
 
     VALUE_NOT_SET_FMT_STR = "# {name} is not set"
 
@@ -80,7 +85,7 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
     def evaluate_dir_dep(self, symbol_value_map):
         """
         Given a symbol => value map,
-        calculates the boolean value of the dir_dep expression of this symbol.
+        calculates the tristate value of the dir_dep expression of this symbol.
 
         If the symbol has no dir_deps, returns tristate "y".
         Reinterprets the expression value based on the symbol type.
@@ -92,6 +97,45 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
         @rtype:  L{TristateKconfigSymbolValue}
         """
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def evaluate_vis_dep(self, symbol_value_map):
+        """
+        Given a symbol => value map, calculates
+        the tristate values of the vis_dep expressions of this symbol,
+        and returns the highest value (y > m > n).
+
+        If the symbol has no vis_deps, returns tristate "y".
+        Reinterprets expression values based on the symbol type.
+
+        @param symbol_value_map:  (incomplete) symbol to value mapping
+        @type  symbol_value_map:  C{dict} :: L{AbstractKconfigSymbol} => _
+
+        @return: tristate value
+        @rtype:  L{TristateKconfigSymbolValue}
+        """
+        raise NotImplementedError()
+
+    def evaluate_dep(self, symbol_value_map):
+        """Given a symbol => value map,
+        calculates the tristate value of this symbol's dependencies
+        (both dir_dep and vis_deps).
+
+        If the symbol has no dependencies, returns tristate "y".
+
+        @param symbol_value_map:  (incomplete) symbol to value mapping
+        @type  symbol_value_map:  C{dict} :: L{AbstractKconfigSymbol} => _
+
+        @return: tristate value
+        @rtype:  L{TristateKconfigSymbolValue}
+        """
+        # lazy-eval min(dep(), vis())
+        dep_eval = self.evaluate_dir_dep(symbol_value_map)
+        if not dep_eval:
+            return dep_eval
+        else:
+            return min((dep_eval, self.evaluate_vis_dep(symbol_value_map)))
+    # --- end of evaluate_dep (...) ---
 
     def format_value_is_not_set(self, name_convert=None):
         return self.VALUE_NOT_SET_FMT_STR.format(
@@ -117,10 +161,11 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
         raise NotImplementedError()
     # ---
 
-    def __init__(self, name, dir_dep=None):
+    def __init__(self, name, dir_dep=None, vis_deps=None):
         super().__init__()
         self.name = name
         self.dir_dep = dir_dep
+        self.vis_deps = vis_deps
 
     def __hash__(self):
         return hash((self.__class__, self.name))
