@@ -24,3 +24,7 @@ class AbstractSymbolExprSolutionCache(object, metaclass=abc.ABCMeta):
     @abc.abstractmethod
     def merge_alternatives(self, alternatives):
         raise NotImplementedError()
+
+    @abc.abstractmethod
+    def copy(self):
+        raise NotImplementedError()

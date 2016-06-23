@@ -19,6 +19,11 @@ class SolutionCache(_solcache_abc.AbstractSymbolExprSolutionCache):
     def __bool__(self):
         return bool(self.solutions)
 
+    def copy(self):
+        obj = self.__class__()
+        obj.solutions = [sol.copy() for sol in self.solutions]
+        return obj
+
     def _replace_solutions(self, new_solutions):
         self.solutions = new_solutions
         return bool(new_solutions)
