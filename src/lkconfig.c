@@ -239,10 +239,8 @@ static PyObject* lkconfig_read_symbols ( PyObject* self, PyObject* args ) {
 static PyObject* lkconfig_get_symbols ( PyObject* self, PyObject* noargs ) {
     unsigned int i;
     const struct symbol* sym;
-    int append_ret;
 
     PyObject* pysym_list;
-    PyObject* pysym;
 
     /* create py-symbol list */
     pysym_list = PyList_New(0);
@@ -259,15 +257,12 @@ static PyObject* lkconfig_get_symbols ( PyObject* self, PyObject* noargs ) {
             case S_INT:
             case S_HEX:
             case S_OTHER:
-                pysym = lkconfig_SymbolViewObject_new_from_struct ( sym );
-                if ( pysym == NULL ) {
-                    append_ret = -1;
-                } else {
-                    append_ret = PyList_Append ( pysym_list, pysym );
-                    Py_DECREF ( pysym ); pysym = NULL;
-                }
-
-                if ( append_ret != 0 ) {
+                if (
+                    lkconfig_list_append_steal_ref (
+                        pysym_list,
+                        lkconfig_SymbolViewObject_new_from_struct ( sym )
+                    ) != 0
+                ) {
                     Py_DECREF ( pysym_list );
                     return NULL;
                 }

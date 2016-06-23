@@ -16,6 +16,44 @@ static int lkconfig_dict_add_str_x_int (
     return dictadd_ret;
 }
 
+/**
+ * Steals a reference to 'item' and adds it to the list 'l'.
+ *
+ * Item may be null, in which case -2 is returned.
+ * The reference count of 'item' is decremented even if list-append fails.
+ *
+ *
+ * @param l       PyList
+ * @param item    PyObject item to append (can be null)
+ *
+ * @return 0 on success, else non-zero
+ * */
+static int lkconfig_list_append_steal_ref (
+    PyObject* const l, PyObject* const item
+) {
+    int append_ret;
+
+    if ( item == NULL ) { return -2; }
+    append_ret = PyList_Append ( l, item );
+    Py_DECREF ( item );
+    return append_ret;
+}
+
+
+/*
+static int lkconfig_list_append_ptr_steal_ref (
+    PyObject* const l, PyObject** const item_ptr
+) {
+    int append_ret;
+
+    if ( *item_ptr == NULL ) { return -2; }
+    append_ret = PyList_Append ( l, *item_ptr );
+    Py_DECREF ( *item_ptr );
+    *item_ptr = NULL;
+    return append_ret;
+}
+*/
+
 
 static int lkconfig_logv (
     PyObject* const logger,

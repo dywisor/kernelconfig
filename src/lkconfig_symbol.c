@@ -90,25 +90,19 @@ static PyObject* lkconfig_SymbolViewObject_get_prompt (
     lkconfig_SymbolViewObject* const self, PyObject* const args
 ) {
     const struct property* prompt;
-    int append_ret;
     PyObject* prompt_list;
-    PyObject* s;
-
 
     prompt_list = PyList_New(0);
 
     if ( prompt_list != NULL ) {
         for_all_properties ( self->kconfig_sym, prompt, P_PROMPT ) {
             if ( prompt->text != NULL ) {
-                s = PyUnicode_FromString ( prompt->text );
-                if ( s == NULL ) {
-                    append_ret = -2;
-                } else {
-                    append_ret = PyList_Append ( prompt_list, s );
-                    Py_DECREF ( s ); s = NULL;
-                }
-
-                if ( append_ret != 0 ) {
+                if (
+                    lkconfig_list_append_steal_ref (
+                        prompt_list,
+                        PyUnicode_FromString ( prompt->text )
+                    ) != 0
+                ) {
                     Py_DECREF ( prompt_list );
                     return NULL;
                 }
@@ -123,15 +117,10 @@ static PyObject* lkconfig_SymbolViewObject_get_prompt (
 static int lkconfig_SymbolViewObject__create_expr_and_append_to_list (
     PyObject* const l, const struct expr* const e
 ) {
-    PyObject* expr_view;
-    int append_ret;
-
-    expr_view = lkconfig_ExprViewObject_new_from_struct ( e );
-    if ( expr_view == NULL ) { return -1; }
-
-    append_ret = PyList_Append ( l, expr_view );
-    Py_DECREF ( expr_view );
-    return append_ret;
+    return lkconfig_list_append_steal_ref (
+        l,
+        lkconfig_ExprViewObject_new_from_struct ( e )
+    );
 }
 
 
