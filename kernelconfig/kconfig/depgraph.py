@@ -263,7 +263,6 @@ class ConfigGraph(loggable.AbstractLoggable):
 
     def accumulate_solutions(self, sym_group, decisions_at_this_level):
         _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
-        _merge_solutions = symbolexpr.merge_solutions
         want_expr_ym = self.EXPR_VALUES_YM
         want_expr_y = self.EXPR_VALUES_Y
 
@@ -324,21 +323,18 @@ class ConfigGraph(loggable.AbstractLoggable):
                     accumulated_solutions = dep_solutions
                 else:
                     assert dep_solutions is not True
-                    accumulated_solutions_next = _merge_solutions(
-                        accumulated_solutions, dep_solutions
-                    )
-                    if not accumulated_solutions_next:
+                    if not accumulated_solutions.merge(dep_solutions):
                         raise ConfigUnresolvableError(
                             "group", decisions_at_this_level
                         )
-
-                    accumulated_solutions = accumulated_solutions_next
-                    del accumulated_solutions_next
                 # -- end if <merge solutions>
             # -- end if <find solutions>
         # -- end for decision symbol
 
-        return accumulated_solutions
+        if accumulated_solutions is True:
+            return True
+        else:
+            return accumulated_solutions.get_solutions()
     # --- end of accumulate_solutions (...) ---
 
     def expand_decision_level_set_and_reduce(

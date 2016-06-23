@@ -205,7 +205,7 @@ class Expr(Visitable):
     def find_solution(self, expr_values):
         sol_cache = SolutionCache()
         ret = self._find_solution(expr_values, sol_cache)
-        return (ret, sol_cache.get_solutions())
+        return (ret, sol_cache)
     # ---
 
     @abc.abstractmethod
