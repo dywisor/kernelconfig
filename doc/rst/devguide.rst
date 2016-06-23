@@ -307,12 +307,16 @@ and repeat that for each upper level:
                         symbol_solutions := get solutions for the symbol's
                                             dependencies so that the
                                             symbol's dir_dep evaluates to
-                                            >= requested symbol value;
+                                            any true value ("m", "y")
+                                            and the symbol's vis_dep evaluates
+                                            to >= requested symbol value
                     ELSE
                         symbol_solutions := get solutions for the symbol's
                                             dependencies so that the
                                             symbol's dir_dep evaluates to
-                                            >= tristate "m";
+                                            any true value ("m", "y")
+                                            and the symbol's vis_dep evaluates
+                                            to >= tristate "m";
                     END IF;
 
                     IF there are no symbol_solutions THEN
