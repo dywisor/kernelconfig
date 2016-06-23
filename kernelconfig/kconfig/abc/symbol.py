@@ -25,9 +25,9 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
     @type dir_dep:  C{None} or undef
 
     and optionally visibility dependencies on other symbols
-    @ivar vis_deps:  the symbol's visiblity dependencies as list
-                      (visibilty of the symbol's prompts, one dep per prompt)
-    @type vis_deps:  C{None} or C{list} of undef
+    @ivar vis_dep:  the symbol's visiblity dependencies
+                     (visibilty of the symbol's prompts, OR-merged)
+    @type vis_dep:  C{None} or undef
 
 
     Additionally, a class-wide variables exists for str-formatting the
@@ -36,7 +36,7 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
     @type VALUE_NOT_SET_FMT_STR: C{str}
     """
 
-    __slots__ = ["__weakref__", "name", "dir_dep", "vis_deps"]
+    __slots__ = ["__weakref__", "name", "dir_dep", "vis_dep"]
 
     VALUE_NOT_SET_FMT_STR = "# {name} is not set"
 
@@ -105,7 +105,7 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
         the tristate values of the vis_dep expressions of this symbol,
         and returns the highest value (y > m > n).
 
-        If the symbol has no vis_deps, returns tristate "y".
+        If the symbol has no vis_dep, returns tristate "y".
         Reinterprets expression values based on the symbol type.
 
         @param symbol_value_map:  (incomplete) symbol to value mapping
@@ -119,7 +119,7 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
     def evaluate_dep(self, symbol_value_map):
         """Given a symbol => value map,
         calculates the tristate value of this symbol's dependencies
-        (both dir_dep and vis_deps).
+        (both dir_dep and vis_dep).
 
         If the symbol has no dependencies, returns tristate "y".
 
@@ -161,11 +161,11 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
         raise NotImplementedError()
     # ---
 
-    def __init__(self, name, dir_dep=None, vis_deps=None):
+    def __init__(self, name, dir_dep=None, vis_dep=None):
         super().__init__()
         self.name = name
         self.dir_dep = dir_dep
-        self.vis_deps = vis_deps
+        self.vis_dep = vis_dep
 
     def __hash__(self):
         return hash((self.__class__, self.name))
