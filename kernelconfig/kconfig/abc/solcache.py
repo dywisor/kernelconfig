@@ -18,5 +18,9 @@ class AbstractSymbolExprSolutionCache(object, metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def merge(self, sol_cache):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def merge_alternatives(self, alternatives):
         raise NotImplementedError()

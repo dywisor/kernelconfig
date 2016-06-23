@@ -16,6 +16,9 @@ class SolutionCache(_solcache_abc.AbstractSymbolExprSolutionCache):
         super().__init__()
         self.solutions = [{}]
 
+    def __bool__(self):
+        return bool(self.solutions)
+
     def _replace_solutions(self, new_solutions):
         self.solutions = new_solutions
         return bool(new_solutions)
@@ -71,6 +74,13 @@ class SolutionCache(_solcache_abc.AbstractSymbolExprSolutionCache):
 
         return solutions
     # ---
+
+    def merge(self, sol_cache):
+        merged_sol = self.merge_solutions_list_x_list(
+            self.solutions, sol_cache.solutions
+        )
+
+        return self._replace_solutions(merged_sol)
 
     def merge_alternatives(self, alternatives):
         merged_sol = []
