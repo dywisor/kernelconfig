@@ -37,7 +37,7 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
     def createv(self, top_expr_views):
         return list(self._gen_createv(top_expr_views))
 
-    def createv_and(self, component_views):
+    def _createv_junction(self, junction_cls, one_expr_cls, component_views):
         expr_iter = self._gen_createv(component_views)
 
         try:
@@ -50,12 +50,27 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
             next_expr = next(expr_iter)
         except StopIteration:
             # one expr
-            return first_expr
+            if one_expr_cls is None:
+                return first_expr
+            else:
+                return one_expr_cls(first_expr)
 
-        and_expr = symbolexpr.Expr_And(first_expr, next_expr)
+        junction_expr = junction_cls(first_expr, next_expr)
         # add remaining exprs
-        and_expr.extend_expr(expr_iter)
-        return and_expr
+        junction_expr.extend_expr(expr_iter)
+        return junction_expr
+    # --- end of _createv_junction (...) ---
+
+    def createv_and(self, component_views):
+        return self._createv_junction(
+            symbolexpr.Expr_And, None, component_views
+        )
+    # ---
+
+    def createv_or(self, component_views):
+        return self._createv_junction(
+            symbolexpr.Expr_Or, None, component_views
+        )
     # ---
 
     def create(self, top_expr_view):
