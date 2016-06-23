@@ -345,7 +345,7 @@ class ConfigGraph(loggable.AbstractLoggable):
                 # --
 
                 dep_solvable, dep_solutions = sym.dir_dep.find_solution(
-                    want_expr_values
+                    want_expr_ym
                 )
 
                 if not dep_solvable:
