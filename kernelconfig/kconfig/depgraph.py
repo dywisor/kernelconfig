@@ -8,6 +8,7 @@ import toposort
 from ..abc import loggable
 from . import symbolexpr
 from . import symbol
+from . import solcache
 
 
 __all__ = ["ConfigGraph"]
@@ -294,6 +295,21 @@ class ConfigGraph(loggable.AbstractLoggable):
         self.decisions = decisions
 
     def accumulate_solutions(self, sym_group, decisions_at_this_level):
+        def merge_sym_solutions(
+            dir_dep_sol, vis_dep_sol, *, _SolutionCache=solcache.SolutionCache
+        ):
+            if dir_dep_sol is True:
+                return vis_dep_sol
+            elif vis_dep_sol is True:
+                return dir_dep_sol
+            else:
+                sol = dir_dep_sol.copy()
+                if not sol.merge(vis_dep_sol):
+                    return False
+                else:
+                    return sol
+        # --- end of merge_sym_solutions (...) ---
+
         _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
         want_expr_ym = self.EXPR_VALUES_YM
         want_expr_y = self.EXPR_VALUES_Y
@@ -324,41 +340,74 @@ class ConfigGraph(loggable.AbstractLoggable):
         #    decide value later.
         # end loop
         for sym in decisions_at_this_level:
-            sym_value = decisions_at_this_level[sym]
+            sym_values = decisions_at_this_level[sym]
+            assert type(sym_values) is set  # FIXME: debug assert, remove
+            min_sym_value = min(sym_values)
 
-            if sym_value is _TristateKconfigSymbolValue.n:
-                pass
-
-            elif sym.dir_dep is None:
+            if min_sym_value is _TristateKconfigSymbolValue.n:
                 pass
 
             else:
                 if symbol.is_tristate_symbol(sym):
-                    if sym_value is _TristateKconfigSymbolValue.y:
-                        want_expr_values = want_expr_y
+                    # then sym_value must be <= vis
+                    if min_sym_value is _TristateKconfigSymbolValue.y:
+                        want_vis_values = want_expr_y
                     else:
-                        want_expr_values = want_expr_ym
+                        want_vis_values = want_expr_ym
 
                 else:
-                    # also: sym_value is tristate "m"
-                    want_expr_values = want_expr_ym
+                    want_vis_values = want_expr_ym
                 # --
 
-                dep_solvable, dep_solutions = sym.dir_dep.find_solution(
-                    want_expr_ym
-                )
+                # FIXME: a single solution cache for both dir_dep and vis_dep
+                #        would be sufficient
+                #        Actually, that's how Expr._find_solution() works
+                #
+                if sym.dir_dep is not None:
+                    dir_dep_solvable, dir_dep_solutions = (
+                        sym.dir_dep.find_solution(want_expr_ym)
+                    )
+                    if not dir_dep_solvable:
+                        raise ConfigUnresolvableError(
+                            "symbol dir deps", sym.name
+                        )
+                    del dir_dep_solvable  # not used outside of this block
+                else:
+                    dir_dep_solutions = True
+                # --
 
-                if not dep_solvable:
-                    raise ConfigUnresolvableError("symbol deps", sym.name)
+                if sym.vis_dep is not None:
+                    vis_dep_solvable, vis_dep_solutions = (
+                        sym.vis_dep.find_solution(want_vis_values)
+                    )
+                    if not vis_dep_solvable:
+                        raise ConfigUnresolvableError(
+                            "symbol vis deps", sym.name
+                        )
+                    del vis_dep_solvable  # not used outside of this block
+                else:
+                    vis_dep_solutions = True
+                # --
+
+                dep_solutions = merge_sym_solutions(
+                    dir_dep_solutions, vis_dep_solutions
+                )
+                if not dep_solutions:
+                    raise ConfigUnresolvableError(
+                        "combined symbol deps", sym.name
+                    )
+                # --
 
                 if accumulated_solutions is True:
                     accumulated_solutions = dep_solutions
-                else:
-                    assert dep_solutions is not True
-                    if not accumulated_solutions.merge(dep_solutions):
-                        raise ConfigUnresolvableError(
-                            "group", decisions_at_this_level
-                        )
+
+                elif dep_solutions is True:
+                    pass
+
+                elif not accumulated_solutions.merge(dep_solutions):
+                    raise ConfigUnresolvableError(
+                        "group", decisions_at_this_level
+                    )
                 # -- end if <merge solutions>
             # -- end if <find solutions>
         # -- end for decision symbol
