@@ -115,6 +115,30 @@ class ConfigGraph(loggable.AbstractLoggable):
             yield from iter(sym_group)
 
     def expand_graph(self, kconfig_symbols):
+        def set_union(*input_sets):
+            """Creates a union of all input sets
+            and tries to ref-use sets if there is only one non-empty.
+
+            Returns None if no non-empty input set was given,
+            a reference to any of the input sets, or a new set.
+            """
+            have_own_output_set = False
+            output_set = None
+
+            for input_set in input_sets:
+                if not input_set:
+                    pass
+                elif not output_set:
+                    output_set = input_set
+                elif have_own_output_set:
+                    output_set.update(input_set)
+                else:
+                    output_set = output_set | input_set
+                    have_own_output_set = True
+
+            return output_set
+        # --- end of set_union (...) ---
+
         empty_set = set()
         dep_graph = self.dep_graph  # ref
 
@@ -124,10 +148,18 @@ class ConfigGraph(loggable.AbstractLoggable):
             for sym in syms_in_need_of_expansion:
                 if sym.dir_dep is not None:
                     sym_deps = sym.dir_dep.get_dependent_symbols()
+                else:
+                    sym_deps = empty_set
 
-                    dep_graph[sym] = sym_deps
-                    syms_next.update(sym_deps)
+                if sym.vis_dep is not None:
+                    sym_vis_deps = sym.vis_dep.get_dependent_symbols()
+                else:
+                    sym_vis_deps = empty_set
 
+                sym_all_deps = set_union(sym_deps, sym_vis_deps)
+                if sym_all_deps:
+                    dep_graph[sym] = sym_all_deps
+                    syms_next.update(sym_all_deps)
                 else:
                     dep_graph[sym] = empty_set  # ref
                 # --
