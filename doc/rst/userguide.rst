@@ -23,7 +23,8 @@ Introduction
 Installing kernelconfig
 -----------------------
 
-This is not possible yet.
+This is not possible yet,
+kernelconfig can only be run in `standalone mode`_ for now.
 
 
 Dependencies
@@ -167,6 +168,7 @@ kernelconfig accepts a number of options:
 
 
 
+.. _standalone mode:
 
 Running kernelconfig from the source directory
 ++++++++++++++++++++++++++++++++++++++++++++++
