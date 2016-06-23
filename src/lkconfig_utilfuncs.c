@@ -1,3 +1,28 @@
+static void lkconfig_set_and_ref (
+    PyObject** const pyvar, PyObject* const pyval
+) {
+    Py_INCREF ( pyval );
+    *pyvar = pyval;
+}
+
+/*
+static void lkconfig_reset_and_ref (
+    PyObject** const pyvar, PyObject* const pyval
+) {
+    Py_CLEAR ( *pyvar );
+    lkconfig_set_and_ref ( pyvar, pyval );
+}
+*/
+
+static void lkconfig_set_and_ref_if_null (
+    PyObject** const pyvar, PyObject* const pyval
+) {
+    if ( *pyvar == NULL ) {
+        lkconfig_set_and_ref ( pyvar, pyval );
+    }
+}
+
+
 static int lkconfig_dict_add_str_x_int (
     PyObject* const d,
     const char* const key,
