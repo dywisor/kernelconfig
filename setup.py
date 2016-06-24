@@ -81,6 +81,8 @@ class ProjectSetup(object):
                 "kconfig.abc",
                 "kconfig.config",
                 "scripts",
+                "sources",
+                "sources.abc",
                 "util"
             ),
             py_modules = cls.pym_names(
