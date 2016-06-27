@@ -8,6 +8,7 @@ import shutil
 import tempfile
 import weakref
 
+from . import fs
 from . import fspath
 
 
@@ -29,6 +30,9 @@ class _Tmpdir(object):
     def _init_tmpdir(self, **kwargs):
         assert self._path is None
         self._path = tempfile.mkdtemp(**kwargs)
+
+    def __str__(self):
+        return str(self._path)
 
     def get_filepath(self, relpath=None):
         return fspath.join_relpath(self._path, relpath)
@@ -57,6 +61,37 @@ class _Tmpdir(object):
         shutil.rmtree(self._path)
         self._path = None
     # ---
+
+    def mkdir(self, relpath):
+        """
+        @return:  path to created directory
+        @rtype:   C{str}
+        """
+        filepath = self.get_filepath(relpath)
+        os.mkdir(filepath)
+        return filepath
+
+    def dodir(self, relpath, mkdir_p=False):
+        """
+        @return:  path to existing/created directory
+        @rtype:   C{str}
+        """
+        filepath = self.get_filepath(relpath)
+        fs.dodir(filepath, mkdir_p)
+        return filepath
+
+    def get_new_subdir(self):
+        """
+        Creates a new, unique subdirectory in the tmpdir,
+        and returns its fspath.
+
+        The subdir is cleaned up together with its parent,
+        but can also be removed prior to that manually.
+
+        @return:  path to sub-tmpdir
+        @rtype:   C{str}
+        """
+        return tempfile.mkdtemp(prefix="privtmp", dir=self._path)
 # ---
 
 
