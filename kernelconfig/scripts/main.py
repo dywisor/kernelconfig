@@ -16,6 +16,8 @@ import kernelconfig.util.fs
 import kernelconfig.util.multidir
 import kernelconfig.util.settings
 
+import kernelconfig.sources._sources
+
 # _version is a setup.py-generated file
 try:
     import kernelconfig._version
@@ -32,6 +34,9 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         self.arg_parser = None
         self.arg_types = None
         self.install_info = kernelconfig.installinfo.get_install_info().copy()
+        self.settings = kernelconfig.util.settings.SettingsFileReader()
+
+        self.source_info = None
     # --- end of __init__ (...) ---
 
     def _setup_arg_parser_args(self, parser, arg_types):
@@ -135,33 +140,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         self.arg_parser = parser
     # --- end of init_arg_parser (...) ---
 
-    def load_settings_file(self, settings_arg):
-        if settings_arg is None:
-            settings_arg = (True, "default")
-        elif not settings_arg:
-            return (None, None)
-
-        need_lookup, filename = settings_arg
-
-        if need_lookup:
-            settings_file = self.install_info.get_settings_file(filename)
-        else:
-            settings_file = filename
-
-        if not settings_file:
-            if self.arg_parser is None:
-                raise FileNotFoundError(filename)
-            else:
-                self.arg_parser.error("settings file %r not found" % filename)
-        # --
-
-        self.logger.info("Reading settings from %s", settings_file)
-        return (
-            kernelconfig.util.settings.read_settings_file(settings_file)
-        )
-    # --- end of load_settings_file (...) ---
-
-    def do_main(self, arg_config):
+    def do_main_setup_logging(self, arg_config):
         # logging
         log_levels = [
             logging.DEBUG, logging.INFO, logging.WARNING,
@@ -180,13 +159,34 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         self.zap_log_handlers()
         self.setup_console_logging(log_level)
+    # ---
 
-        # load settings file
-        settings, settings_conf_mod_requests = (
-            self.load_settings_file(arg_config.get("settings_file"))
-        )
+    def do_main_load_settings(self, arg_config):
+        settings_arg = arg_config.get("settings_file")
+        if settings_arg is None:
+            settings_arg = (True, "default")
+        elif not settings_arg:
+            return
 
-        # source info
+        need_lookup, filename = settings_arg
+
+        if need_lookup:
+            settings_file = self.install_info.get_settings_file(filename)
+        else:
+            settings_file = filename
+
+        if not settings_file:
+            if self.arg_parser is None:
+                raise FileNotFoundError(filename)
+            else:
+                self.arg_parser.error("settings file %r not found" % filename)
+        # --
+
+        self.logger.info("Reading settings from %s", settings_file)
+        self.settings.read_file(settings_file)
+    # --- end of do_main_load_settings (...) ---
+
+    def do_main_setup_source_info(self, arg_config):
         source_info = self.create_loggable(
             kernelconfig.kernel.info.KernelInfo,
             (arg_config.get("srctree") or self.initial_working_dir),
@@ -198,37 +198,69 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                 "%r does not appear to be a kernel sources directory."
                 % source_info.srctree
             )
-        # --
 
         source_info.prepare()
+        self.source_info = source_info
+    # --- end of do_main_setup_source_info (...) ---
 
-        # default input config
-        if not arg_config.get("inconfig"):
-            arg_config["inconfig"] = source_info.get_filepath(".config")
-            if not os.path.isfile(arg_config["inconfig"]):
-                self.arg_parser.error(
-                    "input .config does not exist: %r"
-                    % arg_config["inconfig"]
+    def do_main_load_input_config(self, arg_config, config):
+        if arg_config.get("inconfig"):
+            input_config_file = arg_config["inconfig"]
+
+        else:
+            conf_sources = self.create_loggable(
+                kernelconfig.sources._sources.ConfigurationSources,
+                install_info=self.install_info,
+                source_info=self.source_info
+            )
+
+            input_config_file = (
+                conf_sources.get_configuration_basis_from_settings(
+                    self.settings
                 )
-            # --
+            )
         # --
+
+        if not input_config_file:
+            self.arg_parser.error("No input config!")
+        elif not os.path.isfile(input_config_file):
+            self.arg_parser.error(
+                "input .config does not exist: {!r}".format(input_config_file)
+            )
+        # --
+        config.read_config_file(input_config_file)
+    # ---
+
+    def do_main(self, arg_config):
+        self.do_main_setup_logging(arg_config)
+        self.do_main_load_settings(arg_config)
+        self.do_main_setup_source_info(arg_config)
 
         # default output config
         if not arg_config.get("outconfig"):
-            arg_config["outconfig"] = source_info.get_filepath(".config")
+            arg_config["outconfig"] = self.source_info.get_filepath(".config")
         # --
 
         # config creation
         # * init
         config_gen = self.create_loggable(
             kernelconfig.kconfig.config.gen.ConfigGenerator,
-            self.install_info, source_info
+            self.install_info, self.source_info
         )
 
         config = config_gen.get_config()
 
+        #  the output config file must be backed up
+        #  before loading the input config
+        #
+        #  Otherwise, the wrong file could get copied,
+        #  e.g. when running in-source "make defconfig"
+        #  with outfile <srctree>/.config
+        #
+        kernelconfig.util.fs.prepare_output_file(arg_config["outconfig"])
+
         # * load input config
-        config.read_config_file(arg_config["inconfig"])
+        self.do_main_load_input_config(arg_config, config)
 
         # * modify
         if arg_config["featureset_files"]:
@@ -238,6 +270,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                 return False
         # --
 
+        settings_conf_mod_requests = self.settings.get_section("options")
         if settings_conf_mod_requests:
             interpreter = config_gen.get_config_choices_interpreter()
             if not interpreter.process_str(
@@ -250,7 +283,6 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         config_gen.commit()
 
         # * write output config
-        kernelconfig.util.fs.prepare_output_file(arg_config["outconfig"])
         config.write_config_file(arg_config["outconfig"])
 
     # --- end of do_main (...) ---
