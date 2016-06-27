@@ -278,6 +278,9 @@ class KernelInfo(SourceInfo):
         @type    kwargs:   C{dict} :: C{str} => _
         """
         super().__init__(srctree, **kwargs)
+        # FIXME:
+        #   self.target_arch = arch
+        #   calculate self.arch from self.target_arch
         self.subarch = None
         self.arch = arch
         self.srcarch = srcarch
