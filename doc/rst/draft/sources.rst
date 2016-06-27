@@ -114,6 +114,8 @@ In the ``[source]`` section of the settings file
     [source]
     <name> [<arg>...]
 
+  alternatively ``source <name> [<arg>...]``.
+
   Plus a source definition file and/or a script in
   $$some$$ subdirectory of the settings directories.
 
