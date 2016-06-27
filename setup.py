@@ -83,6 +83,7 @@ class ProjectSetup(object):
                 "scripts",
                 "sources",
                 "sources.abc",
+                "sources.source",
                 "util"
             ),
             py_modules = cls.pym_names(
