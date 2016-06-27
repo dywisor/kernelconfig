@@ -275,6 +275,7 @@ class KernelInfo(SourceInfo):
         @type    kwargs:   C{dict} :: C{str} => _
         """
         super().__init__(srctree, **kwargs)
+        self.subarch = None
         self.arch = arch
         self.srcarch = srcarch
         self.kernelversion = None
@@ -282,11 +283,14 @@ class KernelInfo(SourceInfo):
 
     def prepare(self):
         if not self.arch:
-            self.arch = self.calculate_arch(
-                self.calculate_subarch(os.uname().machine)
-            )
+            if not self.subarch:
+                self.subarch = self.calculate_subarch(os.uname().machine)
+                self.logger.debug("detected SUBARCH=%s", self.subarch)
+            # --
+
+            self.arch = self.calculate_arch(self.subarch)
             self.logger.debug("detected ARCH=%s", self.arch)
-        # --
+        # -- else keep subarch possibly None
 
         if not self.srcarch:
             self.srcarch = self.calculate_srcarch(self.arch)
