@@ -89,6 +89,9 @@ class SourceInfo(loggable.AbstractLoggable):
         raise NotImplementedError()
     # --- end of iter_env_vars (...) ---
 
+    def iter_make_vars(self, **kwargs):
+        return self.iter_env_vars(**kwargs)
+
     def setenv(self, dst_env=None, **kwargs):
         """Sets environment variables necessary for processing source files.
 
@@ -319,5 +322,11 @@ class KernelInfo(SourceInfo):
             ('KERNELVERSION', self.kernelversion)
         ]
     # --- end of iter_env_vars (...) ---
+
+    def iter_make_vars(self):
+        return [
+            ('ARCH', self.subarch or self.arch)
+        ]
+    # --- end of iter_make_vars (...) ---
 
 # --- end of KernelInfo ---
