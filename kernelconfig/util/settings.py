@@ -1,111 +1,136 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
-import configparser
+import collections.abc
+import re
 
 from . import fileio
 
 
-__all__ = ["read_settings_file"]
+__all__ = ["SettingsFileReader"]
 
 
-def read_settings_file(filepath, config_parser=None):
-    """Reads a kernelconfig settings file.
+class SettingsFileReader(collections.abc.Mapping):
 
-    A settings file is in ini-like file format,
-    and consists of several sections,
-    e.g. "[source]" for curated source-related configuration.
-
-    It also contains an "[options]" section that is used to modify the
-    kernel configuration.
-    The format inside this section is not compatible with configparser,
-    and therefore this function exists.
-
-    It filters out the "[options]" section of the input file,
-    lets the config parser read all other sections,
-    and returns a 2-tuple (config parser, lines from "[options]" or None).
-
-    @param filepath:         path to settings file
-    @type  filepath:         C{str}
-    @keyword config_parser:  config parser to use
-                             if None (the default), a new will be created
-
-    @return:  2-tuple (config parser, lines from "[options]" or None)
-    """
-    if config_parser is None:
-        config_parser = get_default_config_parser()
-
-    cfg_parser_ret, unparsed_sections = _read_settings_file(
-        config_parser, {"options", }, filepath
+    # ^"["<name>"]" ["#"...]$
+    SECTION_REGEXP = re.compile(
+        '^[\[](?P<header>[^\[\]]+)[\]]\s*(?:[#].*)?$'
     )
 
-    return (cfg_parser_ret, unparsed_sections.get("options"))
-# --- end of read_settings_file (...) ---
+    COMMENT_LINE_REGEXP = re.compile(r'^\s*[#]')
 
+    @classmethod
+    def new_from_file(cls, filepath):
+        obj = cls()
+        obj.read_file(filepath)
+        return obj
+    # --- end of new_from_file (...) ---
 
-def _read_settings_file(config_parser, passthrough_sections, filepath):
-    """Reads a settings file.
+    def __init__(self):
+        super().__init__()
+        self.data = {}
 
-    The content of a settings file is of mixed format.
-    A considerable part is in ini-file format,
-    whereas certain sections must be parsed separately.
+    def __len__(self):
+        return len(self.data)
 
-    This section stores "unparseable" (non-ini) sections from the given
-    input file in a section name => lines dict,
-    and passes all other sections to the config parser's read_file() method.
-
-    Note: does not handle a few configparser features correctly,
-          for example indented sections (not important for this project)
-
-    @param config_parser:         ini parser
-    @param passthrough_sections:  sections whose text lines should not be
-                                  parsed
-    @param filepath:              input file
-
-    @return:  2-tuple (config_parser, dict :: passthrough_section => lines)
-    """
-    sectcre = config_parser.SECTCRE
-
-    config_lines = []
-    unparsed_sections = {}
-
-    dst = config_lines
-    for lino, line in fileio.read_text_file_lines(filepath):
-        sect_match = sectcre.match(line)
-
-        if not sect_match:
-            dst.append(line)
-
+    def get_section_key(self, sect_name):
+        if isinstance(sect_name, str):
+            return sect_name.lower().replace("-", "_")
         else:
-            sect_name = sect_match.group("header").lower()
-            if sect_name in passthrough_sections:
-                if sect_name in unparsed_sections:
-                    dst = unparsed_sections[sect_name]
-                else:
-                    dst = []
-                    unparsed_sections[sect_name] = dst
+            return sect_name
 
+    def __getitem__(self, key):
+        return self.data[self.get_section_key(key)]
+
+    def __iter__(self):
+        return iter(self.data)
+
+    def _get_or_create_section(self, sect_key):
+        try:
+            sect = self.data[sect_key]
+        except KeyError:
+            sect = []
+            self.data[sect_key] = sect
+        return sect
+    # ---
+
+    def read_file(self, filepath):
+        """Reads a kernelconfig settings file.
+
+        A settings file is in ini-like file format,
+        and consists of several sections,
+        e.g. "[source]" for curated source-related configuration.
+
+        Each section has its own format which is usually not compatible
+        with configparser, and therefore this function exists.
+
+        The "[options]" section that is used to modify
+        the kernel configuration, is in "macros lang" format.
+
+        The "[source]" section that is used for specifying the input .config
+        file, is in a shell script-like format.
+
+        This function simply splits reads the sections of the settings file
+        into a dict :: section name => list of text lines.
+
+        Note: does not handle a few configparser/.ini features correctly,
+              for example indented sections (not important for this project)
+
+        @param filepath:         path to settings file (or file obj)
+        @type  filepath:         C{str} (or file obj)
+        """
+
+        _get_or_create_section = self._get_or_create_section
+        sect_regexp = self.SECTION_REGEXP
+
+        nosection_lines = []
+
+        dst = nosection_lines
+        for lino, line in fileio.read_text_file_lines(filepath):
+            sect_match = sect_regexp.match(line)
+
+            if sect_match:
+                dst = _get_or_create_section(
+                    self.get_section_key(sect_match.group("header"))
+                )
                 # no-append section header
 
-            else:
-                dst = config_lines
+            elif dst or line:
                 dst.append(line)
+            # --
         # --
-    # --
 
-    config_parser.read_file(config_lines, source=filepath)
-    return (config_parser, unparsed_sections)
-# --- end of _read_settings_file (...) ---
+        if nosection_lines:
+            _get_or_create_section(None).extend(nosection_lines)
+    # ---
 
+    def iter_section(self, name, ignore_missing=False, skip_comments=False):
+        def filter_comments(lines):
+            nonlocal skip_comments
+            is_comment = self.COMMENT_LINE_REGEXP.match
 
-def get_default_config_parser():
-    # This is the config parser as it's used in the original project.
-    #
-    # However, settings files are not really ini files, except for the
-    # section headers, so the ConfigParser part of this module may be replaced
-    # in future.
-    #
-    return configparser.RawConfigParser(
-        delimiters="|", allow_no_value=True, comment_prefixes="#"
-    )
-# --- end of get_default_config_parser (...) ---
+            if skip_comments:
+                for line in lines:
+                    if line and not is_comment(line):
+                        yield line
+
+            else:
+                for line in lines:
+                    yield line
+        # ---
+
+        try:
+            sect_lines = self[name]
+        except KeyError:
+            if ignore_missing:
+                return
+            raise
+
+        yield from filter_comments(sect_lines)
+    # --- end of iter_section (...) ---
+
+    def get_section(self, name, **kwargs):
+        return list(self.iter_section(name, **kwargs))
+    # --- end of get_section (...) ---
+
+# --- end of SettingsFileReader ---
