@@ -25,6 +25,13 @@ class ConfigurationSourceInvalidError(ConfigurationSourceError):
     pass
 
 
+class ConfigurationSourceExecError(ConfigurationSourceError):
+    """
+    Uncreatable configuration source due to failing command.
+    """
+    pass
+
+
 class ConfigurationSourceNotFound(KeyError):
     """
     Uncreatable configuration source due to file not found or similar.
