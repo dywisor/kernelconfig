@@ -139,7 +139,7 @@ class ConfigurationSourcesBase(_sources_abc.AbstractConfigurationSources):
 
             elif source_type is ConfigurationSourceType.s_script:
                 # embedded script w/ lang source_subtype
-                source_cls = None
+                source_cls = _source.ScriptConfigurationSource
             # --
         # --
 
