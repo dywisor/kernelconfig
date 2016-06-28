@@ -142,6 +142,14 @@ class SourceInfo(loggable.AbstractLoggable):
         # --
     # --- end of unsetenv (...) ---
 
+    @abc.abstractmethod
+    def check_supports_out_of_tree_build(self):
+        return False
+
+    @abc.abstractmethod
+    def iter_out_of_tree_build_make_vars(self, build_dir):
+        raise TypeError()
+
 # --- end of SourceInfo ---
 
 
@@ -331,5 +339,13 @@ class KernelInfo(SourceInfo):
             ('ARCH', self.subarch or self.arch)
         ]
     # --- end of iter_make_vars (...) ---
+
+    def check_supports_out_of_tree_build(self):
+        return True
+
+    def iter_out_of_tree_build_make_vars(self, build_dir):
+        return [
+            ('O', build_dir)
+        ]
 
 # --- end of KernelInfo ---
