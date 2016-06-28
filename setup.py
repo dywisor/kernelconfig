@@ -68,7 +68,7 @@ class ProjectSetup(object):
     def setup(cls):
         distutils.core.setup(
             name        = cls.PRJ_NAME,
-            version     = "0.1",
+            version     = "1.0_alpha1",
             license     = "GPLv2",
             ext_modules = cls.get_ext_modules(),
             packages    = cls.pym_names(
