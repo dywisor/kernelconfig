@@ -125,7 +125,7 @@ class ConfigurationSourcesBase(_sources_abc.AbstractConfigurationSources):
                 raise NotImplementedError("guess typeof", source_def)
 
             elif source_type is ConfigurationSourceType.s_file:
-                source_cls = None
+                source_cls = _source.FileConfigurationSource
 
             elif source_type is ConfigurationSourceType.s_command:
                 source_cls = None
