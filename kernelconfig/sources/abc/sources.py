@@ -146,6 +146,8 @@ class AbstractConfigurationSources(
         @return:  key
         @rtype:   C{str}
         """
+        if not source_name:
+            raise ValueError()
         return source_name.lower()
 
     def register_source(self, source, assert_key=None):
