@@ -64,29 +64,25 @@ class MakeConfigurationSource(_base.CommandConfigurationSourceBase):
         arg_config.argv.extend(argv)
 
         arg_config.out_of_tree = False          # new attr
-        arg_config.outconfig = None             # new attr
         arg_config.outconfig_name = ".config"   # new attr
 
         if not self.senv.source_info.check_supports_out_of_tree_build():
             arg_config.outconfig = (
                 self.senv.source_info.get_filepath(arg_config.outconfig_name)
             )
-            arg_config.outfiles.append(arg_config.outconfig)
 
         else:
-            arg_config.tmpdir = True
+            arg_config.set_need_tmpdir()
             arg_config.out_of_tree = True
         # --
 
         return arg_config
     # ---
 
-    def do_prepare(self, arg_config):
-        super().do_prepare(arg_config)
-
+    def do_prepare_set_outfiles(self, arg_config):
         if arg_config.out_of_tree:
             if __debug__:
-                assert not arg_config.outfiles
+                assert not arg_config.outconfig
                 assert arg_config.tmpdir
                 assert arg_config.tmpdir is not True
             # --
@@ -95,7 +91,9 @@ class MakeConfigurationSource(_base.CommandConfigurationSourceBase):
             arg_config.outconfig = os.path.join(
                 arg_config.tmpdir, arg_config.outconfig_name
             )
-        # --
+        else:
+            assert arg_config.outconfig
+    # ---
 
     def create_cmdv(self, arg_config):
         def gen_make_var_args(mvar_items):

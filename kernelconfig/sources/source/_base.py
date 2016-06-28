@@ -28,11 +28,11 @@ class ConfigurationSourceArgConfig(object):
     Consumers may add new attributes freely.
 
     @ivar argv:
-    @type argv:      undef
-    @ivar outfiles:
-    @type outfiles:  C{None} or list-like
+    @type argv:        undef
+    @ivar outconfig:
+    @type outconfig:   C{None} or C{str}
     @ivar tmpdir:
-    @type tmpdir:    C{None} or C{bool} or C{str}
+    @type tmpdir:      C{None} or C{bool} or C{str}
     """
 
     # no __slots__ here! -- "consumers may add new attrs freely"
@@ -40,15 +40,17 @@ class ConfigurationSourceArgConfig(object):
     def __init__(self):
         super().__init__()
         self.argv = []
-        self.outfiles = None
         self.tmpdir = None
+        self.outconfig = None
 
     def iter_outfiles(self):
-        if not self.outfiles:
-            return
-        for outfile in self.outfiles:
-            yield outfile
+        if self.outconfig:
+            yield self.outconfig
     # --
+
+    def set_need_tmpdir(self):
+        if not self.tmpdir:
+            self.tmpdir = True
 
 # --- end of ConfigurationSourceArgConfig ---
 
@@ -153,6 +155,9 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
             # be extra sure that outfile does not exist anymore
             fs.rmfile(outfile)
 
+    def do_prepare_set_outfiles(self, arg_config):
+        pass
+
     def do_prepare_outfiles(self, arg_config):
         self._prepare_outfiles(arg_config.iter_outfiles())
 
@@ -174,6 +179,7 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         @return:  None (implicit)
         """
         self.do_prepare_tmpdir(arg_config)
+        self.do_prepare_set_outfiles(arg_config)
         self.do_prepare_outfiles(arg_config)
     # --- end of do_prepare (...) ---
 
@@ -193,7 +199,7 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
 
         @return:  conf basis
         """
-        return arg_config.outfile
+        return self.create_conf_basis_for_file(arg_config.outconfig)
 
     def do_finalize(self, arg_config, conf_basis):
         """Post-"get conf basis" actions.
