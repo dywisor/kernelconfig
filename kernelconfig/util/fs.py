@@ -5,7 +5,12 @@ import errno
 import os
 import shutil
 
-__all__ = ["dodir", "dodir_for_file", "backup_file", "prepare_output_file"]
+__all__ = [
+    "dodir", "dodir_for_file",
+    "rmfile",
+    "backup_file",
+    "prepare_output_file"
+]
 
 
 def dodir(dirpath, mkdir_p=True):
@@ -23,6 +28,18 @@ def dodir(dirpath, mkdir_p=True):
 def dodir_for_file(filepath, mkdir_p=True):
     dodir(os.path.dirname(filepath), mkdir_p=mkdir_p)
 # --- end of dodir_for_file (...) ---
+
+
+def rmfile(filepath):
+    try:
+        os.unlink(filepath)
+    except OSError:
+        if os.path.lexists(filepath):
+            raise
+        else:
+            return False
+    return True
+# --- end of rmfile (...) ---
 
 
 def backup_file(
