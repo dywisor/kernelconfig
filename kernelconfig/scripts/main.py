@@ -16,6 +16,14 @@ import kernelconfig.util.fs
 import kernelconfig.util.multidir
 import kernelconfig.util.settings
 
+# _version is a setup.py-generated file
+try:
+    import kernelconfig._version
+except ImportError:
+    PRJ_VERSION = "???"
+else:
+    PRJ_VERSION = kernelconfig._version.version
+
 
 class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
@@ -34,7 +42,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         kernelconfig.scripts._argutil.UsageAction.attach_to(parser)
 
         parser.add_argument(
-            '-V', '--print-version', action='version', version="???"
+            '-V', '--print-version', action='version', version=PRJ_VERSION
         )
 
         # the following args are mostly consistent with those
