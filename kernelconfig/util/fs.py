@@ -25,6 +25,18 @@ def dodir_for_file(filepath, mkdir_p=True):
 # --- end of dodir_for_file (...) ---
 
 
+def rmfile(filepath):
+    try:
+        os.unlink(filepath)
+    except OSError:
+        if os.path.lexists(filepath):
+            raise
+        else:
+            return False
+    return True
+# --- end of rmfile (...) ---
+
+
 def backup_file(
     orig_file, *, move=False, ignore_missing=False, bak_suffix=".bak"
 ):
