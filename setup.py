@@ -12,6 +12,7 @@ import distutils.command.build_py
 class ProjectSetup(object):
     PRJ_NAME = "kernelconfig"
     PYM_NAME = PRJ_NAME
+    PRJ_VER  = "1.0_alpha1"
 
     @classmethod
     def pym_name(cls, sub_mod):
@@ -68,7 +69,7 @@ class ProjectSetup(object):
     def setup(cls):
         distutils.core.setup(
             name        = cls.PRJ_NAME,
-            version     = "1.0_alpha1",
+            version     = cls.PRJ_VER,
             license     = "GPLv2",
             ext_modules = cls.get_ext_modules(),
             packages    = cls.pym_names(
@@ -109,6 +110,13 @@ class genfiles_build_py(distutils.command.build_py.build_py):
         + ["standalone"]
     )
 
+    def write_py_file_header(self, fh):
+        fh.write(
+            '# This file is part of kernelconfig.\n'
+            '# -*- coding: utf-8 -*-\n'
+        )
+    # ---
+
     def initialize_options(self):
         self.standalone = None
         super().initialize_options()
@@ -124,14 +132,47 @@ class genfiles_build_py(distutils.command.build_py.build_py):
             return os.path.join("build", "installinfo.py")
 
     def build_generated_files(self):
-        install_info_dir = os.path.join(
-            self.build_lib, ProjectSetup.PYM_NAME, "installinfo"
-        )
-        install_info_file = os.path.join(install_info_dir, "_info.py")
+        def build_installinfo():
+            nonlocal gen_files
+            install_info_dir = os.path.join(
+                self.build_lib, ProjectSetup.PYM_NAME, "installinfo"
+            )
+            install_info_file = os.path.join(install_info_dir, "_info.py")
 
-        self.mkpath(install_info_dir)
-        self.copy_file(self.get_install_info_infile(), install_info_file)
-        self.byte_compile([install_info_file])
+            self.mkpath(install_info_dir)
+            self.copy_file(self.get_install_info_infile(), install_info_file)
+            gen_files.append(install_info_file)
+        # ---
+
+        def build_version():
+            nonlocal gen_files
+
+            def write_version(outfile):
+                with open(outfile, "wt") as fh:
+                    self.write_py_file_header(fh)
+                    fh.write(
+                        '\nversion = \"{ver!s}\"\n'.format(
+                            ver=ProjectSetup.PRJ_VER
+                        )
+                    )
+            # ---
+
+            # mkdir not necessary
+            version_info_file = os.path.join(
+                self.build_lib, ProjectSetup.PYM_NAME, "_version.py"
+            )
+            self.execute(
+                write_version,
+                [version_info_file],
+                msg="creating _version.py"
+            )
+            gen_files.append(version_info_file)
+        # ---
+
+        gen_files = []
+        build_installinfo()
+        build_version()
+        self.byte_compile(gen_files)
 
     def build_parsetab(self):
         # COULDFIX: it would be possible to create parsetab.py
