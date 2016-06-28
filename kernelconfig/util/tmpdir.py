@@ -15,6 +15,21 @@ from . import fspath
 __all__ = ["Tmpdir"]
 
 
+class _FileWrapper(object):
+
+    def __init__(self, fh, path):
+        super().__init__()
+        self.fh = fh
+        self.path = path
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        self.fh.close()
+# ---
+
+
 class _Tmpdir(object):
     __slots__ = ["__weakref__", "_path"]
 
@@ -92,6 +107,43 @@ class _Tmpdir(object):
         @rtype:   C{str}
         """
         return tempfile.mkdtemp(prefix="privtmp", dir=self._path)
+
+    def _mkstemp(self, text=True):
+        return tempfile.mkstemp(dir=self._path, text=text)
+
+    def get_new_file(self):
+        """Creates a new, unique file in the tmpdir and returns its fspath.
+
+        The file is cleaned up together with its parent,
+        but can also be removed prior to that manually.
+
+        @return:  path to file
+        @rtype:   C{str}
+        """
+        file_fd, file_path = self._mkstemp()
+        os.close(file_fd)
+        return file_path
+
+    def open_new_file(self, text=True):
+        """Creates a new, unique file in the tmpdir
+        and returns a file object for writing to it and its fspath.
+
+        The file is cleaned up together with its parent,
+        but can also be removed prior to that manually.
+
+        @return:  object with fh, path attributes
+        @rtype:   L{_FileWrapper}
+        """
+        file_fd, file_path = self._mkstemp(text=text)
+        try:
+            file_fh = os.fdopen(file_fd, "w" + ("t" if text else "b"))
+        except:
+            os.close(file_fd)
+            raise
+
+        return _FileWrapper(file_fh, file_path)
+    # ---
+
 # ---
 
 
