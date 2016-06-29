@@ -5,7 +5,12 @@ import errno
 import os
 import shutil
 
-__all__ = ["dodir", "dodir_for_file", "backup_file", "prepare_output_file"]
+__all__ = [
+    "dodir", "dodir_for_file",
+    "rmfile",
+    "backup_file",
+    "prepare_output_file"
+]
 
 
 def dodir(dirpath, mkdir_p=True):
