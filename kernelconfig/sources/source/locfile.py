@@ -40,7 +40,12 @@ class LocalFileConfigurationSource(_base.ConfigurationSourceBase):
             raise exc.ConfigurationSourceInvalidError("too many args")
         # --
 
-        self.filepath = args[0]
+        str_formatter = self.get_str_formatter()
+
+        # normpath() for eliminating redundant leading slashes
+        #  this is an limitation caused by how "local file" source types
+        #  are created from settings (they must start with "/")
+        self.filepath = os.path.normpath(str_formatter.format(args[0]))
         return []
     # ---
 
@@ -49,7 +54,7 @@ class LocalFileConfigurationSource(_base.ConfigurationSourceBase):
             raise exc.ConfigurationSourceInvalidError("non-empty args")
         # --
 
-        filepath = self.filepath  # TODO: str-format
+        filepath = self.filepath
 
         if os.path.isabs(filepath):
             outconfig = filepath
