@@ -190,7 +190,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         source_info = self.create_loggable(
             kernelconfig.kernel.info.KernelInfo,
             (arg_config.get("srctree") or self.initial_working_dir),
-            arch=arg_config.get("arch")
+            karch=arg_config.get("arch")
         )
 
         if not source_info.check_srctree():
