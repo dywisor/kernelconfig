@@ -78,6 +78,16 @@ class InstallInfoBase(object, metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def get_config_source_dirs(self):
+        """
+        Returns a multi dir object that provides access to config source files.
+
+        @return:  multi dir object
+        @rtype:   L{MultiDirEntry}
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def copy(self):
         """Creates and returns a copy of this installation info object.
 
@@ -247,4 +257,8 @@ class DefaultInstallInfo(InstallInfoBase):
                 filename_pattern
             )
         ))
+
+    def get_config_source_dirs(self):
+        return self.settings_dirs.get_child("source")
+
 # --- end of DefaultInstallInfo ---
