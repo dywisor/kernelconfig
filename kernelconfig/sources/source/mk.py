@@ -1,8 +1,6 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
-import os
-
 from . import _base
 from ..abc import exc
 
@@ -63,36 +61,18 @@ class MakeConfigurationSource(_base.CommandConfigurationSourceBase):
         arg_config = _base.ConfigurationSourceArgConfig()
         arg_config.argv.extend(argv)
 
-        arg_config.out_of_tree = False          # new attr
-        arg_config.outconfig_name = ".config"   # new attr
+        arg_config.out_of_tree = (  # new attr
+            self.senv.source_info.check_supports_out_of_tree_build()
+        )
 
-        if not self.senv.source_info.check_supports_out_of_tree_build():
-            arg_config.outconfig = (
-                self.senv.source_info.get_filepath(arg_config.outconfig_name)
-            )
-
+        if arg_config.out_of_tree:
+            arg_config.add_tmp_outfile(".config")
         else:
-            arg_config.set_need_tmpdir()
-            arg_config.out_of_tree = True
-        # --
+            arg_config.add_outfile(
+                self.senv.source_info.get_filepath(".config")
+            )
 
         return arg_config
-    # ---
-
-    def do_prepare_set_outfiles(self, arg_config):
-        if arg_config.out_of_tree:
-            if __debug__:
-                assert not arg_config.outconfig
-                assert arg_config.tmpdir
-                assert arg_config.tmpdir is not True
-            # --
-
-            # not necessary to backup-move/remove tmpfile
-            arg_config.outconfig = os.path.join(
-                arg_config.tmpdir, arg_config.outconfig_name
-            )
-        else:
-            assert arg_config.outconfig
     # ---
 
     def create_cmdv(self, arg_config):
@@ -132,7 +112,4 @@ class MakeConfigurationSource(_base.CommandConfigurationSourceBase):
 
         return cmdv
     # ---
-
-    def create_conf_basis(self, arg_config, proc):
-        return self.create_conf_basis_for_file(arg_config.outconfig)
 # --- end of MakeConfigurationSource ---

@@ -1,8 +1,6 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
-import os
-
 from . import _base
 from ..abc import exc
 
@@ -63,20 +61,8 @@ class ScriptConfigurationSource(_base.CommandConfigurationSourceBase):
 
     def do_parse_source_argv(self, argv):
         arg_config = _base.ConfigurationSourceArgConfig()
-        arg_config.argv = list(argv) if argv else []
+        if argv:
+            arg_config.argv.extend(argv)
 
-        arg_config.set_need_tmpdir()
-        arg_config.outconfig_name = "config"  # new attr
+        arg_config.add_tmp_outfile("config")
         return arg_config
-
-    def do_prepare_set_outfiles(self, arg_config):
-        assert not arg_config.outconfig
-        assert arg_config.tmpdir
-        assert arg_config.tmpdir is not True
-
-        arg_config.outconfig = os.path.join(
-            arg_config.tmpdir, arg_config.outconfig_name
-        )
-
-    def create_conf_basis(self, arg_config, proc):
-        return self.create_conf_basis_for_file(arg_config.outconfig)
