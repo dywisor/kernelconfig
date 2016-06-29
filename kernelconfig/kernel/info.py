@@ -178,6 +178,15 @@ class KernelInfo(SourceInfo):
     }
 
     @classmethod
+    def calculate_arch(cls):
+        """Determines the default target architecture using os.uname().
+
+        @return:  arch
+        @rtype:   C{str}
+        """
+        return os.uname().machine
+
+    @classmethod
     def calculate_srcarch(cls, karch):
         """Determines the SRCARCH from ARCH.
 
@@ -268,13 +277,21 @@ class KernelInfo(SourceInfo):
             return march
     # --- end of calculate_subarch (...) ---
 
-    def __init__(self, srctree, karch=None, srcarch=None, **kwargs):
+    def __init__(self, srctree, arch=None, karch=None, srcarch=None, **kwargs):
         """Constructor.
+
+        Note: it is not advisable to specify arch parameters without
+              also specifying the arch parameters they depend on.
+              For example, when passing a non-empty karch,
+              arch should also be set.
 
         @param   srctree:  path to the kernel sources
         @type    srctree:  C{str}
+        @keyword arch:     target architecture.
+                           Defaults to None (-> autodetect using os.uname()).
+        @type    arch:     C{str} or C{None}
         @keyword karch:    target kconfig architecture.
-                           Defaults to None (-> autodetect using os.uname()) .
+                           Defaults to None (-> autodetect from arch).
         @type    karch:    C{str} or C{None}
         @keyword srcarch:  target (kconfig) source architecture.
                            It is not necessary to specifiy the srcarch,
@@ -286,9 +303,7 @@ class KernelInfo(SourceInfo):
         @type    kwargs:   C{dict} :: C{str} => _
         """
         super().__init__(srctree, **kwargs)
-        # FIXME:
-        #   self.target_arch = arch
-        #   calculate self.karch from self.target_arch
+        self.arch = arch
         self.subarch = None
         self.karch = karch
         self.srcarch = srcarch
@@ -296,14 +311,19 @@ class KernelInfo(SourceInfo):
     # --- end of __init__ (...) ---
 
     def prepare(self):
+        if not self.arch:
+            self.arch = self.calculate_arch()
+            self.logger.debug("detected target architecture %s", self.arch)
+        # --
+
         if not self.karch:
             if not self.subarch:
-                self.subarch = self.calculate_subarch(os.uname().machine)
+                self.subarch = self.calculate_subarch(self.arch)
                 self.logger.debug("detected SUBARCH=%s", self.subarch)
             # --
 
             self.karch = self.calculate_karch(self.subarch)
-            self.logger.debug("detected ARCH=%s", self.karch)
+            self.logger.debug("detected kernel ARCH=%s", self.karch)
         # -- else keep subarch possibly None
 
         if not self.srcarch:
