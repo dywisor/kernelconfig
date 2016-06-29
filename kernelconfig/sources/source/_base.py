@@ -11,6 +11,8 @@ from ..abc import exc
 from ...util import subproc
 from ...util import fs
 
+from ._argconfig import ConfigurationSourceArgConfig
+
 
 __all__ = [
     "ConfigurationSourceArgConfig",
@@ -18,41 +20,6 @@ __all__ = [
     "PhasedConfigurationSourceBase",
     "CommandConfigurationSourceBase",
 ]
-
-
-class ConfigurationSourceArgConfig(object):
-    """
-    Data object that is passed around during the various phases
-    of PhasedConfigurationSourceBase.
-
-    Consumers may add new attributes freely.
-
-    @ivar argv:
-    @type argv:        undef
-    @ivar outconfig:
-    @type outconfig:   C{None} or C{str}
-    @ivar tmpdir:
-    @type tmpdir:      C{None} or C{bool} or C{str}
-    """
-
-    # no __slots__ here! -- "consumers may add new attrs freely"
-
-    def __init__(self):
-        super().__init__()
-        self.argv = []
-        self.tmpdir = None
-        self.outconfig = None
-
-    def iter_outfiles(self):
-        if self.outconfig:
-            yield self.outconfig
-    # --
-
-    def set_need_tmpdir(self):
-        if not self.tmpdir:
-            self.tmpdir = True
-
-# --- end of ConfigurationSourceArgConfig ---
 
 
 class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
@@ -146,8 +113,10 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         return ConfigurationSourceArgConfig()
 
     def do_prepare_tmpdir(self, arg_config):
-        if arg_config.tmpdir is True:
-            arg_config.tmpdir = self.senv.get_tmpdir().get_new_subdir()
+        if arg_config.check_need_tmpdir():
+            arg_config.assign_tmpdir(
+                self.senv.get_tmpdir().get_new_subdir()
+            )
 
     def _prepare_outfiles(self, filesv):
         for outfile in filesv:
@@ -155,11 +124,8 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
             # be extra sure that outfile does not exist anymore
             fs.rmfile(outfile)
 
-    def do_prepare_set_outfiles(self, arg_config):
-        pass
-
     def do_prepare_outfiles(self, arg_config):
-        self._prepare_outfiles(arg_config.iter_outfiles())
+        self._prepare_outfiles(arg_config.iter_outfile_paths())
 
     def do_prepare(self, arg_config):
         """Pre-"get conf basis" actions.
@@ -179,7 +145,6 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         @return:  None (implicit)
         """
         self.do_prepare_tmpdir(arg_config)
-        self.do_prepare_set_outfiles(arg_config)
         self.do_prepare_outfiles(arg_config)
     # --- end of do_prepare (...) ---
 
@@ -199,7 +164,8 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
 
         @return:  conf basis
         """
-        return self.create_conf_basis_for_file(arg_config.outconfig)
+        raise NotImplementedError()
+    # ---
 
     def do_finalize(self, arg_config, conf_basis):
         """Post-"get conf basis" actions.
@@ -243,6 +209,18 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         return self.do_finalize(arg_config, conf_basis)
     # --- end of get_configuration_basis (...) ---
 
+    def create_conf_basis_for_arg_config(self, arg_config):
+        outconfig_v = list(arg_config.iter_outconfig_paths())
+        if not outconfig_v:
+            raise NotImplementedError("no outconfig")
+
+        elif len(outconfig_v) == 1:
+            return self.create_conf_basis_for_file(outconfig_v[0])
+
+        else:
+            raise NotImplementedError("many outconfigs")
+    # ---
+
 # --- end of ConfigurationSourceBase ---
 
 
@@ -263,9 +241,8 @@ class CommandConfigurationSourceBase(PhasedConfigurationSourceBase):
             logger=self.logger, tmpdir=arg_config.tmpdir
         )
 
-    @abc.abstractmethod
     def create_conf_basis(self, arg_config, proc):
-        raise NotImplementedError()
+        return self.create_conf_basis_for_arg_config(arg_config)
 
     def do_get_conf_basis(self, arg_config):
         with self.create_subproc(arg_config) as proc:
