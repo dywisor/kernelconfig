@@ -7,6 +7,7 @@ import os.path
 import shlex
 
 from ..abc import loggable
+from ..util import fspath
 from ..util import tmpdir
 
 from .abc import sources as _sources_abc
@@ -34,7 +35,23 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
         super().__init__(logger=logger)
         self.install_info = install_info
         self.source_info = source_info
+        self._files_dir = None
         self._tmpdir = None
+
+    def get_files_dir(self):
+        files_dir = self._files_dir
+        if files_dir is None:
+            files_dir = self.install_info.get_config_source_dirs()
+            self._files_dir = files_dir
+        return files_dir
+
+    def get_file_path(self, name, *additional_relpath_components):
+        return self.get_files_dir().get_file_path(
+            fspath.join_relpaths_v(name, additional_relpath_components)
+        )
+
+    def get_config_file_path(self, name):
+        return self.get_file_path("files", name)
 
     def get_tmpdir(self):
         tmpdir_obj = self._tmpdir
