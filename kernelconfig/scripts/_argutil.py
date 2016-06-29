@@ -4,8 +4,8 @@
 import argparse
 import os
 import re
-import stat
 
+from ..util import fs
 from ..util import fspath
 
 
@@ -43,17 +43,9 @@ class ArgTypes(object):
 
     def arg_existing_file(self, arg):
         filepath = self.arg_realpath(arg)
-        try:
-            sb = os.stat(filepath)
-        except OSError:
-            raise self.exc_type("file does not exist: %s" % arg) from None
-
-        if stat.S_ISDIR(sb.st_mode) or stat.S_ISLNK(sb.st_mode):
-            # ISLNK is unrealistic, due to realpath()
+        if not fs.is_readable_file(filepath):
             raise self.exc_type("not a file: %s" % arg)
-        # --
 
-        # S_IFCHR, S_IFBLK, S_IFREG, S_IFIFO, S_IFSOCK -- ok!
         return filepath
     # --- end of arg_existing_file (...) ---
 

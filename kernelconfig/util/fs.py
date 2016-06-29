@@ -3,14 +3,56 @@
 
 import errno
 import os
+import stat
 import shutil
 
 __all__ = [
+    "check_stat_mode_readable_file", "is_readable_file",
     "dodir", "dodir_for_file",
     "rmfile",
     "backup_file",
     "prepare_output_file"
 ]
+
+
+def check_stat_mode_readable_file(mode):
+    """
+    Returns True if the given stat mode indicates
+    that the file could be opened for reading.
+    """
+    if stat.S_ISDIR(mode):
+        return False
+
+    elif stat.S_ISLNK(mode):
+        return False
+
+    # BLK, CHR, FIFO, REG, SOCK
+
+    # in Python 3.4,
+    # stat.S_ISDOOR(...)
+    # stat.S_ISPORT(...)
+    # stat.S_ISWHT(...)
+
+    else:
+        # assume true
+        return True
+# --- end of check_stat_mode_readable_file (...) ---
+
+
+def is_readable_file(filepath, follow_symlinks=True):
+    """Returns True if filepath points
+    a regular file or a file that behaves similarily when opened for reading.
+    """
+    try:
+        if follow_symlinks:
+            sb = os.stat(filepath)
+        else:
+            sb = os.lstat(filepath)
+    except OSError:
+        return False
+
+    return check_stat_mode_readable_file(sb.st_mode)
+# --- end is_readable_file (...) ---
 
 
 def dodir(dirpath, mkdir_p=True):
