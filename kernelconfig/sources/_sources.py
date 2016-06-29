@@ -37,6 +37,7 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
         self.source_info = source_info
         self._files_dir = None
         self._tmpdir = None
+        self._fmt_vars = None
 
     def get_files_dir(self):
         files_dir = self._files_dir
@@ -59,6 +60,46 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
             tmpdir_obj = tmpdir.Tmpdir()
             self._tmpdir = tmpdir_obj
         return tmpdir_obj
+
+    def _create_format_vars(self):
+        # FIXME: this is, at least partially,
+        #        a dup of the interpreter's cmp vars
+
+        fmt_vars = {}
+
+        # at least in theory, source_info is just a SourceInfo
+        # and not a KernelInfo object, so use hasattr() where appropriate
+        source_info = self.source_info
+
+        fmt_vars["srctree"] = source_info.srctree
+
+        if hasattr(source_info, "kernelversion"):
+            fmt_vars["kver"] = source_info.kernelversion
+            fmt_vars["kmaj"] = source_info.kernelversion.version
+            fmt_vars["kmin"] = source_info.kernelversion.sublevel
+            fmt_vars["kpatch"] = source_info.kernelversion.patchlevel
+        # --
+
+        for attr_name in {"subarch", "arch", "karch", "srcarch", "srctree"}:
+            try:
+                attr = getattr(source_info, attr_name)
+            except AttributeError:
+                pass
+            else:
+                fmt_vars[attr_name] = attr
+        # --
+
+        return fmt_vars
+    # --- end of _create_format_vars (...) ---
+
+    def get_format_vars(self):
+        fmt_vars = self._fmt_vars
+        if fmt_vars is None:
+            fmt_vars = self._create_format_vars()
+            self._fmt_vars = fmt_vars
+        return fmt_vars
+    # --- end of get_format_vars (...) ---
+
 # ---
 
 
