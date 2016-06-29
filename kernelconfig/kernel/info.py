@@ -159,8 +159,8 @@ class KernelInfo(SourceInfo):
     @type SRCARCH_MAP:  C{dict} :: C{str} => C{str}
 
 
-    @ivar arch:           target architecture
-    @type arch:           C{str} or C{None}
+    @ivar karch:          target kconfig architecture
+    @type karch:          C{str} or C{None}
     @ivar srcarch:        target (kconfig) source architecture
     @type srcarch:        C{str} or C{None}
     @ivar kernelversion:  version of the kernel sources
@@ -178,23 +178,23 @@ class KernelInfo(SourceInfo):
     }
 
     @classmethod
-    def calculate_srcarch(cls, arch):
+    def calculate_srcarch(cls, karch):
         """Determines the SRCARCH from ARCH.
 
-        @param arch:  arch
-        @type  arch:  C{str}
+        @param karch:  kconfig arch
+        @type  karch:  C{str}
 
         @return:  srcarch
         @rtype:   C{str}
         """
-        if not arch:
+        if not karch:
             raise ValueError()
 
-        return cls.SRCARCH_MAP.get(arch, arch)
+        return cls.SRCARCH_MAP.get(karch, karch)
     # --- end of calculate_srcarch (...) ---
 
     @classmethod
-    def calculate_arch(cls, subarch):
+    def calculate_karch(cls, subarch):
         """Determines the ARCH from SUBARCH.
 
         This is a no-op.
@@ -202,14 +202,14 @@ class KernelInfo(SourceInfo):
         @param subarch:  subarch
         @type  subarch:  C{str}
 
-        @return:  arch
+        @return:  kconfig arch
         @rtype:   C{str}
         """
         if not subarch:
             raise ValueError()
 
         return subarch
-    # --- end of calculate_arch (...) ---
+    # --- end of calculate_karch (...) ---
 
     @classmethod
     def calculate_subarch(cls, march):
@@ -268,14 +268,14 @@ class KernelInfo(SourceInfo):
             return march
     # --- end of calculate_subarch (...) ---
 
-    def __init__(self, srctree, arch=None, srcarch=None, **kwargs):
+    def __init__(self, srctree, karch=None, srcarch=None, **kwargs):
         """Constructor.
 
         @param   srctree:  path to the kernel sources
         @type    srctree:  C{str}
-        @keyword arch:     target architecture.
+        @keyword karch:    target kconfig architecture.
                            Defaults to None (-> autodetect using os.uname()) .
-        @type    arch:     C{str} or C{None}
+        @type    karch:    C{str} or C{None}
         @keyword srcarch:  target (kconfig) source architecture.
                            It is not necessary to specifiy the srcarch,
                            as it can be derived from arch.
@@ -288,26 +288,26 @@ class KernelInfo(SourceInfo):
         super().__init__(srctree, **kwargs)
         # FIXME:
         #   self.target_arch = arch
-        #   calculate self.arch from self.target_arch
+        #   calculate self.karch from self.target_arch
         self.subarch = None
-        self.arch = arch
+        self.karch = karch
         self.srcarch = srcarch
         self.kernelversion = None
     # --- end of __init__ (...) ---
 
     def prepare(self):
-        if not self.arch:
+        if not self.karch:
             if not self.subarch:
                 self.subarch = self.calculate_subarch(os.uname().machine)
                 self.logger.debug("detected SUBARCH=%s", self.subarch)
             # --
 
-            self.arch = self.calculate_arch(self.subarch)
-            self.logger.debug("detected ARCH=%s", self.arch)
+            self.karch = self.calculate_karch(self.subarch)
+            self.logger.debug("detected ARCH=%s", self.karch)
         # -- else keep subarch possibly None
 
         if not self.srcarch:
-            self.srcarch = self.calculate_srcarch(self.arch)
+            self.srcarch = self.calculate_srcarch(self.karch)
             self.logger.debug("detected SRCARCH=%s", self.srcarch)
         # --
 
@@ -327,7 +327,7 @@ class KernelInfo(SourceInfo):
 
     def iter_env_vars(self):
         return [
-            ('ARCH', self.arch),
+            ('ARCH', self.karch),
             ('SRCARCH', self.srcarch),
             ('srctree', self.srctree),
             ('KERNELVERSION', self.kernelversion)
@@ -336,7 +336,7 @@ class KernelInfo(SourceInfo):
 
     def iter_make_vars(self):
         return [
-            ('ARCH', self.subarch or self.arch)
+            ('ARCH', self.subarch or self.karch)
         ]
     # --- end of iter_make_vars (...) ---
 
