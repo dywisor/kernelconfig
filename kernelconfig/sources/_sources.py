@@ -128,7 +128,7 @@ class ConfigurationSourcesBase(_sources_abc.AbstractConfigurationSources):
                 source_cls = _source.FileConfigurationSource
 
             elif source_type is ConfigurationSourceType.s_command:
-                source_cls = None
+                source_cls = _source.CommandConfigurationSource
 
             elif source_type is ConfigurationSourceType.s_make:
                 # make command w/ target source_subtype
