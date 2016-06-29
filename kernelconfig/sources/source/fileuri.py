@@ -39,7 +39,10 @@ class FileConfigurationSource(_base.PhasedConfigurationSourceBase):
             raise exc.ConfigurationSourceInvalidError("too many args")
         # --
 
-        file_uri = args[0]
+        str_formatter = self.get_str_formatter()
+
+        # normpath() not strictly needed here (see locfile.py)
+        file_uri = os.path.normpath(str_formatter.format(args[0]))
         file_uri_parsed = urllib.parse.urlparse(file_uri)
 
         if not file_uri_parsed.scheme:
@@ -69,7 +72,7 @@ class FileConfigurationSource(_base.PhasedConfigurationSourceBase):
         arg_config = _base.ConfigurationSourceArgConfig()
         arg_config.file_uri = None  # new attr
 
-        file_uri = self.file_uri  # TODO format-str
+        file_uri = self.file_uri
 
         if self.file_uri_scheme:
             # remote file
