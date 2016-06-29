@@ -1,6 +1,8 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import os.path
+
 from . import _base
 from ..abc import exc
 
@@ -47,8 +49,22 @@ class LocalFileConfigurationSource(_base.ConfigurationSourceBase):
             raise exc.ConfigurationSourceInvalidError("non-empty args")
         # --
 
-        # FIXME: str-format
-        return self.create_conf_basis_for_file(self.filepath)
+        filepath = self.filepath  # TODO: str-format
+
+        if os.path.isabs(filepath):
+            outconfig = filepath
+        else:
+            # there is currently no way
+            # to create LocalFileConfigurationSource objects with a relpath
+            raise AssertionError(
+                "unreachable code: LocalFileConfigurationSource with relpath"
+            )
+
+            outconfig = self.senv.get_config_file_path(filepath)
+            if not outconfig:
+                raise exc.ConfigurationSourceNotFound("files", filepath)
+
+        return self.create_conf_basis_for_file(outconfig)
     # --- end of get_configuration_basis (...) ---
 
 # --- end of LocalFileConfigurationSource ---
