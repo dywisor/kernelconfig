@@ -1,6 +1,7 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import os.path
 import urllib.parse
 
 from . import _base
@@ -68,14 +69,27 @@ class FileConfigurationSource(_base.PhasedConfigurationSourceBase):
         arg_config = _base.ConfigurationSourceArgConfig()
         arg_config.file_uri = None  # new attr
 
-        arg_config.file_uri = self.file_uri  # TODO format-str
+        file_uri = self.file_uri  # TODO format-str
 
         if self.file_uri_scheme:
             # remote file
             arg_config.add_tmp_outfile("config")
-        else:
-            arg_config.add_outconfig(self.file_uri)
+            arg_config.file_uri = file_uri
 
+        else:
+            if os.path.isabs(file_uri):
+                outconfig = file_uri
+                # if not file-like outconfig exists: outconfig = None
+            else:
+                outconfig = self.senv.get_config_file_path(file_uri)
+            # --
+
+            if not outconfig:
+                raise exc.ConfigurationSourceNotFound(file_uri)
+
+            arg_config.add_outconfig(outconfig)
+            # arg_config.file_uri not used
+        # --
         return arg_config
     # ---
 
