@@ -12,6 +12,7 @@ from ...util import subproc
 from ...util import fs
 
 from ._argconfig import ConfigurationSourceArgConfig
+from ._format import ConfigurationSourceStrFormatter
 
 
 __all__ = [
@@ -56,6 +57,19 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         else:
             raise exc.ConfigurationSourceNotFound(filepath)
     # ---
+
+    def get_str_formatter(self):
+        """Returns the 'static' string formatter.
+
+        This method can safely be used after binding the configuration
+        source environment config (in __init__()).
+        However, fmt vars added to the formatter
+        are not preserved between calls.
+
+        @return:  str formatter
+        @rtype:   L{ConfigurationSourceStrFormatter}
+        """
+        return ConfigurationSourceStrFormatter(self.senv)
 
 # --- end of ConfigurationSourceBase ---
 
