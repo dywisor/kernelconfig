@@ -544,7 +544,7 @@ class CommandConfigurationSourceBase(PhasedConfigurationSourceBase):
     def create_subproc(self, arg_config):
         return subproc.SubProc(
             self.create_cmdv(arg_config),
-            logger=self.logger, tmpdir=arg_config.tmpdir
+            logger=self.logger, tmpdir=arg_config.tmpdir_path
         )
 
     def create_conf_basis(self, arg_config, proc):
