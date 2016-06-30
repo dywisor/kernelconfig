@@ -157,7 +157,7 @@ class ConfigurationSourceArgConfig(object):
             )
     # ---
 
-    def _add_outconfig(self, outfile):
+    def register_outconfig(self, outfile):
         """Registers an outconfig file (w/o registering it in _outfiles).
 
         @raises KeyError:  if file is already registered
@@ -173,7 +173,7 @@ class ConfigurationSourceArgConfig(object):
         return outfile
     # ---
 
-    def _add_outfile(self, outfile, is_outconfig=True):
+    def register_outfile(self, outfile, is_outconfig=True):
         """Registers an outfile, optionally also as outconfig file.
 
         @raises KeyError:  if file is already registered
@@ -212,7 +212,7 @@ class ConfigurationSourceArgConfig(object):
 
         @return:  outfile object
         """
-        return self._add_outfile(
+        return self.register_outfile(
             Outfile(path), is_outconfig=is_outconfig
         )
     # --- end of add_outfile (...) ---
@@ -229,7 +229,7 @@ class ConfigurationSourceArgConfig(object):
 
         @return:  outfile object
         """
-        outfile = self._add_outfile(
+        outfile = self.register_outfile(
             TmpOutfile(name), is_outconfig=is_outconfig
         )
 
@@ -254,7 +254,7 @@ class ConfigurationSourceArgConfig(object):
 
         @return:  outfile object
         """
-        return self._add_outconfig(Outfile(path))
+        return self.register_outconfig(Outfile(path))
     # --- end of add_outconfig (...) ---
 
     def has_tmpdir(self):
