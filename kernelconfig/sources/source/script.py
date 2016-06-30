@@ -42,6 +42,10 @@ class ScriptConfigurationSource(_base.CommandConfigurationSourceBase):
         return args
     # --- end of init_from_settings (...) ---
 
+    def add_auto_var(self, varname, varkey):
+        # does not support auto vars yet
+        return False
+
     def create_cmdv(self, arg_config):
         if not self.interpreter:
             raise exc.ConfigurationSourceInvalidError("no interpreter")
