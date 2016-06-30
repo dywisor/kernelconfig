@@ -274,6 +274,25 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         return (any_autovar, missing)
     # --- end of scan_auto_vars (...) ---
 
+    def scan_auto_vars_must_exist(self, format_str_list, **kwargs):
+        """This is a helper method that wraps scan_auto_vars().
+
+        If any missing vars are reported,
+        it raises an ConfigurationSourceInvalidError.
+
+        The return value indicates whether any auto var has been detected.
+
+        @return:  any auto var detected
+        @rtype:   C{bool}
+        """
+        any_autovar, missing = self.scan_auto_vars(format_str_list, **kwargs)
+        if missing:
+            raise exc.ConfigurationSourceInvalidError(
+                "unkown vars", sorted(missing)
+            )
+        return any_autovar
+    # --- end of scan_auto_vars_must_exist (...) ---
+
 # --- end of ConfigurationSourceBase ---
 
 
