@@ -32,7 +32,7 @@ class ConfigurationSourceArgConfig(object):
     @type _outconfig:  C{OrderedDict} :: C{str} => [sub-of] L{Outfile}
 
     @ivar _tmpdir:
-    @type _tmpdir:     C{None} or C{bool} or C{str}
+    @type _tmpdir:     C{None} or C{bool} or L{TmpdirView}
     """
 
     # no __slots__ here! -- "consumers may add new attrs freely"
@@ -240,8 +240,8 @@ class ConfigurationSourceArgConfig(object):
 
         Also takes care of settings the path of the temporary outfiles.
 
-        @param tmpdir:  path to tmpdir
-        @type  tmpdir:  C{str}
+        @param tmpdir:  tmpdir view object (or tmpdir)
+        @type  tmpdir:  L{TmpdirView} | L{Tmpdir}
 
         @return:  None (implicit)
         """
@@ -252,7 +252,7 @@ class ConfigurationSourceArgConfig(object):
         elif self._tmpdir is True:
             self._tmpdir = tmpdir
             for outfile in self.iter_outfiles():
-                outfile.assign_tmpdir(tmpdir)
+                outfile.assign_tmpdir(tmpdir.get_path())
 
         elif self._tmpdir:
             raise AttributeError("tmpdir is already set")
@@ -268,7 +268,7 @@ class ConfigurationSourceArgConfig(object):
         if self._tmpdir is True:
             raise AttributeError("referencing tmpdir=True is not allowed")
         else:
-            return self._tmpdir
+            return self._tmpdir.get_path()
     # ---
 
     tmpdir = property(_get_tmpdir)
