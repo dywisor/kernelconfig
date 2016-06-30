@@ -10,6 +10,75 @@ from ...util import fspath
 __all__ = ["ConfigurationSourceArgConfig"]
 
 
+class Outfile(object):
+    """An output file whose path is known at initialization time.
+
+    @param path:  path to the file (None if unknown, which should only
+                  be used by subclasses)
+    @type  path:  C{str} or C{None}
+    """
+
+    def get_key(self):
+        """Returns a unique identifier for the outfile.
+
+        @return: unique identifier
+        @rtype:  C{str}
+        """
+        return self.path
+
+    def __hash__(self):
+        return hash(self.get_key())
+
+    def __init__(self, path):
+        super().__init__()
+        self.path = os.path.normpath(path) if path else path
+
+    def get_path(self):
+        """
+        @raises AttributeError:  if path is not set
+
+        @return:  path to outfile
+        @rtype:   C{str}
+        """
+        path = self.path
+        if not path:
+            raise AttributeError("path is not set")
+        return path
+
+    def assign_tmpdir(self, tmpdir):
+        """
+        Assigns the outfile to a temporary directory,
+        modifying the outfile's path.
+
+        For this class, this is a no-op, because the path does not depend
+        on a tmpdir. Derived classes may vary.
+        """
+        pass
+# --- end of Outfile ---
+
+
+class TmpOutfile(Outfile):
+    """
+    An output file whose path is unknown until a temporary directory
+    has been assigned to the config source arg config object.
+
+    @ivar name:  name of the file (path relative to tmpdir)
+    @type name:  C{str}
+    """
+
+    def get_key(self):
+        return self.name
+
+    def __init__(self, name):
+        super().__init__(None)
+        self.name = fspath.normalize_relpath(name)
+
+    def assign_tmpdir(self, tmpdir):
+        # if not self.path:
+        self.path = os.path.join(tmpdir, self.name)
+# --- end of TmpOutfile ---
+
+
 class ConfigurationSourceArgConfig(object):
     """
     Data object that is passed around during the various phases
@@ -33,73 +102,6 @@ class ConfigurationSourceArgConfig(object):
     """
 
     # no __slots__ here! -- "consumers may add new attrs freely"
-
-    class Outfile(object):
-        """An output file whose path is known at initialization time.
-
-        @param path:  path to the file (None if unknown, which should only
-                      be used by subclasses)
-        @type  path:  C{str} or C{None}
-        """
-
-        def get_key(self):
-            """Returns a unique identifier for the outfile.
-
-            @return: unique identifier
-            @rtype:  C{str}
-            """
-            return self.path
-
-        def __hash__(self):
-            return hash(self.get_key())
-
-        def __init__(self, path):
-            super().__init__()
-            self.path = os.path.normpath(path) if path else path
-
-        def get_path(self):
-            """
-            @raises AttributeError:  if path is not set
-
-            @return:  path to outfile
-            @rtype:   C{str}
-            """
-            path = self.path
-            if not path:
-                raise AttributeError("path is not set")
-            return path
-
-        def assign_tmpdir(self, tmpdir):
-            """
-            Assigns the outfile to a temporary directory,
-            modifying the outfile's path.
-
-            For this class, this is a no-op, because the path does not depend
-            on a tmpdir. Derived classes may vary.
-            """
-            pass
-    # ---
-
-    class TmpOutfile(Outfile):
-        """
-        An output file whose path is unknown until a temporary directory
-        has been assigned to the config source arg config object.
-
-        @ivar name:  name of the file (path relative to tmpdir)
-        @type name:  C{str}
-        """
-
-        def get_key(self):
-            return self.name
-
-        def __init__(self, name):
-            super().__init__(None)
-            self.name = fspath.normalize_relpath(name)
-
-        def assign_tmpdir(self, tmpdir):
-            # if not self.path:
-            self.path = os.path.join(tmpdir, self.name)
-    # ---
 
     def __init__(self):
         super().__init__()
@@ -211,7 +213,7 @@ class ConfigurationSourceArgConfig(object):
         @return:  outfile object
         """
         return self._add_outfile(
-            self.Outfile(path), is_outconfig=is_outconfig
+            Outfile(path), is_outconfig=is_outconfig
         )
     # --- end of add_outfile (...) ---
 
@@ -228,7 +230,7 @@ class ConfigurationSourceArgConfig(object):
         @return:  outfile object
         """
         outfile = self._add_outfile(
-            self.TmpOutfile(name), is_outconfig=is_outconfig
+            TmpOutfile(name), is_outconfig=is_outconfig
         )
 
         if self.has_tmpdir():
@@ -252,7 +254,7 @@ class ConfigurationSourceArgConfig(object):
 
         @return:  outfile object
         """
-        return self._add_outconfig(self.Outfile(path))
+        return self._add_outconfig(Outfile(path))
     # --- end of add_outconfig (...) ---
 
     def has_tmpdir(self):
