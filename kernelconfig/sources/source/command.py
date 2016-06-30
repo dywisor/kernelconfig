@@ -27,6 +27,12 @@ class CommandConfigurationSource(_base.CommandConfigurationSourceBase):
         # --
 
         self.cmdv = list(args)
+
+        unknown_fmt_vars = self.scan_auto_vars(self.cmdv)
+        if unknown_fmt_vars:
+            raise exc.ConfigurationSourceInvalidError(
+                "unknown vars", sorted(unknown_fmt_vars)
+            )
     # --- end of init_from_settings (...) ---
 
     def create_cmdv(self, arg_config):
@@ -39,7 +45,7 @@ class CommandConfigurationSource(_base.CommandConfigurationSourceBase):
         if arg_config.argv:
             cmdv.extend(arg_config.argv)
 
-        return cmdv
+        return self.format_cmdv(arg_config, cmdv)
     # --- end of create_cmdv (...) ---
 
     def do_parse_source_argv(self, argv):
@@ -47,5 +53,7 @@ class CommandConfigurationSource(_base.CommandConfigurationSourceBase):
         if argv:
             arg_config.argv.extend(argv)
 
-        arg_config.add_tmp_outfile("config")
         return arg_config
+    # --- end of do_parse_source_argv (...) ---
+
+# --- end of CommandConfigurationSource ---
