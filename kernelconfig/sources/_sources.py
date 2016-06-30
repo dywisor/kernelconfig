@@ -80,7 +80,7 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
             fmt_vars["kpatch"] = source_info.kernelversion.patchlevel
         # --
 
-        for attr_name in {"subarch", "arch", "karch", "srcarch", "srctree"}:
+        for attr_name in {"subarch", "arch", "karch", "srcarch"}:
             try:
                 attr = getattr(source_info, attr_name)
             except AttributeError:
