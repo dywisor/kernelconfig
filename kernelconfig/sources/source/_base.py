@@ -285,6 +285,13 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
                                         creates an arg config object
                                         that is used by all other phases
 
+    * do_init_auto_vars(arg_config)  -- optional, returns None,
+                                        initializes the dynamic/automatic
+                                        format vars
+                                        Does not involve fs operations.
+
+    * do_init_tmpdir(arg_config)     -- initializes the temporary dir
+
     * do_prepare(arg_config)         -- optional, returns None,
                                         prepare actions (e.g. file backup)
 
@@ -320,13 +327,35 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         @return:  arg config
         @rtype:   L{ConfigurationSourceArgConfig}
         """
-        return ConfigurationSourceArgConfig()
+        return _argconfig.ConfigurationSourceArgConfig()
 
-    def do_prepare_tmpdir(self, arg_config):
+    def do_init_auto_vars(self, arg_config):
+        if self.auto_outconfig:
+            arg_config.set_need_tmpdir()
+            outfiles, fmt_vars = self.auto_outconfig.get_vars()
+            arg_config.register_outfiles(outfiles, is_outconfig=True)
+            arg_config.fmt_vars.update(fmt_vars)
+        # --
+
+        if self.auto_tmpfiles:
+            arg_config.set_need_tmpdir()
+            outfiles, fmt_vars = self.auto_tmpfiles.get_vars()
+            arg_config.register_outfiles(outfiles, is_outconfig=False)
+            arg_config.fmt_vars.update(fmt_vars)
+        # --
+
+        if self.auto_tmpdirs:
+            raise NotImplementedError("auto tmpdirs")
+        # --
+
+    # --- end of do_init_auto_vars (...) ---
+
+    def do_init_tmpdir(self, arg_config):
         if arg_config.check_need_tmpdir():
             arg_config.assign_tmpdir(
                 self.senv.get_tmpdir().get_new_subdir()
             )
+    # --- end of do_init_tmpdir (...) ---
 
     def _prepare_outfiles(self, filesv):
         for outfile in filesv:
@@ -340,8 +369,7 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
     def do_prepare(self, arg_config):
         """Pre-"get conf basis" actions.
 
-        The default implementation creates the tmpdir if necessary,
-        and backup-moves all output files.
+        The default implementation backup-moves all output files.
         For tmpdir outfiles, this may be a no-op.
 
         @raises ConfigurationSourceError:
@@ -354,7 +382,6 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
 
         @return:  None (implicit)
         """
-        self.do_prepare_tmpdir(arg_config)
         self.do_prepare_outfiles(arg_config)
     # --- end of do_prepare (...) ---
 
@@ -411,6 +438,9 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         self.do_reset()
 
         arg_config = self.do_parse_source_argv(argv)
+
+        self.do_init_auto_vars(arg_config)
+        self.do_init_tmpdir(arg_config)
 
         self.do_prepare(arg_config)
 
