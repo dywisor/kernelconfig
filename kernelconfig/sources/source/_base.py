@@ -379,7 +379,7 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
     def do_init_tmpdir(self, arg_config):
         if arg_config.check_need_tmpdir():
             arg_config.assign_tmpdir(
-                self.senv.get_tmpdir().get_new_subdir_path()
+                self.senv.get_tmpdir().get_new_subdir()
             )
     # --- end of do_init_tmpdir (...) ---
 
