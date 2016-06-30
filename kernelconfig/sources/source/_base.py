@@ -461,6 +461,26 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
             raise NotImplementedError("many outconfigs")
     # ---
 
+    def get_dynamic_str_formatter(self, arg_config):
+        """
+        Returns the 'dynamic' string formatter that is bound to
+        an arg config object.
+
+        @param arg_config:
+
+        @return:  str formatter
+        @rtype:   L{ConfigurationSourceStrFormatter}
+        """
+        str_formatter = self.get_str_formatter()
+        self.init_dynamic_str_formatter(str_formatter, arg_config)
+        return str_formatter
+    # --- end of get_dynamic_str_formatter (...) ---
+
+    def init_dynamic_str_formatter(self, str_formatter, arg_config):
+        if arg_config.fmt_vars:
+            str_formatter.fmt_vars.update(arg_config.fmt_vars)
+    # --- end of init_dynamic_str_formatter (...) ---
+
 # --- end of ConfigurationSourceBase ---
 
 
