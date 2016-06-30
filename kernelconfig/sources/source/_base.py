@@ -491,6 +491,20 @@ class CommandConfigurationSourceBase(PhasedConfigurationSourceBase):
         self.proc_timeout = None
         self.return_codes_success = {os.EX_OK, }
 
+    def add_auto_var(self, varname, varkey):
+        if self.add_auto_var_outconfig(varname, varkey):
+            return True
+
+        elif self.add_auto_var_tmpfile(varname, varkey):
+            return True
+
+        elif self.add_auto_var_tmpdir(varname, varkey):
+            return True
+
+        else:
+            return False
+    # --- end of add_auto_var (...) ---
+
     @abc.abstractmethod
     def create_cmdv(self, arg_config):
         raise NotImplementedError()
