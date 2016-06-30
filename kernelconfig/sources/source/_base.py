@@ -3,6 +3,7 @@
 
 import abc
 import os
+import re
 import subprocess
 
 from ..abc import source as _source_abc
@@ -11,8 +12,10 @@ from ..abc import exc
 from ...util import subproc
 from ...util import fs
 
-from ._argconfig import ConfigurationSourceArgConfig
-from ._format import ConfigurationSourceStrFormatter
+from . import _argconfig
+from ._argconfig import ConfigurationSourceArgConfig   # remove, unexport
+from . import _format
+from . import _formatvar
 
 
 __all__ = [
@@ -25,9 +28,43 @@ __all__ = [
 
 class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     """
+    @cvar AUTO_OUTCONFIG_REGEXP:
+
+    @cvar AUTO_TMPFILE_REGEXP:
+
+    @cvar AUTO_TMPDIR_REGEXP:
+
     @ivar senv:  shared configuration source environment
     @type senv:  L{ConfigurationSourcesEnv}
+
+    @ivar auto_outconfig:  mapping of "outconfig" auto format vars,
+                           initially None, see add_auto_var_outconfig()
+    @type auto_outconfig:  C{None} or C{dict} :: C{str} => L{TmpOutfile}
+
+    @ivar auto_outfiles:   mapping of "outfile" auto format vars,
+                           initially None, see add_auto_var_tmpfile()
+    @type auto_outfiles:   C{None} or C{dict} :: C{str} => L{TmpOutfile}
+
+    @ivar auto_tmpdirs:    mapping of "tmpdir" auto format vars,
+                           initially None, see add_auto_var_tmpdir()
+    @type auto_tmpdirs:    C{None} or C{dict} :: C{str} => undef
     """
+
+    _id_expr = r'(?P<id>[0-9]+)'
+
+    AUTO_OUTCONFIG_REGEXP = re.compile(
+        r'^out(?:config)?{file_id}?$'.format(file_id=_id_expr)
+    )
+
+    AUTO_TMPFILE_REGEXP = re.compile(
+        r'^tmp{file_id}?$'.format(file_id=_id_expr)
+    )
+
+    AUTO_TMPDIR_REGEXP = re.compile(
+        r'^t{file_id}?$'.format(file_id=_id_expr)
+    )
+
+    del _id_expr
 
     @classmethod
     def new_from_settings(cls, conf_source_env, subtype, args, data, **kwargs):
@@ -48,6 +85,49 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     def __init__(self, name, conf_source_env, **kwargs):
         super().__init__(name, **kwargs)
         self.senv = conf_source_env
+        self.auto_outconfig = None
+        self.auto_tmpfiles = None
+        self.auto_tmpdirs = None
+
+    # The thing with "getattr() || setattr(_, _, new())" methods is that
+    # they are prone to errors when refactoring and not linter-friendly,
+    # so we have 3 almost identical methods instead..
+    # The alternative is to create the auto var mappings unconditionally,
+    # which might actually happen for easier initialization of cur~sources.
+    #
+
+    def _get_init_auto_outconfig_vars(self):
+        auto_outconfig_vars = self.auto_outconfig
+        if auto_outconfig_vars is None:
+            auto_outconfig_vars = (
+                _formatvar.ConfigurationSourceAutoTmpOutfileVarMapping()
+            )
+            self.auto_outconfig = auto_outconfig_vars
+        # --
+        return auto_outconfig_vars
+    # --- end of _get_init_auto_outconfig_vars (...) ---
+
+    def _get_init_auto_tmpfile_vars(self):
+        auto_tmpfile_vars = self.auto_outfiles
+        if auto_tmpfile_vars is None:
+            auto_tmpfile_vars = (
+                _formatvar.ConfigurationSourceAutoTmpOutfileVarMapping()
+            )
+            self.auto_tmpfiles = auto_tmpfile_vars
+        # --
+        return auto_tmpfile_vars
+    # --- end of _get_init_auto_tmpfile_vars (...) ---
+
+    def _get_init_auto_tmpdir_vars(self):
+        auto_tmpdir_vars = self.auto_tmpdirs
+        if auto_tmpdir_vars is None:
+            auto_tmpdir_vars = (
+                _formatvar.ConfigurationSourceAutoTmpdirVarMapping()
+            )
+            self.auto_tmpdirs = auto_tmpdir_vars
+        # --
+        return auto_tmpdir_vars
+    # --- end of _get_init_auto_tmpdir_vars (...) ---
 
     def create_conf_basis_for_file(self, filepath):
         # FIXME: temporary helper method
@@ -69,7 +149,123 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         @return:  str formatter
         @rtype:   L{ConfigurationSourceStrFormatter}
         """
-        return ConfigurationSourceStrFormatter(self.senv)
+        return _format.ConfigurationSourceStrFormatter(self.senv)
+
+    @abc.abstractmethod
+    def add_auto_var(self, varname, varkey):
+        """
+        Creates a "dynamic automatic format variable"
+        if varname references such a var.
+
+        Note that this method may get called multiple times for the same var.
+
+        Derived classes must implement this method.
+        Source types that do not support auto-vars should return "False",
+        which is also available via super().add_auto_var(...).
+
+        A few helper methods for common auto vars exist
+        that can be used by derived classes if they support these vars:
+
+          * add_auto_var_outconfig()   -- handle outconfig   vars
+          * add_auto_var_tmpfile()     -- handle tmp-outfile vars
+          * add_auto_var_tmpdir()      -- handle tmpdir      vars
+
+          It is safe to call them in any order in an "elif" fashion:
+
+          >>> if <custom auto var>:
+          >>>     return True
+          >>> elif add_auto_var_outconfig(...):
+          >>>     return True
+          >>> elif ...:
+          >>>     ...
+          >>> else:
+          >>>     return False
+
+
+        @param varname:  name of the format variable
+                         (not case-converted and without dot suffix,
+                         e.g. "outconfig" and not "outConfig.name")
+        @type  varname:  C{str}
+        @param varkey:   lowercase name of the format variable
+        @type  varkey:   C{str}
+
+        @return:  True if varname references a auto-var, else False
+        @rtype:   C{bool}
+        """
+        return False
+    # --- end of add_auto_var (...) ---
+
+    def add_auto_var_outconfig(self, varname, varkey):
+        match = self.AUTO_OUTCONFIG_REGEXP.match(varkey)
+        if match is None:
+            return False
+
+        auto_outconfig_vars = self._get_init_auto_outconfig_vars()
+        auto_outconfig_vars.add(varkey, varname)
+        return True
+    # --- end of add_auto_var_outconfig (...) ---
+
+    def add_auto_var_tmpfile(self, varname, varkey):
+        match = self.AUTO_TMPFILE_REGEXP.match(varkey)
+        if match is None:
+            return False
+
+        auto_tmpfile_vars = self._get_init_auto_tmpfile_vars()
+        auto_tmpfile_vars.add(varkey, varname)
+        return True
+    # --- end of add_auto_var_tmpfile (...) ---
+
+    def add_auto_var_tmpdir(self, varname, varkey):
+        match = self.AUTO_TMPDIR_REGEXP.match(varkey)
+        if match is None:
+            return False
+
+        auto_tmpdir_vars = self._get_init_auto_tmpdir_vars()
+        auto_tmpdir_vars.add(varkey, varname)
+
+        return True
+    # --- end of add_auto_var_tmpfile (...) ---
+
+    def scan_auto_vars(self, format_str_list, str_formatter=None):
+        """
+        Scans a list of format strings for "dynamic auto variables", which
+        are vars that need to be created during get_configuration_basis().
+        Examples include "{T}" (create tmpdir, substitute {T} with its path),
+        and "{outconfig}" (create outconfig obj, substitute with its path).
+
+        Only unknown variables participate in auto-var scanning.
+        That is, if the string formatter contains already a "T" fmtvar,
+        "T" is not considered to be an auto-var.
+
+        Additionally, this method returns the list of unknown variables
+        that were not auto vars. Consumers may use this e.g. for raising
+        a ConfigurationSourceInvalidError at config source creation time.
+
+        @param   format_str_list:  list of format strings to be scanned
+        @type    format_str_list:  C{list} of C{str}  (or iterable)
+
+        @keyword str_formatter:    in order to avoid unnecessary instantiation
+                                   of a new str formatter, an existing one
+                                   may be passed via this keyword.
+                                   Otherwise, a new one is created.
+
+        @type    str_formatter:    C{None} | L{ConfigurationSourceStrFormatter}
+
+        @return:  list of unknown non-auto vars (may be empty)
+        @rtype:   C{list} of C{str}
+        """
+        if str_formatter is None:
+            str_formatter = self.get_str_formatter()
+
+        missing = []
+        for varname in (
+            str_formatter.iter_unknown_var_names_v(format_str_list)
+        ):
+            if not self.add_auto_var(varname, varname.lower()):
+                missing.append(varname)
+        # --
+        return missing
+    # --- end of scan_auto_vars (...) ---
 
 # --- end of ConfigurationSourceBase ---
 
