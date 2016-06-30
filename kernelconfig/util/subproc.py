@@ -315,7 +315,7 @@ class SubProc(loggable.AbstractLoggable):
             self._tmpdir = _tmpdir.Tmpdir()
             setup_tmpdir_obj(self._tmpdir)
 
-        elif isinstance(tmpdir_arg, _tmpdir.Tmpdir):
+        elif isinstance(tmpdir_arg, _tmpdir.TmpdirView):
             setup_tmpdir_obj(tmpdir_arg)
 
         else:
