@@ -72,6 +72,9 @@ class AbstractOutfile(object, metaclass=abc.ABCMeta):
         modifying the outfile's path.
 
         May be a no-op if the outfile's path does not depend on a tmpdir.
+
+        @param tmpdir:  tmpdir view object (or tmpdir)
+        @type  tmpdir:  L{TmpdirView} | L{Tmpdir}
         """
         raise NotImplementedError()
 
@@ -123,7 +126,7 @@ class TmpOutfile(AbstractOutfile):
 
     def assign_tmpdir(self, tmpdir):
         # if not self.path:
-        self.path = os.path.join(tmpdir, self._name)
+        self.path = tmpdir.get_filepath(self._name)
 
     def __repr__(self):
         return "{cls.__name__}({name!r})".format(
