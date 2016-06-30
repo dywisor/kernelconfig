@@ -505,6 +505,12 @@ class CommandConfigurationSourceBase(PhasedConfigurationSourceBase):
             return False
     # --- end of add_auto_var (...) ---
 
+    def format_cmdv(self, arg_config, cmdv, *, str_formatter=None):
+        if str_formatter is None:
+            str_formatter = self.get_dynamic_str_formatter(arg_config)
+        return str_formatter.format_list(cmdv)
+    # --- end of format_cmdv (...) ---
+
     @abc.abstractmethod
     def create_cmdv(self, arg_config):
         raise NotImplementedError()
