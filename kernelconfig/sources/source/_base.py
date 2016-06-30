@@ -237,8 +237,9 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         That is, if the string formatter contains already a "T" fmtvar,
         "T" is not considered to be an auto-var.
 
-        Additionally, this method returns the list of unknown variables
-        that were not auto vars. Consumers may use this e.g. for raising
+        Additionally, this method returns whether any auto var has been
+        detected and a list of unknown variables that were not auto vars.
+        Consumers may use this e.g. for raising
         a ConfigurationSourceInvalidError at config source creation time.
 
         @param   format_str_list:  list of format strings to be scanned
@@ -251,20 +252,26 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
 
         @type    str_formatter:    C{None} | L{ConfigurationSourceStrFormatter}
 
-        @return:  list of unknown non-auto vars (may be empty)
-        @rtype:   C{list} of C{str}
+        @return:  2-tuple (
+                    any auto var detected,
+                    list of unknown non-auto vars (may be empty)
+                  )
+        @rtype:   2-tuple (C{bool}, C{list} of C{str})
         """
         if str_formatter is None:
             str_formatter = self.get_str_formatter()
 
         missing = []
+        any_autovar = False
         for varname in (
             str_formatter.iter_unknown_var_names_v(format_str_list)
         ):
-            if not self.add_auto_var(varname, varname.lower()):
+            if self.add_auto_var(varname, varname.lower()):
+                any_autovar = True
+            else:
                 missing.append(varname)
         # --
-        return missing
+        return (any_autovar, missing)
     # --- end of scan_auto_vars (...) ---
 
 # --- end of ConfigurationSourceBase ---
