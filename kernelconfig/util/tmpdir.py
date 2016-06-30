@@ -91,6 +91,9 @@ class _FsDir(object):
 class TmpdirView(_FsDir):
     __slots__ = []
 
+    def __bool__(self):
+        return bool(self.path)
+
     def get_new_subdir_path(self):
         """
         Creates a new, unique subdirectory in the tmpdir,
