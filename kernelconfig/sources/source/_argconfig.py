@@ -252,7 +252,7 @@ class ConfigurationSourceArgConfig(object):
         elif self._tmpdir is True:
             self._tmpdir = tmpdir
             for outfile in self.iter_outfiles():
-                outfile.assign_tmpdir(tmpdir.get_path())
+                outfile.assign_tmpdir(tmpdir)
 
         elif self._tmpdir:
             raise AttributeError("tmpdir is already set")
