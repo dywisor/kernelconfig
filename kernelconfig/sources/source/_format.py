@@ -3,8 +3,14 @@
 
 import string
 
+from ...util.misc import identity, iter_dedup
+
 
 __all__ = ["ConfigurationSourceStrFormatter"]
+
+
+def unqualify_field_name(name):
+    return name.partition(".")[0]
 
 
 class ConfigurationSourceStrFormatter(string.Formatter):
@@ -102,5 +108,90 @@ class ConfigurationSourceStrFormatter(string.Formatter):
     def format_list(self, str_list, *args, **kwargs):
         return [self.vformat(s, args, kwargs) for s in str_list]
     # --- end of format_list (...) ---
+
+    def iter_referenced_vars_v(self, format_str_list, *, fqn=False):
+        """
+        Generator that yields the name of referenced format variables.
+        Duplicates are likely and do not get filtered out.
+
+        @param   format_str_list:  list of format strings
+        @type    format_str_list:  C{list} of C{str}  (or iterable)
+
+        @keyword fqn:              whether to emit full names
+                                   ("fmtvar.attr"; True)
+                                   or just the name of the format var (False).
+                                   Defaults to False.
+        @type    fqn:              C{bool}
+
+        @return:  format var name(s)
+        @rtype:   C{str}
+        """
+        get_field_name = identity if fqn else unqualify_field_name
+
+        for format_str in format_str_list:
+            for item in self.parse(format_str):
+                if item[1]:
+                    yield get_field_name(item[1])
+    # --- end of iter_referenced_vars_v (...) ---
+
+    def iter_referenced_vars(self, *format_str_list, fqn=False):
+        """var-args variant of iter_referenced_vars_v()."""
+        return self.iter_referenced_vars_v(format_str_list, fqn=fqn)
+
+    def iter_unknown_vars_v(self, format_str_list):
+        """
+        @return:  2-tuples (name, full name)
+        @rtype:   C{str}, C{str}
+        """
+        _unqualify = unqualify_field_name
+
+        def get_value(key, *, vget=self.get_value, args=(), kwargs={}):
+            return vget(key, args, kwargs)
+
+        # save some time on repeated value lookups and remember past keys
+        hits = set()   # keys that are known to exist
+        miss = set()   # keys that are known not to exist
+
+        for full_name in (
+            self.iter_referenced_vars_v(format_str_list, fqn=True)
+        ):
+            key = _unqualify(full_name)
+
+            if key in hits:
+                # key exists
+                pass
+
+            elif key in miss:
+                # key does not exist
+                yield (key, full_name)
+
+            else:
+                try:
+                    get_value(key)
+                except (IndexError, KeyError):
+                    # key does not exist
+                    #
+                    #  catching IndexError here might be a bit odd,
+                    #  but there may be legitimate use cases
+                    #
+                    miss.add(key)
+                    yield (key, full_name)
+                else:
+                    # key exists
+                    hits.add(key)
+                # -- end try get value
+
+            # -- end if check key exists w/ cache lookup
+    # --- end of iter_unknown_vars_v (...) ---
+
+    def iter_unknown_var_names_v(self, format_str_list):
+        return iter_dedup((
+            name
+            for name, full_name in self.iter_unknown_vars_v(format_str_list)
+        ))
+    # --- end of iter_unknown_var_names_v (...) ---
+
+    def iter_unknown_var_names(self, *format_str_list):
+        return self.iter_unknown_var_names_v(format_str_list)
 
 # --- end of ConfigurationSourceStrFormatter ---
