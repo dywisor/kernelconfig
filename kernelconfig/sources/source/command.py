@@ -27,12 +27,7 @@ class CommandConfigurationSource(_base.CommandConfigurationSourceBase):
         # --
 
         self.cmdv = list(args)
-
-        has_auto_vars, unknown_fmt_vars = self.scan_auto_vars(self.cmdv)
-        if unknown_fmt_vars:
-            raise exc.ConfigurationSourceInvalidError(
-                "unknown vars", sorted(unknown_fmt_vars)
-            )
+        self.scan_auto_vars_must_exist(self.cmdv)
     # --- end of init_from_settings (...) ---
 
     def create_cmdv(self, arg_config):
