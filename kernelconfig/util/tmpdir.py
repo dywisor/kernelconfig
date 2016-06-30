@@ -104,6 +104,44 @@ class TmpdirView(_FsDir):
         """
         return tempfile.mkdtemp(prefix="privtmp", dir=self.path)
 
+    def _create_subdir_view(self, absolute_path):
+        # not self.__class__!
+        return TmpdirView(absolute_path)
+
+    def get_new_subdir(self):
+        """
+        Creates a new, unique subdirectory in the tmpdir,
+        and returns a TmpdirView object.
+
+        The subdir is cleaned up together with its parent,
+        but can also be removed prior to that manually.
+
+        @return:  tmpdir view object
+        @rtype:   L{TmpdirView}
+        """
+        # not self.__class__()!
+        return self._create_subdir_view(self.get_new_subdir_path())
+
+    def get_subdir(self, relpath, mkdir_p=True):
+        """
+        Creates a named subdirectory in the tmpdir if it does not exist yet,
+        and returns a TmpdirView object.
+
+        The subdir is cleaned up together with its parent,
+        but can also be removed prior to that manually.
+
+        @param   relpath:  name of the subdirectory
+        @type    relpath:  C{str} or C{None}
+        @keyword mkdir_p:  whether to create parent directories if necessary
+                           Defaults to True.
+        @type    mkdir_p:  C{bool}
+
+        @return:  tmpdir view object
+        @rtype:   L{TmpdirView}
+        """
+        # empty relpath is accepted, results in a view of self
+        return self._create_subdir_view(self.dodir(relpath, mkdir_p=True))
+
     def _mkstemp(self, text=True):
         return tempfile.mkstemp(dir=self.path, text=text)
 
