@@ -105,7 +105,7 @@ class MakeConfigurationSource(_base.CommandConfigurationSourceBase):
             #  + O= ...
             add_make_vars(
                 self.senv.source_info.iter_out_of_tree_build_make_vars(
-                    arg_config.tmpdir
+                    arg_config.tmpdir_path
                 )
             )
         # --

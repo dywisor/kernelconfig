@@ -258,7 +258,7 @@ class ConfigurationSourceArgConfig(object):
             raise AttributeError("tmpdir is already set")
     # --- end of assign_tmpdir (...) ---
 
-    def _get_tmpdir(self):
+    def get_tmpdir(self):
         """
         @raises AttributeError:  if tmpdir requested but not assigned
 
@@ -268,9 +268,15 @@ class ConfigurationSourceArgConfig(object):
         if self._tmpdir is True:
             raise AttributeError("referencing tmpdir=True is not allowed")
         else:
-            return self._tmpdir.get_path()
+            return self._tmpdir
     # ---
 
-    tmpdir = property(_get_tmpdir)
+    tmpdir = property(get_tmpdir)
+
+    def get_tmpdir_path(self):
+        return self.get_tmpdir().get_path()
+    # ---
+
+    tmpdir_path = property(get_tmpdir_path)
 
 # --- end of ConfigurationSourceArgConfig ---
