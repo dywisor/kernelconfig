@@ -30,27 +30,21 @@ class _FileWrapper(object):
 # ---
 
 
-class _Tmpdir(object):
-    __slots__ = ["__weakref__", "_path"]
+class _FsDir(object):
+    __slots__ = ["__weakref__", "path"]
 
-    def __init__(self, **kwargs):
+    def __init__(self, path):
         super().__init__()
-        self._path = None
-        self._setup_finalizer()
-        self._init_tmpdir(**kwargs)
+        self.path = path
 
-    def _setup_finalizer(self):
-        raise NotImplementedError()
-
-    def _init_tmpdir(self, **kwargs):
-        assert self._path is None
-        self._path = tempfile.mkdtemp(**kwargs)
+    def get_path(self):
+        return self.path
 
     def __str__(self):
-        return str(self._path)
+        return str(self.path)
 
     def get_filepath(self, relpath=None):
-        return fspath.join_relpath(self._path, relpath)
+        return fspath.join_relpath(self.path, relpath)
     # ---
 
     def copyfile(self, relpath, dst):
@@ -61,6 +55,7 @@ class _Tmpdir(object):
     def rmfile(self, relpath):
         filepath = self.get_filepath(relpath)
         os.unlink(filepath)
+    # ---
 
     def rmfile_ifexist(self, relpath):
         try:
@@ -68,13 +63,6 @@ class _Tmpdir(object):
         except OSError as oserr:
             if oserr.errno != errno.ENOENT:
                 raise
-
-    def _cleanup(self):
-        if not self._path:
-            return
-
-        shutil.rmtree(self._path)
-        self._path = None
     # ---
 
     def mkdir(self, relpath):
@@ -85,6 +73,7 @@ class _Tmpdir(object):
         filepath = self.get_filepath(relpath)
         os.mkdir(filepath)
         return filepath
+    # ---
 
     def dodir(self, relpath, mkdir_p=False):
         """
@@ -94,8 +83,15 @@ class _Tmpdir(object):
         filepath = self.get_filepath(relpath)
         fs.dodir(filepath, mkdir_p)
         return filepath
+    # ---
 
-    def get_new_subdir(self):
+# --- end of _FsDir (...) ---
+
+
+class TmpdirView(_FsDir):
+    __slots__ = []
+
+    def get_new_subdir_path(self):
         """
         Creates a new, unique subdirectory in the tmpdir,
         and returns its fspath.
@@ -106,10 +102,10 @@ class _Tmpdir(object):
         @return:  path to sub-tmpdir
         @rtype:   C{str}
         """
-        return tempfile.mkdtemp(prefix="privtmp", dir=self._path)
+        return tempfile.mkdtemp(prefix="privtmp", dir=self.path)
 
     def _mkstemp(self, text=True):
-        return tempfile.mkstemp(dir=self._path, text=text)
+        return tempfile.mkstemp(dir=self.path, text=text)
 
     def get_new_file(self):
         """Creates a new, unique file in the tmpdir and returns its fspath.
@@ -144,6 +140,32 @@ class _Tmpdir(object):
         return _FileWrapper(file_fh, file_path)
     # ---
 
+# --- end of TmpdirView ---
+
+
+class _Tmpdir(TmpdirView):
+    __slots__ = []
+
+    def __init__(self, **kwargs):
+        super().__init__(None)
+        self._setup_finalizer()
+        self._init_tmpdir(**kwargs)
+
+    def _setup_finalizer(self):
+        raise NotImplementedError()
+
+    def _init_tmpdir(self, **kwargs):
+        assert self.path is None
+        self.path = tempfile.mkdtemp(**kwargs)
+
+    def _cleanup(self):
+        if not self.path:
+            return
+
+        shutil.rmtree(self.path)
+        self.path = None
+    # ---
+
 # ---
 
 
@@ -155,6 +177,7 @@ def _finalize_tmpdir(obj_ref):
 
 if sys.hexversion >= 0x3040000:
     class Tmpdir(_Tmpdir):
+        __slots__ = []
         _finalizers = []
 
         def _setup_finalizer(self):
@@ -171,6 +194,7 @@ else:
             obj._cleanup()
 
     class Tmpdir(_Tmpdir):
+        __slots__ = []
 
         def _setup_finalizer(self):
             atexit.register(_finalize_tmpdir, weakref.ref(self))

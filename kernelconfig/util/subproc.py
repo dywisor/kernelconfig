@@ -300,7 +300,7 @@ class SubProc(loggable.AbstractLoggable):
         def setup_tmpdir_obj(tmpdir):
             nonlocal env
 
-            priv_tmpdir_path = tmpdir.get_new_subdir()
+            priv_tmpdir_path = tmpdir.get_new_subdir_path()
             shared_tmpdir_path = tmpdir.dodir("tmp")
 
             env["T"] = priv_tmpdir_path
