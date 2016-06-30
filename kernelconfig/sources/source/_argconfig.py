@@ -108,6 +108,11 @@ class ConfigurationSourceArgConfig(object):
         return outfile
     # ---
 
+    def register_outconfigs(self, outfiles, **kwargs):
+        for outfile in outfiles:
+            self.register_outconfig(outfile, **kwargs)
+    # ---
+
     def register_outfile(self, outfile, is_outconfig=True):
         """Registers an outfile, optionally also as outconfig file.
 
@@ -132,6 +137,11 @@ class ConfigurationSourceArgConfig(object):
             if is_outconfig:
                 self._outconfig[key] = outfile
             return outfile
+    # ---
+
+    def register_outfiles(self, outfiles, is_outconfig=True):
+        for outfile in outfiles:
+            self.register_outfile(outfile, is_outconfig=is_outconfig)
     # ---
 
     def add_outfile(self, path, is_outconfig=True):
