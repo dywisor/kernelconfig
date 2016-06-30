@@ -38,6 +38,7 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
         self._files_dir = None
         self._tmpdir = None
         self._fmt_vars = None
+        self._env_vars = None
 
     def get_files_dir(self):
         files_dir = self._files_dir
@@ -99,6 +100,23 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
             self._fmt_vars = fmt_vars
         return fmt_vars
     # --- end of get_format_vars (...) ---
+
+    def _create_env_vars(self):
+        # get_env() -> _create_env() -> get_fmt() -> _create_fmt() ...
+        denv = {
+            k.upper(): str(v) for k, v in self.get_format_vars().items()
+        }
+        denv["S"] = denv["SRCTREE"]
+        return denv
+    # --- end of _create_env_vars (...) ---
+
+    def get_env_vars(self):
+        env_vars = self._env_vars
+        if env_vars is None:
+            env_vars = self._create_env_vars()
+            self._env_vars = env_vars
+        return env_vars
+    # --- end of get_env_vars (...) ---
 
 # ---
 
