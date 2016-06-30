@@ -221,7 +221,13 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
             return False
 
         auto_tmpdir_vars = self._get_init_auto_tmpdir_vars()
-        auto_tmpdir_vars.add(varkey, varname)
+
+        if match.group("id"):
+            # then create a new, unique tmpdir
+            auto_tmpdir_vars.add(varkey, varname)
+        else:
+            # then use the shared tmpdir
+            auto_tmpdir_vars.add(".", varname)
 
         return True
     # --- end of add_auto_var_tmpfile (...) ---
@@ -371,7 +377,10 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         # --
 
         if self.auto_tmpdirs:
-            raise NotImplementedError("auto tmpdirs")
+            arg_config.set_need_tmpdir()
+            tmpdirs, fmt_vars = self.auto_tmpdirs.get_vars()
+            arg_config.register_outdirs(tmpdirs)
+            arg_config.fmt_vars.update(fmt_vars)
         # --
 
     # --- end of do_init_auto_vars (...) ---
