@@ -18,6 +18,10 @@ class ConfigurationSourceArgConfig(object):
 
     @ivar argv:
     @type argv:        undef
+
+    @ivar fmt_vars:    dict containing additional vars for str-formatting
+    @type fmt_vars:    C{dict} :: C{str} => C{str}
+
     @ivar _outfiles:   an unordered mapping of to-be-created files
     @type _outfiles:   C{dict} :: C{str} => [sub-of] L{Outfile}
     @ivar _outconfig:  an ordered mapping of output config files
@@ -36,6 +40,7 @@ class ConfigurationSourceArgConfig(object):
     def __init__(self):
         super().__init__()
         self.argv = []
+        self.fmt_vars = {}
         self._tmpdir = None
         self._outfiles = {}
         self._outconfig = collections.OrderedDict()
