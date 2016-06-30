@@ -134,3 +134,16 @@ class TmpOutfile(AbstractOutfile):
         )
 
 # --- end of TmpOutfile ---
+
+
+class TmpOutdir(TmpOutfile):
+    __slots__ = []
+
+    def assign_tmpdir(self, tmpdir):
+        if self._name == ".":
+            # functionally redundant, but supresses mkdir()
+            self.path = tmpdir.get_path()
+        else:
+            self.path = tmpdir.dodir(self._name, mkdir_p=True)
+
+# --- end of TmpOutdir ---

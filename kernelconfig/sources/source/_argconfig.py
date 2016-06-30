@@ -22,8 +22,9 @@ class ConfigurationSourceArgConfig(object):
     @ivar fmt_vars:    dict containing additional vars for str-formatting
     @type fmt_vars:    C{dict} :: C{str} => C{str}
 
-    @ivar _outfiles:   an unordered mapping of to-be-created files
-    @type _outfiles:   C{dict} :: C{str} => [sub-of] L{Outfile}
+    @ivar _outfiles:   an unordered mapping of to-be-created files/dirs
+    @type _outfiles:   C{dict} :: C{str}
+                          => 2-tuple(C{bool}, sub-of L{AbstractOutfile})
     @ivar _outconfig:  an ordered mapping of output config files
                        in constrast to _outfiles,
                        these files may or may not already exist,
@@ -46,11 +47,22 @@ class ConfigurationSourceArgConfig(object):
         self._outconfig = collections.OrderedDict()
     # ---
 
+    def _iter_outfiles(self, outfile_type):
+        for of_type, outfile in self._outfiles.values():
+            if of_type is outfile_type:
+                yield outfile
+    # ---
+
+    def iter_all_outfiles(self):
+        for of_type, outfile in self._outfiles.values():
+            yield outfile
+    # ---
+
     def iter_outfiles(self):
         """
         @return:  iterator over all outfile objects
         """
-        return iter(self._outfiles.values())
+        return self._iter_outfiles(False)
     # ---
 
     def iter_outfile_paths(self):
@@ -58,6 +70,18 @@ class ConfigurationSourceArgConfig(object):
         @return:  iterator over all outfile paths
         """
         for outfile in self.iter_outfiles():
+            yield outfile.get_path()
+    # ---
+
+    def iter_outdirs(self):
+        """
+        @return:  iterator over all outdir objects
+        """
+        return self._iter_outfiles(True)
+    # ---
+
+    def iter_outdir_paths(self):
+        for outfile in self.iter_outdirs():
             yield outfile.get_path()
     # ---
 
@@ -113,6 +137,22 @@ class ConfigurationSourceArgConfig(object):
             self.register_outconfig(outfile, **kwargs)
     # ---
 
+    def _register_outfile(self, outfile_type, outfile, is_outconfig):
+        key = outfile.get_key()
+
+        if key in self._outfiles:
+            raise KeyError("outfile already exists", key)
+
+        elif (is_outconfig and key in self._outconfig):
+            raise KeyError("outconfig already exists", key)
+
+        else:
+            self._outfiles[key] = (outfile_type, outfile)
+            if is_outconfig:
+                self._outconfig[key] = outfile
+            return outfile
+    # ---
+
     def register_outfile(self, outfile, is_outconfig=True):
         """Registers an outfile, optionally also as outconfig file.
 
@@ -124,24 +164,20 @@ class ConfigurationSourceArgConfig(object):
 
         @return:  outfile
         """
-        key = outfile.get_key()
-
-        if key in self._outfiles:
-            raise KeyError("outfile already exists", key)
-
-        elif (is_outconfig and key in self._outconfig):
-            raise KeyError("outconfig already exists", key)
-
-        else:
-            self._outfiles[key] = outfile
-            if is_outconfig:
-                self._outconfig[key] = outfile
-            return outfile
-    # ---
+        return self._register_outfile(False, outfile, is_outconfig)
 
     def register_outfiles(self, outfiles, is_outconfig=True):
         for outfile in outfiles:
             self.register_outfile(outfile, is_outconfig=is_outconfig)
+    # ---
+
+    def register_outdir(self, outfile):
+        return self._register_outfile(True, outfile, False)
+    # ---
+
+    def register_outdirs(self, outfiles):
+        for outfile in outfiles:
+            self.register_outdir(outfile)
     # ---
 
     def add_outfile(self, path, is_outconfig=True):
@@ -251,7 +287,7 @@ class ConfigurationSourceArgConfig(object):
 
         elif self._tmpdir is True:
             self._tmpdir = tmpdir
-            for outfile in self.iter_outfiles():
+            for outfile in self.iter_all_outfiles():
                 outfile.assign_tmpdir(tmpdir)
 
         elif self._tmpdir:
