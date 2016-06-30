@@ -57,6 +57,10 @@ class MakeConfigurationSource(_base.CommandConfigurationSourceBase):
         return args_rem
     # --- end of __init__ (...) ---
 
+    def add_auto_var(self, varname, varkey):
+        # does not support auto vars
+        return False
+
     def do_parse_source_argv(self, argv):
         arg_config = _base.ConfigurationSourceArgConfig()
         arg_config.argv.extend(argv)
