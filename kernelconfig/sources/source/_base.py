@@ -322,7 +322,12 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
                                         format vars
                                         Does not involve fs operations.
 
-    * do_init_tmpdir(arg_config)     -- initializes the temporary dir
+    * do_init_tmpdir(arg_config)     -- optional, returns None,
+                                        initializes the temporary dir
+
+    * do_init_env(arg_config)        -- optional, returns None,
+                                        initializes arg_config.env_vars
+                                        if necessary. no-op by default.
 
     * do_prepare(arg_config)         -- optional, returns None,
                                         prepare actions (e.g. file backup)
@@ -391,6 +396,10 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
                 self.senv.get_tmpdir().get_new_subdir()
             )
     # --- end of do_init_tmpdir (...) ---
+
+    def do_init_env(self, arg_config):
+        pass
+    # --- end of do_init_env (...) ---
 
     def _prepare_outfiles(self, filesv):
         for outfile in filesv:
@@ -476,6 +485,7 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
 
         self.do_init_auto_vars(arg_config)
         self.do_init_tmpdir(arg_config)
+        self.do_init_env(arg_config)
 
         self.do_prepare(arg_config)
 
@@ -550,10 +560,23 @@ class CommandConfigurationSourceBase(PhasedConfigurationSourceBase):
     def create_cmdv(self, arg_config):
         raise NotImplementedError()
 
+    def do_init_tmpdir(self, arg_config):
+        super().do_init_tmpdir(arg_config)
+
+    def do_init_env(self, arg_config):
+        arg_config.env_vars.update(self.senv.get_env_vars())
+        if arg_config.has_tmpdir():
+            arg_config.env_vars["T"] = arg_config.tmpdir_path
+        else:
+            arg_config.env_vars["T"] = None  # deletes "T"
+    # ---
+
     def create_subproc(self, arg_config):
         return subproc.SubProc(
             self.create_cmdv(arg_config),
-            logger=self.logger, tmpdir=arg_config.tmpdir_path
+            logger=self.logger,
+            tmpdir=arg_config.tmpdir_path,
+            extra_env=arg_config.env_vars
         )
 
     def create_conf_basis(self, arg_config, proc):

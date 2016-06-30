@@ -61,6 +61,10 @@ class MakeConfigurationSource(_base.CommandConfigurationSourceBase):
         # does not support auto vars
         return False
 
+    def do_init_env(self, arg_config):
+        # does not make use of the default env vars
+        return False
+
     def do_parse_source_argv(self, argv):
         arg_config = _base.ConfigurationSourceArgConfig()
         arg_config.argv.extend(argv)
