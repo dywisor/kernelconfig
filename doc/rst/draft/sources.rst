@@ -208,6 +208,137 @@ Section and option names are case-insensitive.
     +-----------------+---------------+-----------+---------------------------------------+
 
 
+Source Environment
+------------------
+
+environment vars
+++++++++++++++++
+
+For ``script`` and ``command`` type config sources,
+the following environment variables are set:
+
+.. table:: environment variables
+
+    +------------------+-------------------------------------------+
+    | name             |  description                              |
+    +==================+===========================================+
+    | S                | path to the kernel sources                |
+    +------------------+                                           |
+    | SRCTREE          |                                           |
+    +------------------+-------------------------------------------+
+    | T                | private temporary directory               |
+    |                  |                                           |
+    +------------------+-------------------------------------------+
+    | TMPDIR           | temporary directory                       |
+    |                  |                                           |
+    |                  | Do not rely on ``T == TMPDIR``            |
+    |                  | or the contrary,                          |
+    |                  | this might change in future.              |
+    +------------------+-------------------------------------------+
+    | ARCH             | target architecture as specified          |
+    |                  | on the command line, or ``$(uname -m)``   |
+    +------------------+-------------------------------------------+
+    | KARCH            | target kernel architecture                |
+    |                  |                                           |
+    |                  | For instance, if ``ARCH`` is ``x86_64``,  |
+    |                  | ``KARCH`` would be ``x86``.               |
+    +------------------+-------------------------------------------+
+    | SUBARCH          | *underlying kernel architecture*          |
+    |                  |                                           |
+    |                  | Usually equal to ``KARCH``.               |
+    |                  | (Except for usermode builds ``KARCH=um``, |
+    |                  | but it is not supported [yet?])           |
+    +------------------+-------------------------------------------+
+    | SRCARCH          | target kernel source architecture         |
+    |                  |                                           |
+    |                  | Usually equal to ``KARCH``.               |
+    |                  | (due to how *kernelconfig* creates        |
+    |                  | these vars)                               |
+    +------------------+-------------------------------------------+
+    | KVER             | full kernel version, e.g.                 |
+    |                  | ``4.7.0-r1``, ``3.0.0``, ``4.5.1``        |
+    +------------------+-------------------------------------------+
+    | KV               | full kernel version without patchlevel    |
+    |                  | unless it is an ``-rc`` version,          |
+    |                  | e..g ``4.7.0-r1``, ``3.0``, ``4.5``       |
+    +------------------+-------------------------------------------+
+    | KMAJ             | kernel version,                           |
+    |                  | e.g. ``4``, ``3``, ``4``                  |
+    +------------------+-------------------------------------------+
+    | KMIN             | kernel version sublevel,                  |
+    |                  | e.g. ``7``, ``0``, ``5``                  |
+    +------------------+-------------------------------------------+
+    | KPATCH           | kernel version patchlevel,                |
+    |                  | e.g. ``0``, ``0``, ``1``                  |
+    +------------------+-------------------------------------------+
+
+
+format variables
+++++++++++++++++
+
+All source types are subject to Python string formatting.
+
+The available format variables are identical to the `environment vars`_,
+except for ``TMPDIR`` (not set) and  ``T`` (special, see below).
+Unlike the environment vars, the variable names are case-insensitive,
+e.g. both ``{kv}`` and ``{KV}`` are accepted.
+
+Additionally, the ``script`` and ``command`` type config sources
+support *automatic format variables*,
+which can be used to request additional tmpdirs/tmpfiles
+and to tell kernelconfig where the output file(s) will be written to,
+without having to specify a filesystem path.
+
+These variables start with a keyword
+and are optionally followed by an integer identifier.
+
+The following *automatic format variables* exist:
+
+``outconfig`` or ``out``
+    Request a temporary file that will contain the input ``.config`` later on.
+
+    The identifier can be used to request additional files.
+    Note that ``{out}`` and ``{outconfig}`` will point to distinct files,
+    and so do ``{out},  {out0}, {out00}, ..., {out9}, ...``.
+
+    Example::
+
+        [source]
+        command wget 'http://...' -O '{outconfig}'
+
+    (Note that a ``file``-type config
+    source would be more appropriate in that case.)
+
+
+``outfile``
+    Similar to ``outconfig``, except that the temporary file
+    will not be registered as input ``.config``.
+
+    Example::
+
+        [source]
+        sh
+        set -e
+        wget 'http://...' -O '{outfile1}'
+        wget 'http://...' -O '{outfile2}'
+        cat '{outfile1}' '{outfile2}' > '{outconfig}'
+
+``T``
+    Request a temporary directory.
+
+    If used without an identifier, request the default private tmpdir.
+
+    If used with an identifier, creates a new one::
+
+        [source]
+        sh
+        set -e
+        wget 'http://.../file.tar' -O '{outfile}'        '
+        tar x -C '{T0}' -f '{outfile}'
+        ...
+
+
+
 Getting Dynamic Sources
 -----------------------
 
