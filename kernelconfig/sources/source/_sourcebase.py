@@ -88,6 +88,24 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         raise NotImplementedError()
     # --- end of init_from_settings (...) ---
 
+    @classmethod
+    def new_from_def(cls, conf_source_env, name, source_def, **kwargs):
+        obj = cls(
+            name=name,
+            conf_source_env=conf_source_env,
+            **kwargs
+        )
+        obj.init_from_def(source_def)
+        return obj
+    # --- end of new_from_def (...) ---
+
+    # @abc.abstractmethod
+    def init_from_def(self, source_def):
+        # TODO: add implementations to the various types
+        #       and make this method abstract
+        raise NotImplementedError()
+    # --- end of init_from_def (...) ---
+
     def __init__(self, name, conf_source_env, **kwargs):
         super().__init__(name, **kwargs)
         self._str_formatter = None
