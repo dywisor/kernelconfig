@@ -79,6 +79,7 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
             fmt_vars["kmaj"] = source_info.kernelversion.version
             fmt_vars["kmin"] = source_info.kernelversion.sublevel
             fmt_vars["kpatch"] = source_info.kernelversion.patchlevel
+            fmt_vars["kv"] = source_info.kernelversion.kv
         # --
 
         for attr_name in {"subarch", "arch", "karch", "srcarch"}:
