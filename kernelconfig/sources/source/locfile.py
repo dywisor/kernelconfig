@@ -3,14 +3,14 @@
 
 import os.path
 
-from . import _base
+from . import _sourcebase
 from ..abc import exc
 
 
 __all__ = ["LocalFileConfigurationSource"]
 
 
-class LocalFileConfigurationSource(_base.ConfigurationSourceBase):
+class LocalFileConfigurationSource(_sourcebase.ConfigurationSourceBase):
     """
     Configuration source type for local files only.
 
