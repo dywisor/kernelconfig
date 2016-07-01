@@ -17,6 +17,10 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
 
     SCRIPT_FILE_FMT_VARNAME = "script_file"
 
+    @property
+    def SCRIPT_FILE_FMT_VAR_TEMPLATE(self):
+        return "{" + self.SCRIPT_FILE_FMT_VARNAME + "}"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.base_cmdv = None
@@ -41,23 +45,50 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         return script_filepath
     # --- end of write_script_file (...) ---
 
+    def init_base_cmdv_scan_auto_vars(self, base_cmdv, str_formatter=None):
+        if str_formatter is not None:
+            assert self.SCRIPT_FILE_FMT_VARNAME not in str_formatter.fmt_vars
+
+        has_auto_vars, missing = self.scan_auto_vars(
+            base_cmdv, str_formatter=str_formatter
+        )
+
+        try:
+            missing.remove(self.SCRIPT_FILE_FMT_VARNAME)
+        except KeyError:
+            # FIXME: handle this gracefully
+            raise exc.ConfigurationSourceInvalidError(
+                "script command line does not include the script"
+            )
+        # --
+
+        if missing:
+            raise exc.ConfigurationSourceInvalidError(
+                "unknown vars", sorted(missing)
+            )
+        # --
+
+        self.base_cmdv = base_cmdv
+    # --- end of init_base_cmdv_scan_auto_vars (...) ---
+
     def init_from_settings(self, subtype, args, data):
         script_file_fmt_varname = self.SCRIPT_FILE_FMT_VARNAME
-        script_file_fmt_var_template = "{" + script_file_fmt_varname + "}"
+        script_file_fmt_var_template = self.SCRIPT_FILE_FMT_VAR_TEMPLATE
 
         if not data:
             raise exc.ConfigurationSourceInvalidError("empty data")
         # --
 
+        base_cmdv = None
         if subtype == "sh":
-            self.base_cmdv = [subtype, script_file_fmt_var_template]
+            base_cmdv = [subtype, script_file_fmt_var_template]
         else:
             # FIXME: get interpreter from args
             raise exc.ConfigurationSourceInvalidError("empty/unknown subtype")
         # --
 
         if args:
-            self.base_cmdv.extend(args)
+            base_cmdv.extend(args)
 
         str_formatter = self.get_str_formatter()
         # generally, self.fmt_vars should be used for modifying fmt vars,
@@ -91,23 +122,9 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
             # self.script_data = None  # already set
         # --
 
-        has_auto_vars, missing = self.scan_auto_vars(
-            self.base_cmdv, str_formatter=str_formatter
+        self.init_base_cmdv_scan_auto_vars(
+            base_cmdv, str_formatter=str_formatter
         )
-
-        try:
-            missing.remove(script_file_fmt_varname)
-        except KeyError:
-            raise exc.ConfigurationSourceInvalidError(
-                "script command line does not include the script"
-            ) from None
-        # --
-
-        if missing:
-            raise exc.ConfigurationSourceInvalidError(
-                "unknown vars", sorted(missing)
-            )
-        # --
 
         self.sanity_check()
         return []
