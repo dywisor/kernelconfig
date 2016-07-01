@@ -27,6 +27,10 @@ What type of sources exist in kernelconfig?
 
   * relative path, looked up in ``<settings dirs>/source/files``
 
+* remote file
+
+  a input ``.config`` file that can be retrieved via http(s) or ftp
+
 * command
 
   A command that creates the input ``.config`` file,
@@ -93,13 +97,22 @@ In the ``[source]`` section of the settings file
 
     [source]
     file <file>
+    #file file://<file>
 
   Possibly subject to Python string formatting.
+
+* remote file::
+
+    [source]
+    file http://
+    file https://
+    file ftp://
 
 * command::
 
     [source]
-    cmd [...] <command> [<arg>...]
+    command [...] <command> [<arg>...]
+    #cmd [...] <command> [<arg>...]
 
   The command line is subject to Python string formatting,
   make sure to escape ``{`` and ``}`` braces accordingly (``{{``, ``}}``).
