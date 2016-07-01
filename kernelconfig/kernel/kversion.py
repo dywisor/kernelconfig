@@ -182,6 +182,15 @@ class KernelExtraVersion(_kversion_base.KernelVersionBaseObject):
 class KernelVersion(_kversion_base.KernelVersionBaseObject):
     """A kernel version.
 
+    @ivar kv:            version string up to the next-to-last int version
+                         component if the kernel version is not an "-rc"
+                         version, and the full kernel version str otherwise
+                         examples:
+                           4.7.0-r1 => 4.7.0-r1,
+                           3.5.1 => 3.5,
+                           2.6.32.32 => 2.6.32
+    @type kv:            C{str}  (readonly property)
+
     @ivar version:
     @type version:       C{int}
     @ivar patchlevel:
@@ -460,6 +469,50 @@ class KernelVersion(_kversion_base.KernelVersionBaseObject):
         if self.extraversion is not None:
             yield "%s" % self.extraversion
     # --
+
+    def get_kv_str(self):
+        assert self.is_partially_complete()
+        if (
+            self.extraversion is not None
+            and self.extraversion.rclevel is not None
+        ):
+            # -rc version: full version str
+            return str(self)
+
+        elif self.version is None:
+            raise ValueError()
+
+        elif self.patchlevel is None:
+            return str(self.version)
+
+        else:
+            vparts = [self.version, self.patchlevel]
+
+            if self.sublevel is not None:
+                vparts.append(self.sublevel)
+            # --
+
+            if (
+                self.extraversion is not None
+                and self.extraversion.subsublevel
+            ):
+                assert self.sublevel is not None
+
+                # subsublevel is a non-empty tuple if
+                #  there are additional version components
+                vparts.extend(self.extraversion.subsublevel)
+            # --
+
+            if len(vparts) > 2:
+                # sublevel or subsublevel,
+                #  chop one version component off
+                vparts.pop()
+            # --
+
+            return ".".join(map(str, vparts))
+    # --- end of get_kv_str (...) ---
+
+    kv = property(get_kv_str)
 
 # --- end of KernelVersion ---
 
