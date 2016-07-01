@@ -1,6 +1,9 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import os
+import stat
+
 from . import _sourcebase
 from ..abc import exc
 from .._util import _argconfig
@@ -23,6 +26,7 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.interpreter = None
         self.base_cmdv = None
         self.script_file = None
         self.script_data = None
@@ -81,6 +85,7 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
 
         base_cmdv = None
         if subtype == "sh":
+            self.interpreter = True
             base_cmdv = [subtype, script_file_fmt_var_template]
         else:
             # FIXME: get interpreter from args
@@ -174,6 +179,11 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
             arg_config.script_file = self.write_script_file(
                 str_formatter.format_list(self.script_data)
             )
+
+            if not self.interpreter:
+                # make it executable
+                os.chmod(arg_config.script_file, stat.S_IRWXU)
+            # --
         # --
 
         # script_file format var can only be set after assigning script_file
