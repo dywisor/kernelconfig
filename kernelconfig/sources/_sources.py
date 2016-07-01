@@ -7,6 +7,7 @@ import os.path
 import shlex
 
 from .abc import sources as _sources_abc
+from .abc import exc
 from . import source as _source
 
 from ._util import sourceenv
@@ -43,7 +44,55 @@ class ConfigurationSourcesBase(_sources_abc.AbstractConfigurationSources):
         )
 
     def create_source_by_name(self, source_name):
-        raise NotImplementedError("curated sources")
+        self.logger.info("Trying to locate curated source %s", source_name)
+
+        source_def_file = self.senv.get_source_definition_file(source_name)
+        source_script_file = self.senv.get_source_script_file(source_name)
+
+        # TODO: create source_def dict (or dict-like)
+        #       * from source_def_file, if present
+        #       * implicit (from source_script_file), otherwise
+        if source_def_file:
+            raise NotImplementedError("curated source with definition file")
+        # --
+
+        if not source_script_file:
+            raise NotImplementedError("curated source without script file")
+        # --
+
+        source_cls = _source.ScriptConfigurationSource    # TODO
+        source_def = {"script_file": source_script_file}  # TODO, see above
+
+        return source_cls.new_from_def(
+            name=source_name,
+            conf_source_env=self.senv,
+            source_def=source_def,
+            parent_logger=self.logger
+        )
+    # --- end of create_source_by_name (...) ---
+
+    def create_source_by_name_from_settings(self, subtype, args, data):
+        if data:
+            raise exc.ConfigurationSourceInvalidError(
+                "curated source does not accept data"
+            )
+        # --
+
+        if subtype is not None:
+            source_name = subtype
+            conf_args = args
+        elif args:
+            source_name = args[0]
+            conf_args = args[1:]
+        else:
+            raise exc.ConfigurationSourceInvalidError(
+                "missing curated source name"
+            )
+        # --
+
+        conf_source = self.create_source_by_name(source_name)
+        return (conf_source, conf_args)
+    # ---
 
     def get_configuration_source_from_settings(self, settings):
         def join_subtype_and_args(subtype, args):
@@ -122,7 +171,10 @@ class ConfigurationSourcesBase(_sources_abc.AbstractConfigurationSources):
                 source_cls = _source.MakeConfigurationSource
 
             elif source_type is ConfigurationSourceType.s_source:
-                source_cls = None
+                # calling convention different from source_cls.new_from*
+                return self.create_source_by_name_from_settings(
+                    source_subtype, source_args, source_data
+                )
 
             elif source_type is ConfigurationSourceType.s_script:
                 # embedded script w/ lang source_subtype
