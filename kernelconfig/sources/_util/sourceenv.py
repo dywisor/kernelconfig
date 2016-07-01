@@ -34,6 +34,13 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
     def get_config_file_path(self, name):
         return self.get_file_path("files", name)
 
+    def get_source_definition_file(self, name):
+        # FIXME: file name / suffix
+        return self.get_file_path(name + ".def")
+
+    def get_source_script_file(self, name):
+        return self.get_file_path(name)
+
     def get_tmpdir(self):
         tmpdir_obj = self._tmpdir
         if tmpdir_obj is None:
