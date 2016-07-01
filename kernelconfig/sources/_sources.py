@@ -91,9 +91,13 @@ class ConfigurationSourcesBase(_sources_abc.AbstractConfigurationSources):
             source_args = source_def[1:]
 
             source_type_name = source_def[0].lower()
-            source_type, source_subtype = (
-                self.SOURCE_TYPE_KEYWORDS.get(source_type_name)
-            )
+
+            try:
+                source_type_entry = self.SOURCE_TYPE_KEYWORDS[source_type_name]
+            except KeyError:
+                source_type_entry = (None, None)
+
+            source_type, source_subtype = source_type_entry
 
             if source_type is None:
                 assert source_subtype is None
