@@ -3,6 +3,7 @@
 
 from . import _sourcebase
 from ..abc import exc
+from .._util import _argconfig
 
 __all__ = ["ScriptConfigurationSource"]
 
@@ -81,7 +82,7 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     # --- end of create_cmdv (...) ---
 
     def do_parse_source_argv(self, argv):
-        arg_config = _sourcebase.ConfigurationSourceArgConfig()
+        arg_config = _argconfig.ConfigurationSourceArgConfig()
         if argv:
             arg_config.argv.extend(argv)
 

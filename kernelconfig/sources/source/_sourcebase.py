@@ -12,14 +12,12 @@ from ..abc import exc
 from ...util import subproc
 from ...util import fs
 
-from . import _argconfig
-from ._argconfig import ConfigurationSourceArgConfig   # remove, unexport
-from . import _format
-from . import _formatvar
+from .._util import _argconfig
+from .._util import _format
+from .._util import _formatvar
 
 
 __all__ = [
-    "ConfigurationSourceArgConfig",
     "ConfigurationSourceBase",
     "PhasedConfigurationSourceBase",
     "CommandConfigurationSourceBase",
