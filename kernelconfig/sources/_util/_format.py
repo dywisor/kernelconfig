@@ -83,6 +83,11 @@ class ConfigurationSourceStrFormatter(string.Formatter):
         self.fmt_vars = {}
         self.senv = conf_source_env
 
+    def copy(self):
+        obj = self.__class__(self.senv)
+        obj.fmt_vars.update(self.fmt_vars)
+        return obj
+
     def normalize_field_name(self, key):
         lowkey = key.lower()
         return self.FIELD_RENAME_MAP.get(lowkey, lowkey)
