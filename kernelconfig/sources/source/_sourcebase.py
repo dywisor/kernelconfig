@@ -558,9 +558,6 @@ class CommandConfigurationSourceBase(PhasedConfigurationSourceBase):
     def create_cmdv(self, arg_config):
         raise NotImplementedError()
 
-    def do_init_tmpdir(self, arg_config):
-        super().do_init_tmpdir(arg_config)
-
     def do_init_env(self, arg_config):
         arg_config.env_vars.update(self.senv.get_env_vars())
         if arg_config.has_tmpdir():
