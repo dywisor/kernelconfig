@@ -207,6 +207,9 @@ class _Tmpdir(TmpdirView):
         self.path = None
     # ---
 
+    def __del__(self):
+        self._cleanup()
+
 # ---
 
 
