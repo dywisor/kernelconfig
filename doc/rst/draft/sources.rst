@@ -25,7 +25,7 @@ What type of sources exist in kernelconfig?
 
   * absolute path
 
-  * relative path, looked up in ``<settings dirs>/source/files``
+  * relative path, looked up in ``<settings dirs>/sources/files``
 
 * remote file
 
