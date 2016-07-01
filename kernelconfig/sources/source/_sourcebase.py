@@ -242,7 +242,7 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         "T" is not considered to be an auto-var.
 
         Additionally, this method returns whether any auto var has been
-        detected and a list of unknown variables that were not auto vars.
+        detected and a set of unknown variables that were not auto vars.
         Consumers may use this e.g. for raising
         a ConfigurationSourceInvalidError at config source creation time.
 
@@ -258,14 +258,14 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
 
         @return:  2-tuple (
                     any auto var detected,
-                    list of unknown non-auto vars (may be empty)
+                    set of unknown non-auto vars (may be empty)
                   )
-        @rtype:   2-tuple (C{bool}, C{list} of C{str})
+        @rtype:   2-tuple (C{bool}, C{set} of C{str})
         """
         if str_formatter is None:
             str_formatter = self.get_str_formatter()
 
-        missing = []
+        missing = set()
         any_autovar = False
         for varname in (
             str_formatter.iter_unknown_var_names_v(format_str_list)
@@ -273,7 +273,7 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
             if self.add_auto_var(varname, varname.lower()):
                 any_autovar = True
             else:
-                missing.append(varname)
+                missing.add(varname)
         # --
         return (any_autovar, missing)
     # --- end of scan_auto_vars (...) ---
@@ -292,7 +292,7 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         any_autovar, missing = self.scan_auto_vars(format_str_list, **kwargs)
         if missing:
             raise exc.ConfigurationSourceInvalidError(
-                "unkown vars", sorted(missing)
+                "unknown vars", sorted(missing)
             )
         return any_autovar
     # --- end of scan_auto_vars_must_exist (...) ---
