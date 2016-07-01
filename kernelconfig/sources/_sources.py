@@ -62,24 +62,27 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
             self._tmpdir = tmpdir_obj
         return tmpdir_obj
 
-    def _create_format_vars(self):
+    def _create_base_vars(self):
         # FIXME: this is, at least partially,
         #        a dup of the interpreter's cmp vars
-
-        fmt_vars = {}
+        #
+        #        maybe add a get_base_vars() function to source_info?
+        #
+        base_vars = {}
 
         # at least in theory, source_info is just a SourceInfo
         # and not a KernelInfo object, so use hasattr() where appropriate
         source_info = self.source_info
 
-        fmt_vars["srctree"] = source_info.srctree
+        base_vars["srctree"] = source_info.srctree
+        base_vars["s"] = source_info.srctree
 
         if hasattr(source_info, "kernelversion"):
-            fmt_vars["kver"] = source_info.kernelversion
-            fmt_vars["kmaj"] = source_info.kernelversion.version
-            fmt_vars["kmin"] = source_info.kernelversion.sublevel
-            fmt_vars["kpatch"] = source_info.kernelversion.patchlevel
-            fmt_vars["kv"] = source_info.kernelversion.kv
+            base_vars["kver"] = source_info.kernelversion
+            base_vars["kmaj"] = source_info.kernelversion.version
+            base_vars["kmin"] = source_info.kernelversion.sublevel
+            base_vars["kpatch"] = source_info.kernelversion.patchlevel
+            base_vars["kv"] = source_info.kernelversion.kv
         # --
 
         for attr_name in {"subarch", "arch", "karch", "srcarch"}:
@@ -88,10 +91,23 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
             except AttributeError:
                 pass
             else:
-                fmt_vars[attr_name] = attr
+                base_vars[attr_name] = attr
         # --
 
-        return fmt_vars
+        return base_vars
+    # --- end of _create_base_vars (...) ---
+
+    def _get_base_vars(self):
+        # base vars do not get cached
+        return self._create_base_vars()
+    # --- end of _get_base_vars (...) ---
+
+    def _create_format_vars(self):
+        return {
+            k: v
+            for k, v in self._get_base_vars().items()
+            if v is not None
+        }
     # --- end of _create_format_vars (...) ---
 
     def get_format_vars(self):
@@ -103,12 +119,11 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
     # --- end of get_format_vars (...) ---
 
     def _create_env_vars(self):
-        # get_env() -> _create_env() -> get_fmt() -> _create_fmt() ...
-        denv = {
-            k.upper(): str(v) for k, v in self.get_format_vars().items()
+        # keep None and non-str values, see subproc.merge_env_dicts_add_item()
+        return {
+            k.upper(): v
+            for k, v in self._get_base_vars().items()
         }
-        denv["S"] = denv["SRCTREE"]
-        return denv
     # --- end of _create_env_vars (...) ---
 
     def get_env_vars(self):
