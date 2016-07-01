@@ -68,7 +68,7 @@ class ConfigurationSourceStrFormatter(string.Formatter):
     """
 
     FIELD_RENAME_MAP = {
-        "s": "srctree"
+        "s": "srctree"   # FIXME: remove dup, see sources env
     }
 
     @classmethod
