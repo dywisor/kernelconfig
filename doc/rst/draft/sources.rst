@@ -265,10 +265,10 @@ the following environment variables are set:
     | KMAJ             | kernel version,                           |
     |                  | e.g. ``4``, ``3``, ``4``                  |
     +------------------+-------------------------------------------+
-    | KMIN             | kernel version sublevel,                  |
+    | KPATCH           | kernel version patchlevel,                |
     |                  | e.g. ``7``, ``0``, ``5``                  |
     +------------------+-------------------------------------------+
-    | KPATCH           | kernel version patchlevel,                |
+    | KMIN             | kernel version sublevel,                  |
     |                  | e.g. ``0``, ``0``, ``1``                  |
     +------------------+-------------------------------------------+
 
