@@ -83,6 +83,7 @@ class ProjectSetup(object):
                 "scripts",
                 "sources",
                 "sources.abc",
+                "sources._base",
                 "sources.source",
                 "util"
             ),

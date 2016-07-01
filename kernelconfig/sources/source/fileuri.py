@@ -9,6 +9,8 @@ from ..abc import exc
 
 from ...util import fileget
 
+from .._util import _argconfig
+
 
 __all__ = ["FileConfigurationSource"]
 
@@ -69,7 +71,7 @@ class FileConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
             raise exc.ConfigurationSourceInvalidError("non-empty args")
         # --
 
-        arg_config = _sourcebase.ConfigurationSourceArgConfig()
+        arg_config = _argconfig.ConfigurationSourceArgConfig()
         arg_config.file_uri = None  # new attr
 
         file_uri = self.file_uri

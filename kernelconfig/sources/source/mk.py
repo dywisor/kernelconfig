@@ -3,6 +3,7 @@
 
 from . import _sourcebase
 from ..abc import exc
+from .._util import _argconfig
 
 
 __all__ = ["MakeConfigurationSource"]
@@ -66,7 +67,7 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         return False
 
     def do_parse_source_argv(self, argv):
-        arg_config = _sourcebase.ConfigurationSourceArgConfig()
+        arg_config = _argconfig.ConfigurationSourceArgConfig()
         arg_config.argv.extend(argv)
 
         arg_config.out_of_tree = (  # new attr
