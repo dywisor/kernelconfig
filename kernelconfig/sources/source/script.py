@@ -10,24 +10,27 @@ __all__ = ["ScriptConfigurationSource"]
 
 class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     """
-    @type interpreter:  C{None} or C{list} of C{str}
+    @type base_cmdv:    C{None} or C{list} of C{str}
     @type script_file:  C{None} or C{str}
     @type script_data:  C{None} or C{list} of C{str}
     """
 
+    SCRIPT_FILE_FMT_VARNAME = "script_file"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.interpreter = None
+        self.base_cmdv = None
         self.script_file = None
         self.script_data = None
 
-    def set_interpreter(self, interpreter, argv=None):
-        if not interpreter:
-            raise exc.ConfigurationSourceInvalidError("empty interpreter name")
-
-        self.interpreter = [interpreter]
-        if argv:
-            self.interpreter.extend(argv)
+    def sanity_check(self):
+        if self.script_file is None:
+            if self.script_data is None:
+                raise exc.ConfigurationSourceInvalidError(
+                    "script file is not set, and data neither"
+                )
+        # --
+    # --- end of sanity_check (...) ---
 
     def write_script_file(self, formatted_data):
         script_filepath = None
@@ -39,46 +42,91 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     # --- end of write_script_file (...) ---
 
     def init_from_settings(self, subtype, args, data):
+        script_file_fmt_varname = self.SCRIPT_FILE_FMT_VARNAME
+        script_file_fmt_var_template = "{" + script_file_fmt_varname + "}"
+
         if not data:
             raise exc.ConfigurationSourceInvalidError("empty data")
         # --
 
-        if subtype:
-            self.set_interpreter(subtype)
+        if subtype == "sh":
+            self.base_cmdv = [subtype, script_file_fmt_var_template]
         else:
             # FIXME: get interpreter from args
-            raise exc.ConfigurationSourceInvalidError("empty subtype")
+            raise exc.ConfigurationSourceInvalidError("empty/unknown subtype")
         # --
 
+        if args:
+            self.base_cmdv.extend(args)
+
         str_formatter = self.get_str_formatter()
+        # generally, self.fmt_vars should be used for modifying fmt vars,
+        # but in this case, it is important that the formatter does not
+        # have this var:
+        assert self.SCRIPT_FILE_FMT_VARNAME not in str_formatter.fmt_vars
 
-        if self.scan_auto_vars_must_exist(data, str_formatter=str_formatter):
+        has_auto_vars, missing = self.scan_auto_vars(
+            data, str_formatter=str_formatter
+        )
+
+        if script_file_fmt_varname in missing:
+            raise exc.ConfigurationSourceInvalidError(
+                "script references itself via {} format var".format(
+                    script_file_fmt_varname
+                )
+            )
+        elif missing:
+            raise exc.ConfigurationSourceInvalidError(
+                "unknown vars", sorted(missing)
+            )
+        # --
+
+        if has_auto_vars:
+            self.script_file = None
             self.script_data = data
-
         else:
             self.script_file = self.write_script_file(
                 str_formatter.format_list(data)
             )
+            # self.script_data = None  # already set
         # --
 
-        return args
+        has_auto_vars, missing = self.scan_auto_vars(
+            self.base_cmdv, str_formatter=str_formatter
+        )
+
+        try:
+            missing.remove(script_file_fmt_varname)
+        except KeyError:
+            raise exc.ConfigurationSourceInvalidError(
+                "script command line does not include the script"
+            ) from None
+        # --
+
+        if missing:
+            raise exc.ConfigurationSourceInvalidError(
+                "unknown vars", sorted(missing)
+            )
+        # --
+
+        self.sanity_check()
+        return []
     # --- end of init_from_settings (...) ---
 
     def create_cmdv(self, arg_config):
-        if not self.interpreter:
-            raise exc.ConfigurationSourceInvalidError("no interpreter")
+        if not self.base_cmdv:
+            raise exc.ConfigurationSourceInvalidError("no command")
 
         if not arg_config.script_file:
             raise exc.ConfigurationSourceInvalidError("no script file")
 
         cmdv = []
-        cmdv.extend(self.interpreter)
-        cmdv.append(arg_config.script_file)
+        cmdv.extend(self.base_cmdv)
 
         if arg_config.argv:
             cmdv.extend(arg_config.argv)
 
-        return cmdv
+        return self.format_cmdv(arg_config, cmdv)
     # --- end of create_cmdv (...) ---
 
     def do_parse_source_argv(self, argv):
@@ -109,6 +157,12 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
             arg_config.script_file = self.write_script_file(
                 str_formatter.format_list(self.script_data)
             )
+        # --
+
+        # script_file format var can only be set after assigning script_file
+        arg_config.fmt_vars[self.SCRIPT_FILE_FMT_VARNAME] = (
+            arg_config.script_file
+        )
     # --- end of do_prepare (...) ---
 
 # --- end of ScriptConfigurationSource ---
