@@ -35,6 +35,14 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     @ivar senv:  shared configuration source environment
     @type senv:  L{ConfigurationSourcesEnv}
 
+    @ivar _str_formatter:  'static' str formatter
+    @type _str_formatter:  L{ConfigurationSourceStrFormatter}
+
+    @ivar fmt_vars:        'static' format variables
+                           The attribute itself is readonly,
+                           but its content can be modified (e.g. adding vars).
+    @type fmt_vars:        C{dict} :: C{str} => C{str}
+
     @ivar auto_outconfig:  mapping of "outconfig" auto format vars,
                            initially None, see add_auto_var_outconfig()
     @type auto_outconfig:  C{None} or C{dict} :: C{str} => L{TmpOutfile}
@@ -82,10 +90,15 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
 
     def __init__(self, name, conf_source_env, **kwargs):
         super().__init__(name, **kwargs)
+        self._str_formatter = None
         self.senv = conf_source_env
         self.auto_outconfig = None
         self.auto_tmpfiles = None
         self.auto_tmpdirs = None
+
+    @property
+    def fmt_vars(self):
+        return self.get_str_formatter().fmt_vars
 
     # The thing with "getattr() || setattr(_, _, new())" methods is that
     # they are prone to errors when refactoring and not linter-friendly,
@@ -136,8 +149,8 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
             raise exc.ConfigurationSourceNotFound(filepath)
     # ---
 
-    def get_str_formatter(self):
-        """Returns the 'static' string formatter.
+    def get_new_str_formatter(self):
+        """Returns a copy of the shared 'static' string formatter.
 
         This method can safely be used after binding the configuration
         source environment config (in __init__()).
@@ -147,7 +160,25 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         @return:  str formatter
         @rtype:   L{ConfigurationSourceStrFormatter}
         """
-        return _format.ConfigurationSourceStrFormatter(self.senv)
+        return self.get_str_formatter().copy()
+    # --- end of get_new_str_formatter (...) ---
+
+    def get_str_formatter(self):
+        """Returns the shared 'static' string formatter.
+
+        This method can safely be used after binding the configuration
+        source environment config (in __init__()).
+
+        @return:  str formatter
+        @rtype:   L{ConfigurationSourceStrFormatter}
+        """
+        str_formatter = self._str_formatter
+        if str_formatter is None:
+            str_formatter = _format.ConfigurationSourceStrFormatter(self.senv)
+            self._str_formatter = str_formatter
+
+        return str_formatter
+    # --- end of get_str_formatter (...) ---
 
     @abc.abstractmethod
     def add_auto_var(self, varname, varkey):
@@ -514,7 +545,7 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         @return:  str formatter
         @rtype:   L{ConfigurationSourceStrFormatter}
         """
-        str_formatter = self.get_str_formatter()
+        str_formatter = self.get_new_str_formatter()
         self.init_dynamic_str_formatter(str_formatter, arg_config)
         return str_formatter
     # --- end of get_dynamic_str_formatter (...) ---
