@@ -1,14 +1,14 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
-from . import _base
+from . import _sourcebase
 from ..abc import exc
 
 
 __all__ = ["MakeConfigurationSource"]
 
 
-class MakeConfigurationSource(_base.CommandConfigurationSourceBase):
+class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     """
     Configuration source that creates a .config file with "make <target>".
     """
@@ -66,7 +66,7 @@ class MakeConfigurationSource(_base.CommandConfigurationSourceBase):
         return False
 
     def do_parse_source_argv(self, argv):
-        arg_config = _base.ConfigurationSourceArgConfig()
+        arg_config = _sourcebase.ConfigurationSourceArgConfig()
         arg_config.argv.extend(argv)
 
         arg_config.out_of_tree = (  # new attr

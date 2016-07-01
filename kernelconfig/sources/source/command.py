@@ -1,13 +1,13 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
-from . import _base
+from . import _sourcebase
 from ..abc import exc
 
 __all__ = ["CommandConfigurationSource"]
 
 
-class CommandConfigurationSource(_base.CommandConfigurationSourceBase):
+class CommandConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -44,7 +44,7 @@ class CommandConfigurationSource(_base.CommandConfigurationSourceBase):
     # --- end of create_cmdv (...) ---
 
     def do_parse_source_argv(self, argv):
-        arg_config = _base.ConfigurationSourceArgConfig()
+        arg_config = _sourcebase.ConfigurationSourceArgConfig()
         if argv:
             arg_config.argv.extend(argv)
 

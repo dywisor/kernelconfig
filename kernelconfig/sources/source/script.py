@@ -1,13 +1,13 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
-from . import _base
+from . import _sourcebase
 from ..abc import exc
 
 __all__ = ["ScriptConfigurationSource"]
 
 
-class ScriptConfigurationSource(_base.CommandConfigurationSourceBase):
+class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     """
     @type interpreter:  C{None} or C{list} of C{str}
     @type script_file:  C{None} or C{str}
@@ -81,7 +81,7 @@ class ScriptConfigurationSource(_base.CommandConfigurationSourceBase):
     # --- end of create_cmdv (...) ---
 
     def do_parse_source_argv(self, argv):
-        arg_config = _base.ConfigurationSourceArgConfig()
+        arg_config = _sourcebase.ConfigurationSourceArgConfig()
         if argv:
             arg_config.argv.extend(argv)
 

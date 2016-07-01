@@ -4,7 +4,7 @@
 import os.path
 import urllib.parse
 
-from . import _base
+from . import _sourcebase
 from ..abc import exc
 
 from ...util import fileget
@@ -13,7 +13,7 @@ from ...util import fileget
 __all__ = ["FileConfigurationSource"]
 
 
-class FileConfigurationSource(_base.PhasedConfigurationSourceBase):
+class FileConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -69,7 +69,7 @@ class FileConfigurationSource(_base.PhasedConfigurationSourceBase):
             raise exc.ConfigurationSourceInvalidError("non-empty args")
         # --
 
-        arg_config = _base.ConfigurationSourceArgConfig()
+        arg_config = _sourcebase.ConfigurationSourceArgConfig()
         arg_config.file_uri = None  # new attr
 
         file_uri = self.file_uri
