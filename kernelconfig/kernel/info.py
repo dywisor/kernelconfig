@@ -7,6 +7,7 @@ import re
 
 from ..abc import loggable
 from ..util import fspath
+from ..util import misc
 from . import kversion
 
 __all__ = ["SourceInfo", "KernelInfo"]
@@ -149,6 +150,13 @@ class SourceInfo(loggable.AbstractLoggable):
     @abc.abstractmethod
     def iter_out_of_tree_build_make_vars(self, build_dir):
         raise TypeError()
+
+    @abc.abstractmethod
+    def iter_target_arch(self):
+        raise TypeError()
+
+    def iter_target_arch_dedup(self):
+        return misc.iter_dedup(self.iter_target_arch(), key=lambda xv: xv[1])
 
 # --- end of SourceInfo ---
 
@@ -367,5 +375,16 @@ class KernelInfo(SourceInfo):
         return [
             ('O', build_dir)
         ]
+
+    def iter_target_arch(self):
+        # FIXME: generator instead of list return
+        #        (here and in the other methods)
+        return [
+            ("arch", self.arch),
+            ("subarch", self.subarch),
+            ("karch", self.karch),
+            ("srcarch",  self.srcarch)
+        ]
+
 
 # --- end of KernelInfo ---
