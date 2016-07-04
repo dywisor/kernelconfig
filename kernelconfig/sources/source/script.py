@@ -136,8 +136,8 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     # --- end of init_from_settings (...) ---
 
     def init_from_def(self, source_def):
-        if "script_file" in source_def:
-            self.script_file = source_def["script_file"]
+        if "scriptfile" in source_def:
+            self.script_file = source_def["scriptfile"]
 
         # this is going to change (i.e. configurable via def), but for now,
         #  base_cmdv uses the calling convention of the original project:
