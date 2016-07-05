@@ -5,8 +5,8 @@ import argparse
 import os
 import re
 
-from ..util import fs
-from ..util import fspath
+from . import fs
+from . import fspath
 
 
 __all__ = ["ArgTypes", "UsageAction"]
