@@ -5,6 +5,8 @@ import collections.abc
 import configparser
 
 from ..abc import loggable
+from .abc import exc
+from . import sourcetype
 
 
 __all__ = ["CuratedSourceDef"]
@@ -15,7 +17,8 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
     @classmethod
     def new_from_ini(
         cls,
-        conf_source_env, name, source_def_file=None, *,
+        conf_source_env, name,
+        source_def_file=None, source_script_file=None, *,
         parent_logger=None, logger=None, logger_name=None
     ):
         # This is a convenience method that should only be used
@@ -23,7 +26,7 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
         # For that reason, it is bound to cls and not self.
         #
         source_def = cls(
-            conf_source_env, name,
+            conf_source_env, name, default_script_file=source_script_file,
             parent_logger=parent_logger,
             logger=logger, logger_name=logger_name
         )
@@ -41,7 +44,7 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
     # --- end of new_from_ini (...) ---
 
     def __init__(
-        self, conf_source_env, name, *,
+        self, conf_source_env, name, *, default_script_file=None,
         parent_logger=None, logger=None, logger_name=None
     ):
         super().__init__(
@@ -51,7 +54,22 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
         self.senv = conf_source_env
         self.name = name
         self.data = {}  # gets replaced by a new dict in load_*()
+
+        self.default_script_file = default_script_file
+
+        self.arch = None
+        self.feat = None
     # --- end of __init__ (...) ---
+
+    def get_source_type(self):
+        source_type_name = self.data.get("type")
+        if not source_type_name:
+            # then _autodetect_type() could not detect the source type
+            raise exc.ConfigurationSourceMissingType()
+        # --
+
+        return sourcetype.get_source_type(source_type_name)
+    # --- end of get_source_type (...) ---
 
     def __bool__(self):
         return bool(self.data)
@@ -71,8 +89,27 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
 
     def load_ini_data(self, data):
         self.data = data
+        self._fillup_data()
+
+    def _fillup_data(self):
+        self._autodetect_type()
         self._link_arch_x_feat()
         self._pick_arch()
+
+    def _autodetect_type(self):
+        if self.data.get("type"):
+            return
+        # --
+
+        if self.data.get("scriptfile"):
+            self.data["type"] = "script"
+
+        # elif ...
+
+        elif self.default_script_file:
+            self.data["scriptfile"] = self.default_script_file
+            self.data["type"] = "script"
+    # --- end of _autodetect_type (...) ---
 
     def _link_arch_x_feat(self):
         def cross_iter(pair):
