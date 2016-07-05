@@ -1,15 +1,198 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import argparse
 import collections.abc
 import configparser
+import re
 
 from ..abc import loggable
+from ..util import argutil
 from .abc import exc
 from . import sourcetype
 
 
 __all__ = ["CuratedSourceDef"]
+
+
+class CuratedSourceArgFeatureNotSupportedAction(argparse.Action):
+    """
+    This action replaces the original action of a "feature" argparse parameter
+    if the feature is inactive, i.e. not supported by the target arch.
+
+    If the feature option is encountered in the parsed argv,
+    an ConfigurationSourceFeatureNotSupported exception will be raised.
+    """
+
+    def __call__(self, parser, namespace, values, option_string=None):
+        raise exc.ConfigurationSourceFeatureNotSupported(self.dest)
+
+# ---
+
+
+class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
+    """
+    @cvar DEFAULT_EXIT_EXC_TYPE:  exception that is raised instead of exiting
+    @type DEFAULT_EXIT_EXC_TYPE:  C{type} e, e is subclass of Exception
+
+    @cvar RE_FEAT_SPLIT:          regexp for preprocessing feature names
+
+                                  Each char sequence matched by the regexp
+                                  will be replaced with a single dash char "-",
+                                  and leading/ending dash chars are removed.
+                                  The resulting string is then used as base
+                                  for the feature argument's long option name.
+                                  (and must not be empty)
+    @type RE_FEAT_SPLIT:          compiled regexp
+    """
+
+    DEFAULT_EXIT_EXC_TYPE = exc.ConfigurationSourceFeatureUsageError
+
+    RE_FEAT_SPLIT = re.compile(r'[^a-zA-Z0-9]+')
+
+    def __init__(self, source_name, description=None, epilog=None):
+        super().__init__(
+            prog=source_name,
+            description=description,
+            epilog=epilog,
+            add_help=False,
+        )
+
+    def add_feature(self, feat_name, feat_node, is_active):
+        """
+        @param feat_name:  the feature's name,
+                           which is transformed into a (long) option name
+                           in absence of an explicit option name
+
+        @param feat_node:  the feature's data dict
+        @type  feat_node:  C{dict} :: C{str} => C{object}
+
+        @param is_active:  whether the feature is active or not
+
+                           An active feature can be specified as parameter
+                           and behaves as configured.
+                           An inactive feature raises an exception
+                           if it is specified as parameter.
+        @type  is_active:  C{bool}
+        """
+
+        feat_opts = set()
+        feat_kwargs = {}
+        keys_processed = {"architectures", }
+
+        def feat_pseudo_pop(key):
+            nonlocal feat_node
+            nonlocal keys_processed
+
+            try:
+                item = feat_node[key]
+            except KeyError:
+                return None
+            else:
+                keys_processed.add(key)
+                return item
+        # ---
+
+        # feat_name is already lowercase
+        feat_arg_name = feat_pseudo_pop("name") or feat_name
+        feat_key = [
+            w for w in self.RE_FEAT_SPLIT.split(feat_arg_name.lower()) if w
+        ]
+        if not feat_key:
+            raise exc.ConfigurationSourceInvalidParameterDef(
+                "empty feature key for {}".format(feat_name)
+            )
+        # --
+
+        feat_opts.add("--{}".format("-".join(feat_key)))
+
+        feat_kwargs["dest"] = "_".join(feat_key)
+        feat_kwargs["help"] = feat_pseudo_pop("description") or None
+
+        # for now, feat_node is always parsed completely
+        #
+        #  action-related config should be stored in feat_action,
+        #  which is merged with feat_kwargs if the feature is "active".
+        #
+        #  Otherwise, feat_action gets (mostly) discarded,
+        #  and a "feature disabled" action will be set up.
+        #
+        feat_action = {}
+        arg_type = (feat_pseudo_pop("type") or "const").lower()
+
+        if arg_type == "const":
+            # then use action=store_const,
+            # * "default" holds the default str value (optional)
+            #     may be empty, defaults to ""
+            # * "value" holds the const str value     (optional)
+            #     may be empty, defaults to feat_arg_name
+            #     (case preserved IFF feat_arg_name originates
+            #     from feat_node["name"]
+            #
+            if "value" in feat_node:
+                feat_action["const"] = feat_pseudo_pop("value")
+            else:
+                feat_action["const"] = feat_arg_name
+            # --
+
+            feat_action["action"] = "store_const"
+            feat_action["default"] = feat_pseudo_pop("default") or ""
+
+        elif arg_type in {"optin", "optout"}:
+            # then use action=store_const,
+            # * default is ""  (optin) or "y" (optout)
+            # * const   is "y"         or ""
+
+            is_optin = arg_type[-1] == "n"
+
+            feat_action["action"] = "store_const"
+            feat_action["default"] = "" if is_optin else "y"
+            feat_action["const"] = "y" if is_optin else ""
+
+        else:
+            raise exc.ConfigurationSourceInvalidParameterDef(
+                "unknown argument type {} for {}".format(
+                    arg_type, feat_name
+                )
+            )
+        # -- end if arg type
+
+        if is_active:
+            feat_kwargs.update(feat_action)
+        else:
+            # default from feat_action or None?
+            #
+            #  default from feat_action:
+            #     pretend that the feature has not been enabled
+            #     * fmt vars will contain param_x = <default>
+            #     * env vars will contain PARAM_X = <default>
+            #
+            #  default None:
+            #     pretend that the feature does not exist
+            #     * fmt vars will contain param_x = ""  (for convenience)
+            #     * env vars will not contain PARAM_X,
+            #       (PARAM_X will be removed from the env vars)
+            #
+            feat_kwargs["default"] = None
+            feat_kwargs["action"] = CuratedSourceArgFeatureNotSupportedAction
+
+            # the nargs=0 'hack' is necessary,
+            # otherwise the parser expects a value after --<feature>
+            feat_kwargs["nargs"] = feat_action.get("nargs") or 0
+        # --
+
+        keys_unprocessed = set(feat_node) - keys_processed
+        if keys_unprocessed:
+            raise exc.ConfigurationSourceInvalidParameterDef(
+                "unknown parameter options", keys_unprocessed
+            )
+        # --
+
+        feat_args = sorted(feat_opts, key=len)
+        return self.add_argument(*feat_args, **feat_kwargs)
+    # --- end of add_feature_argument (...) ---
+
+# --- end of CuratedSourceArgParser ---
 
 
 class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
@@ -82,6 +265,28 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
 
     def __len__(self):
         return len(self.data)
+
+    def build_parser(self):
+        parser = CuratedSourceArgParser(
+            self.name,
+            description=self.data.get("description")
+        )
+
+        arch_value = (
+            (self.arch.get("value") if self.arch else None)
+            or (self.senv.get_fmt_vars().get("arch"))
+        )
+        if arch_value:
+            parser.set_defaults(arch=arch_value)
+
+        active_features = set(self.feat) if self.feat else set()
+        for feat_name, feat_node in self.data["features"].items():
+            parser.add_feature(
+                feat_name, feat_node, (feat_name in active_features)
+            )
+
+        return parser
+    # --- end of build_parser (...) ---
 
     def load_ini_data(self, data):
         self.data = data
