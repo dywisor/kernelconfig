@@ -26,6 +26,9 @@ class FileConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
     def file_is_local(self):
         return not self.file_uri_scheme
 
+    def add_auto_var(self, varname, varkey):
+        return False
+
     def init_from_settings(self, subtype, args, data):
         if data:
             raise exc.ConfigurationSourceInvalidError("non-empty data")
