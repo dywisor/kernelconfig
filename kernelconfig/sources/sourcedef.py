@@ -51,12 +51,20 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
     RE_FEAT_SPLIT = re.compile(r'[^a-zA-Z0-9]+')
 
     def __init__(self, source_name, description=None, epilog=None):
+        # keep track of all arch/feature parameters
+        #  there are ways to re-use what argparse.ArgumentParser already has,
+        #  but this is more explicit and just works
+        self.source_params = set()
+
         super().__init__(
             prog=source_name,
             description=description,
             epilog=epilog,
             add_help=False,
         )
+
+    def register_param(self, name):
+        self.source_params.add(name)
 
     def add_feature(self, feat_name, feat_node, is_active):
         """
@@ -106,7 +114,8 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
 
         feat_opts.add("--{}".format("-".join(feat_key)))
 
-        feat_kwargs["dest"] = "_".join(feat_key)
+        feat_dest = "_".join(feat_key)
+        feat_kwargs["dest"] = feat_dest
         feat_kwargs["help"] = feat_pseudo_pop("description") or None
 
         # for now, feat_node is always parsed completely
@@ -189,7 +198,9 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
         # --
 
         feat_args = sorted(feat_opts, key=len)
-        return self.add_argument(*feat_args, **feat_kwargs)
+        arg = self.add_argument(*feat_args, **feat_kwargs)
+        self.register_param(feat_dest)
+        return arg
     # --- end of add_feature_argument (...) ---
 
 # --- end of CuratedSourceArgParser ---
@@ -278,6 +289,7 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
         )
         if arch_value:
             parser.set_defaults(arch=arch_value)
+            parser.register_param("arch")
 
         active_features = set(self.feat) if self.feat else set()
         for feat_name, feat_node in self.data["features"].items():
