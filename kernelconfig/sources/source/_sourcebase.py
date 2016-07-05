@@ -85,7 +85,7 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
 
     @abc.abstractmethod
     def init_from_settings(self, subtype, args, data):
-        raise NotImplementedError()
+        pass
     # --- end of init_from_settings (...) ---
 
     @classmethod
