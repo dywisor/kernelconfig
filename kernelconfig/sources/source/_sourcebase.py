@@ -411,7 +411,22 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         @return:  arg config
         @rtype:   L{ConfigurationSourceArgConfig}
         """
-        return _argconfig.ConfigurationSourceArgConfig()
+        arg_config = _argconfig.ConfigurationSourceArgConfig()
+
+        if self.arg_parser is not None:
+            # allow None argv
+            params = self.arg_parser.parse_args(argv or [])
+            if params:
+                arg_config.set_params(params)
+
+        elif argv:
+            raise exc.ConfigurationSourceFeatureUsageError(
+                "this configuration source does not accept parameters"
+            )
+        # --
+
+        return arg_config
+    # --- end of do_parse_source_argv (...) ---
 
     def do_init_auto_vars(self, arg_config):
         if self.auto_outconfig:
