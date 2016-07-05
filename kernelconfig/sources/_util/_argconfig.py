@@ -47,9 +47,32 @@ class ConfigurationSourceArgConfig(object):
         self.fmt_vars = {}
         self.env_vars = {}
         self._tmpdir = None
+        self._params = None
         self._outfiles = {}
         self._outconfig = collections.OrderedDict()
     # ---
+
+    def set_params(self, params_namespace):
+        if self._params is not None:
+            raise AssertionError("params are already set!")
+
+        if params_namespace is None:
+            self._params = False
+            return
+
+        param_vars = {
+            "param_{}".format(name.lower()): value
+            for name, value in vars(params_namespace).items()
+        }
+
+        self._params = True
+        self.fmt_vars.update(
+            ((k, (v or "")) for k, v in param_vars.items())
+        )
+        self.env_vars.update(
+            ((k.upper(), v) for k, v in param_vars.items())
+        )
+    # --- end of set_params (...) ---
 
     def _iter_outfiles(self, outfile_type):
         for of_type, outfile in self._outfiles.values():
