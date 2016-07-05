@@ -102,7 +102,7 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     @abc.abstractmethod
     def init_from_def(self, source_def):
         # TODO: add implementations to the various types
-        pass
+        self.arg_parser = source_def.build_parser()
     # --- end of init_from_def (...) ---
 
     def __init__(self, name, conf_source_env, **kwargs):
@@ -112,6 +112,7 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         self.auto_outconfig = None
         self.auto_tmpfiles = None
         self.auto_tmpdirs = None
+        self.arg_parser = None
 
     @property
     def fmt_vars(self):
