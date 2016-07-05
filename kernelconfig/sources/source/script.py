@@ -143,15 +143,21 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         if "path" in source_def:
             self.script_file = source_def["path"]
 
-        # this is going to change (i.e. configurable via def), but for now,
-        #  base_cmdv uses the calling convention of the original project:
-        #
-        base_cmdv = [
-            "{script_file}",      # 0: the script file to be executed
-            "{outconfig}",        # 1: the output config file
-            "{arch}",             # 2: target arch
-            "{kmaj}.{kpatch}"     # 3: kernel version $KMAJ.$KPATCH
-        ]
+        source_def_cmdv = source_def.get("command")  # ref-copy!
+        if source_def_cmdv:
+            # this is not really required since no other object uses the
+            # source_def, but stay safe and copy source_def_cmdv
+            base_cmdv = list(source_def_cmdv)
+
+        else:
+            # use the calling convention of the original project
+            base_cmdv = [
+                "{script_file}",      # 0: the script file to be executed
+                "{outconfig}",        # 1: the output config file
+                "{arch}",             # 2: target arch
+                "{kmaj}.{kpatch}"     # 3: kernel version $KMAJ.$KPATCH
+            ]
+        # --
 
         self.init_base_cmdv_scan_auto_vars(base_cmdv)
         self.sanity_check()
