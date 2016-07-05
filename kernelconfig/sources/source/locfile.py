@@ -25,6 +25,9 @@ class LocalFileConfigurationSource(_sourcebase.ConfigurationSourceBase):
         super().__init__(*args, **kwargs)
         self.filepath = None
 
+    def add_auto_var(self, varname, varkey):
+        return False
+
     def init_from_settings(self, subtype, args, data):
         if data:
             raise exc.ConfigurationSourceInvalidError("non-empty data")
