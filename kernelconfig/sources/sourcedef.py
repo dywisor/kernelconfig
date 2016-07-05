@@ -83,10 +83,6 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
     def __len__(self):
         return len(self.data)
 
-    def setdefault(self, key, defaultvalue=None):
-        if key not in self.data:
-            self.data[key] = defaultvalue
-
     def load_ini_data(self, data):
         self.data = data
         self._fillup_data()
