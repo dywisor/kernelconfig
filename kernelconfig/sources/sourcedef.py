@@ -318,7 +318,10 @@ class CuratedSourceDefIniParser(configparser.ConfigParser):
 
                 # convert input_value depending on option name
                 if option in dict_sects:
-                    value = {w: {} for w in set(input_value.split())}
+                    value = {
+                        w.lower(): {"name": w}
+                        for w in set(input_value.split())
+                    }
 
                 else:
                     # strip leading/ending whitespace from all options
