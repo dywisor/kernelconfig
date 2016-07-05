@@ -8,7 +8,7 @@ import os.path
 __all__ = ["KernelConfigMainScript"]
 
 import kernelconfig.scripts._base
-import kernelconfig.scripts._argutil
+import kernelconfig.util.argutil
 import kernelconfig.installinfo
 import kernelconfig.kernel.info
 import kernelconfig.kconfig.config.gen
@@ -44,7 +44,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             "%s (default: %s)" % (h, ("%(default)s" if d is None else d))
         )
 
-        kernelconfig.scripts._argutil.UsageAction.attach_to(parser)
+        kernelconfig.util.argutil.UsageAction.attach_to(parser)
 
         parser.add_argument(
             '-V', '--print-version', action='version', version=PRJ_VERSION
@@ -126,7 +126,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
     def init_arg_parser(self):
         arg_types = self.arg_types
         if arg_types is None:
-            arg_types = kernelconfig.scripts._argutil.ArgTypes()
+            arg_types = kernelconfig.util.argutil.ArgTypes()
             self.arg_types = arg_types
         # --
 
