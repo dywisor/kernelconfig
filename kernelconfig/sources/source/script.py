@@ -6,7 +6,6 @@ import stat
 
 from . import _sourcebase
 from ..abc import exc
-from .._util import _argconfig
 
 __all__ = ["ScriptConfigurationSource"]
 
@@ -77,6 +76,8 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     # --- end of init_base_cmdv_scan_auto_vars (...) ---
 
     def init_from_settings(self, subtype, args, data):
+        super().init_from_settings(subtype, args, data)
+
         script_file_fmt_varname = self.SCRIPT_FILE_FMT_VARNAME
         script_file_fmt_var_template = self.SCRIPT_FILE_FMT_VAR_TEMPLATE
 
@@ -137,10 +138,10 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     # --- end of init_from_settings (...) ---
 
     def init_from_def(self, source_def):
+        super().init_from_def(source_def)
+
         if "path" in source_def:
             self.script_file = source_def["path"]
-
-        self.arg_parser = source_def.build_parser()
 
         # this is going to change (i.e. configurable via def), but for now,
         #  base_cmdv uses the calling convention of the original project:
@@ -173,21 +174,7 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     # --- end of create_cmdv (...) ---
 
     def do_parse_source_argv(self, argv):
-        arg_config = _argconfig.ConfigurationSourceArgConfig()
-
-        if self.arg_parser is not None:
-            params = self.arg_parser.parse_args(argv or [])  # allow None argv
-            if params:
-                arg_config.set_params(params)
-
-            # if argv'rem:
-            #     arg_config.argv.extend(argv'rem)
-
-        elif argv:
-            raise exc.ConfigurationSourceFeatureUsageError(
-                "this source does not accept parameters"
-            )
-        # --
+        arg_config = super().do_parse_source_argv(argv)
 
         if not self.auto_outconfig:
             # FIXME: remove/replace,
