@@ -279,7 +279,9 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         return True
     # --- end of add_auto_var_tmpfile (...) ---
 
-    def scan_auto_vars(self, format_str_list, str_formatter=None):
+    def scan_auto_vars(
+        self, format_str_list, str_formatter=None, drop_params=True
+    ):
         """
         Scans a list of format strings for "dynamic auto variables", which
         are vars that need to be created during get_configuration_basis().
@@ -305,6 +307,12 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
 
         @type    str_formatter:    C{None} | L{ConfigurationSourceStrFormatter}
 
+        @keyword drop_params:      whether to remove known argument parser
+                                   parameters from the set of unknown vars
+                                   Defaults to True.
+        @type    drop_params:      C{bool}
+
+
         @return:  2-tuple (
                     any auto var detected,
                     set of unknown non-auto vars (may be empty)
@@ -324,6 +332,13 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
             else:
                 missing.add(varname)
         # --
+
+        if missing:
+            if drop_params and self.arg_parser is not None:
+                for param_name in self.arg_parser.source_params:
+                    missing.discard("param_{}".format(param_name))
+        # --
+
         return (any_autovar, missing)
     # --- end of scan_auto_vars (...) ---
 
