@@ -5,6 +5,8 @@ from ..abc import loggable
 from ..util import fspath
 from ..util import tmpdir
 
+from ._util import _format
+
 
 __all__ = ["ConfigurationSourcesEnv"]
 
@@ -103,6 +105,9 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
             self._fmt_vars = fmt_vars
         return fmt_vars
     # --- end of get_format_vars (...) ---
+
+    def get_str_formatter(self):
+        return _format.ConfigurationSourceStrFormatter(self)
 
     def _create_env_vars(self):
         # keep None and non-str values, see subproc.merge_env_dicts_add_item()
