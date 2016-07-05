@@ -12,6 +12,38 @@ from . import fspath
 __all__ = ["ArgTypes", "UsageAction"]
 
 
+class NonExitingArgumentParserExit(Exception):
+    """
+    This exception is raised by a NonExitingArgumentParser
+    whenever a normal arg parser would exit() straightaway.
+    """
+    pass
+
+
+class NonExitingArgumentParser(argparse.ArgumentParser):
+    """An argument parser that raises an exception instead of exiting."""
+
+    DEFAULT_EXIT_EXC_TYPE = NonExitingArgumentParserExit
+
+    def __init__(self, *args, exit_exc_type=None, **kwargs):
+        self.exit_exc_type = (
+            self.DEFAULT_EXIT_EXC_TYPE if exit_exc_type is None
+            else exit_exc_type
+        )
+        super().__init__(*args, **kwargs)
+
+    def exit(self, status=0, message=None):
+        if message:
+            raise self.exit_exc_type(message)
+        else:
+            raise self.exit_exc_type()
+
+    def error(self, message):
+        raise self.exit_exc_type(message)
+
+# --- end of NonExitingArgumentParser ---
+
+
 class ArgTypes(object):
     DEFAULT_EXC_TYPE = argparse.ArgumentTypeError
 
