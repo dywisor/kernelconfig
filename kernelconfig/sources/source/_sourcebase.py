@@ -102,7 +102,7 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     @abc.abstractmethod
     def init_from_def(self, source_def):
         # TODO: add implementations to the various types
-        raise NotImplementedError()
+        pass
     # --- end of init_from_def (...) ---
 
     def __init__(self, name, conf_source_env, **kwargs):
