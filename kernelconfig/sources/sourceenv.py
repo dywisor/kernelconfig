@@ -1,9 +1,9 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
-from ...abc import loggable
-from ...util import fspath
-from ...util import tmpdir
+from ..abc import loggable
+from ..util import fspath
+from ..util import tmpdir
 
 
 __all__ = ["ConfigurationSourcesEnv"]
