@@ -34,7 +34,7 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
                 logger=source_def.get_child_logger("parser")
             )
             parser.read_filepath(source_def_file)
-            source_def.data = parser.get_source_def_raw_dict()
+            source_def.load_ini_data(parser.get_source_def_raw_dict())
         # --
 
         return source_def
