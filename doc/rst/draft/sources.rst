@@ -188,6 +188,14 @@ Section and option names are case-insensitive.
     | Path            | format str    | *depends* | path to the input ``.config``,        |
     |                 |               |           | or path to the script                 |
     +-----------------+---------------+-----------+---------------------------------------+
+    | Command         | format str    | *depends* | for ``command`` source types,         |
+    |                 |               |           | this field specifies the command      |
+    |                 |               |           | to be run and is mandatory.           |
+    |                 |               |           |                                       |
+    |                 |               |           | for ``script`` source types,          |
+    |                 |               |           | this field can be used to override    |
+    |                 |               |           | the calling convention.               |
+    +-----------------+---------------+-----------+---------------------------------------+
     | Architectures   | str-list      | no        | supported architectures               |
     |                 |               |           |                                       |
     |                 |               |           | Defaults to *all*.                    |
