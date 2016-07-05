@@ -137,8 +137,8 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     # --- end of init_from_settings (...) ---
 
     def init_from_def(self, source_def):
-        if "scriptfile" in source_def:
-            self.script_file = source_def["scriptfile"]
+        if "path" in source_def:
+            self.script_file = source_def["path"]
 
         self.arg_parser = source_def.build_parser()
 

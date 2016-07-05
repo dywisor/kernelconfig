@@ -302,13 +302,13 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
             return
         # --
 
-        if self.data.get("scriptfile"):
+        if self.data.get("path"):
             self.data["type"] = "script"
 
         # elif ...
 
         elif self.default_script_file:
-            self.data["scriptfile"] = self.default_script_file
+            self.data["path"] = self.default_script_file
             self.data["type"] = "script"
     # --- end of _autodetect_type (...) ---
 
