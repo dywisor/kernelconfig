@@ -30,6 +30,7 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         self.base_cmdv = None
         self.script_file = None
         self.script_data = None
+        self.arg_parser = None
 
     def sanity_check(self):
         if self.script_file is None:
@@ -139,6 +140,8 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         if "scriptfile" in source_def:
             self.script_file = source_def["scriptfile"]
 
+        self.arg_parser = source_def.build_parser()
+
         # this is going to change (i.e. configurable via def), but for now,
         #  base_cmdv uses the calling convention of the original project:
         #
@@ -171,8 +174,20 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
 
     def do_parse_source_argv(self, argv):
         arg_config = _argconfig.ConfigurationSourceArgConfig()
-        if argv:
-            arg_config.argv.extend(argv)
+
+        if self.arg_parser is not None:
+            params = self.arg_parser.parse_args(argv or [])  # allow None argv
+            if params:
+                arg_config.set_params(params)
+
+            # if argv'rem:
+            #     arg_config.argv.extend(argv'rem)
+
+        elif argv:
+            raise exc.ConfigurationSourceFeatureUsageError(
+                "this source does not accept parameters"
+            )
+        # --
 
         if not self.auto_outconfig:
             # FIXME: remove/replace,
