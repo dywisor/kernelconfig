@@ -4,6 +4,7 @@
 import argparse
 import collections.abc
 import configparser
+import shlex
 import re
 
 from ..abc import loggable
@@ -310,18 +311,38 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
         self._pick_arch()
 
     def _autodetect_type(self):
-        if self.data.get("type"):
-            return
-        # --
+        type_name = self.data.get("type") or None
 
-        if self.data.get("path"):
-            self.data["type"] = "script"
+        if type_name:
+            pass
+
+        elif self.data.get("path"):
+            type_name = "script"
+
+        elif self.data.get("command"):
+            # either a command or a script
+            str_formatter = self.senv.get_str_formatter()
+            fvars = set(
+                str_formatter.iter_referenced_vars_v(self.data["command"])
+            )
+
+            if "script_file" in fvars:
+                type_name = "script"
+            else:
+                type_name = "command"
 
         # elif ...
 
         elif self.default_script_file:
-            self.data["path"] = self.default_script_file
-            self.data["type"] = "script"
+            type_name = "script"
+        # --
+
+        self.data["type"] = type_name  # possibly None
+
+        if type_name == "script":
+            if self.default_script_file and not self.data.get("path"):
+                self.data["path"] = self.default_script_file
+        # --
     # --- end of _autodetect_type (...) ---
 
     def _link_arch_x_feat(self):
@@ -488,6 +509,8 @@ class CuratedSourceDefIniParser(configparser.ConfigParser):
         "feature":      "features",
 
         "desc":         "description",
+
+        "cmd":          "command",
     }
 
     def __init__(
@@ -522,6 +545,7 @@ class CuratedSourceDefIniParser(configparser.ConfigParser):
     def get_source_def_raw_dict(self):
         # set of section names that accumulate in a dict-like fashion
         dict_sects = {"architectures", "features"}
+        shlex_options = {"command", }
 
         sdef_raw = {}
 
@@ -539,6 +563,14 @@ class CuratedSourceDefIniParser(configparser.ConfigParser):
                         w.lower(): {"name": w}
                         for w in set(input_value.split())
                     }
+
+                elif option.endswith("_str"):
+                    raise ValueError("reserved field name: {}".format(option))
+
+                elif option in shlex_options:
+                    value_str = input_value.strip()
+                    value = shlex.split(value_str)
+                    sdef_raw[option + "_str"] = value_str
 
                 else:
                     # strip leading/ending whitespace from all options
