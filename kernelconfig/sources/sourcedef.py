@@ -219,6 +219,9 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
         assert "arch" not in source_def
         assert "feat" not in source_def
 
+        self.arch = None
+        self.feat = None
+
         try:
             architectures = source_def["architectures"]
             features = source_def["features"]
@@ -226,14 +229,11 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
             raise AssertionError("no data loaded")
 
         if not architectures:
-            source_def["arch"] = {"features": set(features)}
-            source_def["feat"] = features
+            self.arch = {"features": set(features)}
+            self.feat = features
             # not adding arch to feat->arch
 
         else:
-            source_def["arch"] = None
-            source_def["feat"] = None
-
             # for each possible arch str (from most specific to most generic)
             #    if arch str appears in architectures:
             #       pick this arch and associated features
@@ -247,8 +247,8 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
 
                 if arch_candlow in architectures:
                     arch_node = architectures[arch_candidate]
-                    source_def["arch"] = arch_node
-                    source_def["feat"] = {
+                    self.arch = arch_node
+                    self.feat = {
                         feat_name: features[feat_name]
                         for feat_name in arch_node["features"]
                     }
@@ -258,7 +258,6 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
                 # -- end if arch candidate matches
             # --- end for arch candidate
         # -- end if source def defines architectures?
-
     # --- end of _pick_arch (...) ---
 
 # --- end of CuratedSourceDef ---
