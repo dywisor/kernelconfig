@@ -10,8 +10,7 @@ from .abc import sources as _sources_abc
 from .abc import exc
 from . import source as _source
 from . import sourcedef
-
-from ._util import sourceenv
+from . import sourceenv
 
 
 __all__ = ["ConfigurationSourceType", "ConfigurationSources"]
