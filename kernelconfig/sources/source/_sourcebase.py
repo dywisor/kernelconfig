@@ -99,10 +99,9 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         return obj
     # --- end of new_from_def (...) ---
 
-    # @abc.abstractmethod
+    @abc.abstractmethod
     def init_from_def(self, source_def):
         # TODO: add implementations to the various types
-        #       and make this method abstract
         raise NotImplementedError()
     # --- end of init_from_def (...) ---
 
