@@ -288,11 +288,9 @@ class CuratedSourceDefIniParser(configparser.ConfigParser):
                 if option in dict_sects:
                     value = {w: {} for w in set(input_value.split())}
 
-                elif option == "description":
-                    value = input_value.strip()
-
                 else:
-                    value = input_value
+                    # strip leading/ending whitespace from all options
+                    value = input_value.strip()
                 # --
 
                 sdef_raw[option] = value
