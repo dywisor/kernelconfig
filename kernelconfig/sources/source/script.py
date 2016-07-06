@@ -37,7 +37,29 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
                 raise exc.ConfigurationSourceInvalidError(
                     "script file is not set, and data neither"
                 )
+
+            # {script_file} in script_data needs to be checked in init_()
+
+        elif not os.path.isfile(self.script_file):
+            raise exc.ConfigurationSourceInvalidError(
+                "script file {!r} does not exist or is not a file".format(
+                    self.script_file
+                )
+            )
+
+        elif not os.access(
+            self.script_file,
+            os.R_OK | (0 if self.interpreter else os.X_OK)
+        ):
+            raise exc.ConfigurationSourceInvalidError(
+                "script file {!r} is not readable/executable".format(
+                    self.script_file
+                )
+            )
         # --
+
+        if not self.base_cmdv:
+            raise exc.ConfigurationSourceInvalidError("no command")
     # --- end of check_source_valid (...) ---
 
     def write_script_file(self, formatted_data):
@@ -162,9 +184,6 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     # --- end of init_from_def (...) ---
 
     def create_cmdv(self, arg_config):
-        if not self.base_cmdv:
-            raise exc.ConfigurationSourceInvalidError("no command")
-
         if not arg_config.script_file:
             raise exc.ConfigurationSourceInvalidError("no script file")
 
@@ -197,6 +216,7 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         if arg_config.script_file is None:
             # then it needs to be created from self.script_data now
             if not self.script_data:
+                # this should have been catched by check_source_valid() already
                 raise exc.ConfigurationSourceInvalidError("no script data")
 
             str_formatter = self.get_dynamic_str_formatter(arg_config)
