@@ -3,7 +3,6 @@
 
 from . import _sourcebase
 from ..abc import exc
-from .._util import _argconfig
 
 
 __all__ = ["MakeConfigurationSource"]
@@ -19,23 +18,44 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         self.base_argv = []
         self.make_target = None
 
+    def check_source_valid(self):
+        if not self.make_target:
+            raise exc.ConfigurationSourceInvalidError("no make target")
+    # --- end of check_source_valid (...) ---
+
+    def _set_make_target(self, subtype, name):
+        make_target = None
+
+        if subtype == "defconfig":
+            # FIXME: for defconfig,
+            #        this needs some investigation and minor changes
+            #
+            #        If an arch has more than one defconfig,
+            #        it would good to choose the best-fitting one!
+            #
+            if not name:
+                make_target = subtype
+
+            else:
+                raise NotImplementedError("defconfig with variant name")
+
+        elif subtype:
+            raise exc.ConfigurationSourceInvalidError(
+                "unknown make subtype {!r}".format(subtype)
+            )
+
+        elif name:
+            make_target = name
+
+        # else keep make_target==None
+
+        self.make_target = make_target
+    # --- end of _set_make_target (...) ---
+
     def init_from_settings(self, subtype, args, data):
         if data:
             raise exc.ConfigurationSourceInvalidError("non-empty data")
         # --
-
-        # FIXME: for defconfig,
-        #        this needs some investigation and minor changes
-        #
-        #        In kernelconfig, the meaning of "arch" is ambiguous:
-        #        (a) the kernel arch, which is a 'simplification'
-        #            of the target arch (e.g. "arm")
-        #
-        #        (b) the target arch (e.g. "armv5te")
-        #
-        #        If an arch has more than one defconfig,
-        #        it would good to choose the best-fitting one!
-        #
 
         # FIXME:
         # if subtype == defconfig or not subtype:
@@ -48,15 +68,26 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         #  end if
 
         if subtype:
-            self.make_target = subtype
+            self._set_make_target(subtype, None)
             args_rem = args
         else:
             raise NotImplementedError("more advanced make target")
             args_rem = None
         # --
 
-        return args_rem
-    # --- end of __init__ (...) ---
+        self.base_argv.extend(args_rem)
+        return []
+    # --- end of init_from_settings (...) ---
+
+    def init_from_def(self, source_def):
+        super().init_from_def(source_def)
+
+        source_type = source_def.get_source_type()
+
+        self._set_make_target(
+            source_type.source_subtype, source_def.get("target")
+        )
+    # --- end of init_from_def (...) ---
 
     def add_auto_var(self, varname, varkey):
         # does not support auto vars
@@ -67,8 +98,7 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         return False
 
     def do_parse_source_argv(self, argv):
-        arg_config = _argconfig.ConfigurationSourceArgConfig()
-        arg_config.argv.extend(argv)
+        arg_config = super().do_parse_source_argv(argv)
 
         arg_config.out_of_tree = (  # new attr
             self.senv.source_info.check_supports_out_of_tree_build()
