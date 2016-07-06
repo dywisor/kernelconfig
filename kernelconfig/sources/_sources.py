@@ -214,19 +214,51 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
             try:
                 source_type = sourcetype.get_source_type(source_def[0])
             except KeyError:
-                raise
                 source_type = None
 
             if source_type is None:
+                self.logger.debug(
+                    "Trying to guess type of %s", source_def[0]
+                )
+
                 # then the type is implicit, and we have to "guess":
                 #
                 # (a) is source_def[0] the name of a curated source?
-                #
-                # (b) file path of any type?
-                #
-                # TODO
-                raise NotImplementedError("guess typeof", source_def)
-            # --
+                try:
+                    sfiles = self.senv.get_source_def_files(source_def[0])
+                except ValueError:
+                    sfiles = None
+
+                if sfiles and any(sfiles):
+                    self.logger.debug("%s is a curated source", source_def[0])
+
+                    # could return directly from
+                    # _create_source_by_name_from_files(...) here,
+                    # but that requires duplicated checks (source_data)
+                    source_type = sourcetype.get_source_type("source")
+                    source_args = source_def
+
+                else:
+                    # (b) file path of any type?
+                    #  note that relative paths are not supported here
+                    #  unless they begin with file://,
+                    #  and absolute paths starting with "/" have already
+                    #  been handled
+                    scheme, scheme_sep, rem = source_def[0].partition("://")
+
+                    if scheme_sep:
+                        self.logger.debug("%s is a file source", source_def[0])
+                        source_type = sourcetype.get_source_type("file")
+                        source_args = source_def
+                # -- end if try detect
+
+                if source_type is None:
+                    # then guessing was not successful
+                    self.logger.warning(
+                        "could not guess source type of %s", source_def[0]
+                    )
+                    raise exc.ConfigurationSourceNotFound(source_def[0])
+            # -- end if source_type is None
         # --
 
         if source_type.is_source():
