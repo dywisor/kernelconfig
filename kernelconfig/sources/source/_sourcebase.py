@@ -80,6 +80,7 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
             **kwargs
         )
         args_rem = obj.init_from_settings(subtype, args, data)
+        obj.check_source_valid()
         return (obj, args_rem)
     # --- end of new_from_settings (...) ---
 
@@ -96,6 +97,7 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
             **kwargs
         )
         obj.init_from_def(source_def)
+        obj.check_source_valid()
         return obj
     # --- end of new_from_def (...) ---
 
@@ -104,6 +106,19 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         # TODO: add implementations to the various types
         self.arg_parser = source_def.build_parser()
     # --- end of init_from_def (...) ---
+
+    @abc.abstractmethod
+    def check_source_valid(self):
+        """
+        This method is called after initializing the conf source with
+        init_from_*(), and should raise a ConfigurationSourceInvalidError
+        if the configuration is invalid or not sufficient.
+
+        @raises ConfigurationSourceInvalidError:
+
+        @return: None (implicit)
+        """
+        raise NotImplementedError()
 
     def __init__(self, name, conf_source_env, **kwargs):
         super().__init__(name, **kwargs)
