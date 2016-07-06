@@ -37,7 +37,20 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         self.settings = kernelconfig.util.settings.SettingsFileReader()
 
         self.source_info = None
+        self.conf_sources = None
     # --- end of __init__ (...) ---
+
+    def get_conf_sources(self):
+        conf_sources = self.conf_sources
+        if conf_sources is None:
+            conf_sources = self.create_loggable(
+                kernelconfig.sources._sources.ConfigurationSources,
+                install_info=self.install_info,
+                source_info=self.source_info
+            )
+            self.conf_sources = conf_sources
+        return conf_sources
+    # ---
 
     def _setup_arg_parser_args(self, parser, arg_types):
         with_default = lambda h, d=None: (
@@ -267,11 +280,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             input_config_file = arg_config["inconfig"]
 
         else:
-            conf_sources = self.create_loggable(
-                kernelconfig.sources._sources.ConfigurationSources,
-                install_info=self.install_info,
-                source_info=self.source_info
-            )
+            conf_sources = self.get_conf_sources()
 
             input_config_file = (
                 conf_sources.get_configuration_basis_from_settings(
@@ -290,7 +299,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         config.read_config_file(input_config_file)
     # ---
 
-    def do_main_genconfig(self, arg_config):
+    def do_main_script_genconfig(self, arg_config):
         self.do_main_setup_logging(arg_config)
         self.do_main_load_settings(arg_config)
         self.do_main_setup_source_info(arg_config)
@@ -344,13 +353,42 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         # * write output config
         config.write_config_file(arg_config["outconfig"])
 
-    # --- end of do_main_genconfig (...) ---
+    # --- end of do_main_script_genconfig (...) ---
+
+    def do_main_script_list_sources(self, arg_config):
+        # def any_of(sfiles):
+        #     for item in filter(None, sfiles):
+        #         return item
+        #     return None
+        # # ---
+
+        self.do_main_setup_logging(arg_config)
+        # FIXME: drop this requirement:
+        self.do_main_setup_source_info(arg_config)
+
+        conf_sources = self.get_conf_sources()
+        sources_info = conf_sources.get_available_sources_info()
+
+        if not sources_info:
+            return False
+
+        for name in sorted(sources_info):
+            print(name)
+            # sfile = any_of(sources_info[name])
+            # if sfile:
+            #     print("  ({})".format(sfile))
+        # --
+
+    # --- end of do_main_script_list_sources (...) ---
 
     def do_main(self, arg_config):
         script_mode = arg_config["script_mode"]
 
         if not script_mode or script_mode[0] == "generate-config":
-            return self.do_main_genconfig(arg_config)
+            return self.do_main_script_genconfig(arg_config)
+
+        elif script_mode[0] == "list-sources":
+            return self.do_main_script_list_sources(arg_config)
 
         else:
             raise NotImplementedError("script mode", script_mode)
