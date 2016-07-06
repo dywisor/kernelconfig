@@ -113,7 +113,9 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
             )
         # --
 
-        feat_opts.add("--{}".format("-".join(feat_key)))
+        feat_longopt = "--{}".format("-".join(feat_key))
+
+        feat_opts.add(feat_longopt)
 
         feat_dest = "_".join(feat_key)
         feat_kwargs["dest"] = feat_dest
@@ -135,14 +137,12 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
             # * "default" holds the default str value (optional)
             #     may be empty, defaults to ""
             # * "value" holds the const str value     (optional)
-            #     may be empty, defaults to feat_arg_name
-            #     (case preserved IFF feat_arg_name originates
-            #     from feat_node["name"]
+            #     may be empty, defaults to feat_longopt
             #
             if "value" in feat_node:
                 feat_action["const"] = feat_pseudo_pop("value")
             else:
-                feat_action["const"] = feat_arg_name
+                feat_action["const"] = feat_longopt
             # --
 
             feat_action["action"] = "store_const"
