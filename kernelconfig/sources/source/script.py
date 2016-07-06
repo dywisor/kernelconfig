@@ -177,6 +177,13 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
                 "{param_arch}",       # 2: target arch
                 "{kmaj}.{kpatch}"     # 3: kernel version $KMAJ.$KPATCH
             ]
+
+            # all parameters (except for target arch, see above)
+            base_cmdv.extend((
+                "{{param_{!s}}}".format(param)
+                for param in sorted(self.arg_parser.source_params)
+                if param != "arch"
+            ))
         # --
 
         self.init_base_cmdv_scan_auto_vars(base_cmdv)
