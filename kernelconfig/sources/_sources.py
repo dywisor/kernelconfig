@@ -3,6 +3,7 @@
 
 import os.path
 import shlex
+import sys
 
 from .abc import sources as _sources_abc
 from .abc import exc
@@ -27,6 +28,30 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
     def iter_available_sources_info(self):
         # fs lookup is done sources env, dispatch
         return self.senv.iter_available_sources_info()
+
+    def load_available_sources(self):
+        sources_loaded = []
+        sources_failed = {}
+
+        for source_name, source_info in self.iter_available_sources_info():
+            #  source_info discarded
+            try:
+                self.get_source(source_name)
+
+            except exc.ConfigurationSourceNotFound:
+                # false positive
+                pass
+
+            except exc.ConfigurationSourceError:
+                assert source_name not in sources_failed
+                sources_failed[source_name] = sys.exc_info()
+
+            else:
+                sources_loaded.append(source_name)
+        # --
+
+        return (sources_loaded, sources_failed)
+    # --- end of load_available_sources (...) ---
 
     def _create_curated_source_def_by_name_from_files(
         self, source_name, source_def_file, source_script_file

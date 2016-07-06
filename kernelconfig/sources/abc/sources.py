@@ -55,6 +55,30 @@ class AbstractConfigurationSources(
     # --- end of create_source_by_name (...) ---
 
     @abc.abstractmethod
+    def load_available_sources(self):
+        """
+        Tries to construct and add all available configuration sources.
+
+        THe names of sources that have been loaded are returned as a list,
+        while sources that could not be constructed are returned as
+        a name => exc_info dict.
+
+        Whether this method replaces existing configuration sources
+        with new objects is up to the actual implementation.
+
+        @return:  2-tuple (
+                     list of loaded sources' names,
+                     dict of failed sources' names
+                  )
+        @return:  2-tuple (
+                     C{list} of C{str},
+                     C{dict} :: C{str} => None | exc_info 3-tuple
+                  )
+        """
+        raise NotImplementedError()
+    # --- end of load_available_sources (...) ---
+
+    @abc.abstractmethod
     def iter_available_sources_info(self):
         """
         Generator that yields information about sources
