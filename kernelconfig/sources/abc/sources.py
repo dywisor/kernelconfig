@@ -262,7 +262,7 @@ class AbstractConfigurationSources(
         @return:  configuration source object
         @rtype:   subclass of L{AbstractConfigurationSource}
         """
-        source_key = self.get_source_key(source_name)
+        source_key = self.get_source_name_key(source_name)
         return self._sources[source_key]
     # --- end of get_existing_source (...) ---
 
@@ -288,7 +288,7 @@ class AbstractConfigurationSources(
         @return:  configuration source object
         @rtype:   subclass of L{AbstractConfigurationSource}
         """
-        source_key = self.get_source_key(source_name)
+        source_key = self.get_source_name_key(source_name)
         try:
             return self._sources[source_key]
         except KeyError:
