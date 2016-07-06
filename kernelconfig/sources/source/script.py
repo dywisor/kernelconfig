@@ -29,7 +29,6 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         self.base_cmdv = None
         self.script_file = None
         self.script_data = None
-        self.arg_parser = None
 
     def check_source_valid(self):
         if self.script_file is None:
