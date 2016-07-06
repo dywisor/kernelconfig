@@ -1,6 +1,8 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import collections
+
 from ..abc import loggable
 from ..util import fspath
 from ..util import tmpdir
@@ -9,6 +11,11 @@ from ._util import _format
 
 
 __all__ = ["ConfigurationSourcesEnv"]
+
+
+SourceDefFiles = collections.namedtuple(
+    "SourceDefFiles", "def_file script_file"
+)
 
 
 class ConfigurationSourcesEnv(loggable.AbstractLoggable):
@@ -36,12 +43,16 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
     def get_config_file_path(self, name):
         return self.get_file_path("files", name)
 
-    def get_source_definition_file(self, name):
-        # FIXME: file name / suffix
-        return self.get_file_path(name + ".def")
+    def get_source_def_files(self, name):
+        sname = name.lower()
+        if sname.endswith(".def"):
+            raise ValueError(name)
 
-    def get_source_script_file(self, name):
-        return self.get_file_path(name)
+        return SourceDefFiles(
+            self.get_file_path(sname + ".def"),
+            self.get_file_path(sname)
+        )
+    # --- end of get_source_def_files (...) ---
 
     def get_tmpdir(self):
         tmpdir_obj = self._tmpdir
