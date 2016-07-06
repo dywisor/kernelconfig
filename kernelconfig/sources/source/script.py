@@ -174,7 +174,7 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
             base_cmdv = [
                 "{script_file}",      # 0: the script file to be executed
                 "{outconfig}",        # 1: the output config file
-                "{arch}",             # 2: target arch
+                "{param_arch}",       # 2: target arch
                 "{kmaj}.{kpatch}"     # 3: kernel version $KMAJ.$KPATCH
             ]
         # --
