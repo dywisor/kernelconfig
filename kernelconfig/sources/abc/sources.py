@@ -54,6 +54,34 @@ class AbstractConfigurationSources(
         raise NotImplementedError()
     # --- end of create_source_by_name (...) ---
 
+    @abc.abstractmethod
+    def iter_available_sources_info(self):
+        """
+        Generator that yields information about sources
+        that could be constructed with create_source_by_name().
+
+        Note that there is no guarantee that the sources
+        can actually be constructed.
+
+        Derived classes must implement this method.
+        It should not create ConfigurationSource objects
+        (that is a task for create_source_by_name()),
+        but instead provide basic information about available sources
+        such as name and origin (e.g. definition file path).
+
+        Source names must be unique.
+
+        @return:  2-tuples (source name, source info)
+        @rtype:   2-tuples (C{str}, C{object})
+        """
+        raise NotImplementedError()
+    # --- end of iter_available_sources (...) ---
+
+    def get_available_sources_info(self):
+        """Returns a dict with information about available sources."""
+        return dict(self.iter_available_sources_info())
+    # --- end of get_available_sources_info (...) ---
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._sources = {}

@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import collections
+import re
+import stat
 
 from ..abc import loggable
 from ..util import fspath
@@ -19,6 +21,17 @@ SourceDefFiles = collections.namedtuple(
 
 
 class ConfigurationSourcesEnv(loggable.AbstractLoggable):
+
+    SOURCE_DEF_FILE_SUFFIX = ".def"
+    SOURCE_DEF_FILE_NAME = re.compile(
+        (
+            r'^(?:'
+            r'(?P<name>(?P<dirname>.*[/])?(?P<basename>[^/]+))'
+            r'(?P<suffix>{suffix})'
+            r')$'
+        ).format(suffix=SOURCE_DEF_FILE_SUFFIX)
+    )
+
     def __init__(self, *, logger, install_info, source_info):
         super().__init__(logger=logger)
         self.install_info = install_info
@@ -45,14 +58,73 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
 
     def get_source_def_files(self, name):
         sname = name.lower()
-        if sname.endswith(".def"):
+        if sname.endswith(self.SOURCE_DEF_FILE_SUFFIX):
             raise ValueError(name)
 
+        files_dir = self.get_files_dir()
         return SourceDefFiles(
-            self.get_file_path(sname + ".def"),
-            self.get_file_path(sname)
+            files_dir.get_file_path(sname + self.SOURCE_DEF_FILE_SUFFIX),
+            files_dir.get_file_path(sname)
         )
     # --- end of get_source_def_files (...) ---
+
+    def iter_available_sources_info(self, refresh=False):
+        null_entry = (None, None)
+
+        def entry_is_reg_file(entry, *, _isreg=stat.S_ISREG):
+            return entry[1] and _isreg(entry[1].st_mode)
+        # ---
+
+        # entries :: name => entry object
+        entries = self.get_files_dir().scandir_flatten(refresh=refresh)
+
+        keys_to_del = set()
+        for match in filter(
+            None,
+            map(self.SOURCE_DEF_FILE_NAME.match, entries)
+        ):
+            def_entry = entries[match.string]
+
+            # one way or another, this .def entry about to be processed
+            keys_to_del.add(match.string)
+
+            # if stat info available and is a file
+            if entry_is_reg_file(def_entry):
+                # then entry is a source def file
+
+                name = match.group("name")
+
+                # is there also a script for the .def entry?
+                if name in entries:
+                    # then it is processed here
+                    #  note that if def_entry is not a file (e.g. a dir),
+                    #  "name" can still be a def-less script source
+                    script_entry = entries[name]
+                    keys_to_del.add(name)
+                else:
+                    script_entry = null_entry
+
+                yield (
+                    name,
+                    SourceDefFiles(
+                        def_entry[0],
+                        (
+                            script_entry[0] if entry_is_reg_file(script_entry)
+                            else None
+                        )
+                    )
+                )
+            # -- end if
+        # -- end for
+
+        for key in keys_to_del:
+            del entries[key]
+
+        for name, script_entry in entries.items():
+            if entry_is_reg_file(script_entry):
+                # could check for executability here
+                yield (name, SourceDefFiles(None, script_entry[0]))
+    # --- end of iter_available_sources_info (...) ---
 
     def get_tmpdir(self):
         tmpdir_obj = self._tmpdir

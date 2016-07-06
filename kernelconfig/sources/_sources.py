@@ -24,6 +24,10 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
             source_info=source_info
         )
 
+    def iter_available_sources_info(self):
+        # fs lookup is done sources env, dispatch
+        return self.senv.iter_available_sources_info()
+
     def _create_curated_source_def_by_name_from_files(
         self, source_name, source_def_file, source_script_file
     ):
