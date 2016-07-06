@@ -224,9 +224,7 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
                 #
                 # (a) is source_def[0] the name of a curated source?
                 #
-                # (b) is source_def[0] the name of a defconfig target?
-                #
-                # (c) file path of any type?
+                # (b) file path of any type?
                 #
                 # TODO
                 raise NotImplementedError("guess typeof", source_def)
