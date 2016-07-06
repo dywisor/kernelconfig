@@ -31,14 +31,14 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         self.script_data = None
         self.arg_parser = None
 
-    def sanity_check(self):
+    def check_source_valid(self):
         if self.script_file is None:
             if self.script_data is None:
                 raise exc.ConfigurationSourceInvalidError(
                     "script file is not set, and data neither"
                 )
         # --
-    # --- end of sanity_check (...) ---
+    # --- end of check_source_valid (...) ---
 
     def write_script_file(self, formatted_data):
         script_filepath = None
@@ -133,7 +133,6 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
             base_cmdv, str_formatter=str_formatter
         )
 
-        self.sanity_check()
         return []
     # --- end of init_from_settings (...) ---
 
@@ -160,7 +159,6 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         # --
 
         self.init_base_cmdv_scan_auto_vars(base_cmdv)
-        self.sanity_check()
     # --- end of init_from_def (...) ---
 
     def create_cmdv(self, arg_config):
