@@ -96,24 +96,40 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         self.base_cmdv = base_cmdv
     # --- end of init_base_cmdv_scan_auto_vars (...) ---
 
+    def get_subtype_base_cmdv(self, subtype):
+        if not subtype:
+            return (False, [self.SCRIPT_FILE_FMT_VAR_TEMPLATE])
+
+        elif subtype in {"sh", }:
+            return (True, [subtype, self.SCRIPT_FILE_FMT_VAR_TEMPLATE])
+
+        else:
+            raise exc.ConfigurationSourceInvalidError(
+                "unknown subtype {!r}".format(subtype)
+            )
+    # --- end of get_subtype_base_cmdv (...) ---
+
     def init_from_settings(self, subtype, args, data):
         super().init_from_settings(subtype, args, data)
 
         script_file_fmt_varname = self.SCRIPT_FILE_FMT_VARNAME
-        script_file_fmt_var_template = self.SCRIPT_FILE_FMT_VAR_TEMPLATE
 
         if not data:
             raise exc.ConfigurationSourceInvalidError("empty data")
         # --
 
         base_cmdv = None
-        if subtype == "sh":
-            self.interpreter = True
-            base_cmdv = [subtype, script_file_fmt_var_template]
-        else:
-            # FIXME: get interpreter from args
-            raise exc.ConfigurationSourceInvalidError("empty/unknown subtype")
+        if not subtype:
+            if args:
+                subtype = args[0]
+                args = args[1:]
+
+            if not subtype:
+                raise exc.ConfigurationSourceInvalidError("empty subtype")
         # --
+
+        ipret, base_cmdv = self.get_subtype_base_cmdv(subtype)
+        self.interpreter = ipret
 
         if args:
             base_cmdv.extend(args)
@@ -160,23 +176,31 @@ class ScriptConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     def init_from_def(self, source_def):
         super().init_from_def(source_def)
 
+        source_type = source_def.get_source_type()
+
         if "path" in source_def:
             self.script_file = source_def["path"]
 
         source_def_cmdv = source_def.get("command")  # ref-copy!
         if source_def_cmdv:
+            # a command has been specified, ignore subtype
+
             # this is not really required since no other object uses the
             # source_def, but stay safe and copy source_def_cmdv
             base_cmdv = list(source_def_cmdv)
 
         else:
             # use the calling convention of the original project
-            base_cmdv = [
-                "{script_file}",      # 0: the script file to be executed
+            ipret, base_cmdv = self.get_subtype_base_cmdv(
+                source_type.source_subtype
+            )
+            self.interpreter = ipret
+
+            base_cmdv.extend([
                 "{outconfig}",        # 1: the output config file
                 "{param_arch}",       # 2: target arch
                 "{kmaj}.{kpatch}"     # 3: kernel version $KMAJ.$KPATCH
-            ]
+            ])
 
             # all parameters (except for target arch, see above)
             base_cmdv.extend((
