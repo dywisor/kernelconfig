@@ -334,6 +334,22 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         return self.scandir_ref(refresh=refresh).copy()
     # --- end of scandir (...) ---
 
+    def scandir_flatten(self, refresh=False):
+        """
+        Like scandir_ref(), but the values of the returned dict
+        are 2-tuples (path, stat info) of the 'most relevant' path.
+
+        The returned dict is not shared with other instances
+        and can be modified freely.
+        """
+        entries = self.scandir_ref(refresh=refresh)
+        return {
+            name: next(entry.iter_paths())
+            for name, entry in entries.items()
+            if entry
+        }
+    # --- end of scandir_flatten (...) ---
+
     def _glob_from_scandir_cache(self, norm_filename, glob_kw):
         """Tries to glob-expand norm_filename using the scandir cache.
 
