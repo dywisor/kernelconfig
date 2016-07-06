@@ -44,73 +44,58 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             "%s (default: %s)" % (h, ("%(default)s" if d is None else d))
         )
 
+        def add_script_mode_args():
+            script_modes = [
+                (
+                    "generate-config", None,
+                    "generate a .config file (default mode)"
+                ),
+                (
+                    "list-sources", None,
+                    "list available curated sources"
+                ),
+                (
+                    "help-sources", None,
+                    "list available curated sources and their usage"
+                ),
+            ]
+
+            script_mode_group = parser.add_argument_group(title="script mode")
+            script_mode_mut_group = (
+                script_mode_group.add_mutually_exclusive_group()
+            )
+
+            script_mode_mut_group.add_argument(
+                "--script-mode",
+                dest="script_mode", default=None,
+                choices=[xv[0] for xv in script_modes],
+                help="set script mode"
+            )
+
+            for mode_name, mode_opts, mode_help in script_modes:
+                mode_args = mode_opts or ["--{}".format(mode_name)]
+                mode_kwargs = {
+                    "dest": "script_mode",
+                    "default": argparse.SUPPRESS,
+                    "action": "store_const",
+                    "const": (mode_name, None),
+                    "help": mode_help
+                }
+                script_mode_mut_group.add_argument(*mode_args, **mode_kwargs)
+            # --
+
+            script_mode_mut_group.add_argument(
+                "--help-source", metavar="<name>",
+                dest="script_mode", default=argparse.SUPPRESS,
+                type=lambda w: ("help-source", arg_types.arg_nonempty(w)),
+                help="print help of the given curated source"
+            )
+        # ---
+
         kernelconfig.util.argutil.UsageAction.attach_to(parser)
 
         parser.add_argument(
             '-V', '--print-version', action='version', version=PRJ_VERSION
-        )
-
-        # the following args are mostly consistent with those
-        # of the original project:
-        parser.add_argument(
-            "-a", "--arch", metavar="<arch>",
-            default=argparse.SUPPRESS,
-            help=with_default(
-                "configuration target architecture", "\"uname -m\""
-            )
-        )
-
-        parser.add_argument(
-            "-k", "--kernel", dest="srctree", metavar="<srctree>",
-            default=argparse.SUPPRESS,
-            type=arg_types.arg_existing_dir,
-            help=with_default(
-                "path to the unpacked kernel sources directory", "\".\""
-            )
-        )
-
-        parser.add_argument(
-            "-s", "--settings", dest="settings_file", metavar="<file>",
-            default=argparse.SUPPRESS,
-            type=arg_types.arg_existing_file_special_relpath,
-            help=with_default(
-                "settings file", "\"default\""
-                # explain relpath lookup
-            )
-        )
-
-        # --
-
-        # "--config" is an option and not a positional arg
-        #
-        # In future, with "curated sources" and a settings file,
-        # it will be unlikely to specify the input config via --config.
-        #
-        parser.add_argument(
-            "--config", dest="inconfig", metavar="<file>",
-            type=arg_types.arg_existing_file,
-            default=argparse.SUPPRESS,
-            help=with_default(
-                "input kernel configuration file", "\"<srctree>/.config\""
-            )
-        )
-
-        parser.add_argument(
-            "-I", dest="featureset_files", metavar="<file>",
-            type=arg_types.arg_existing_file,
-            default=[], action="append",
-            help=with_default(
-                "config-modifying \"macros\" files", "none"
-            )
-        )
-
-        parser.add_argument(
-            "-O", "--outconfig", metavar="<file>",
-            type=arg_types.arg_output_file,
-            default=argparse.SUPPRESS,
-            help=with_default(
-                "output kernel configuration file", "\"<srctree>/.config\""
-            )
         )
 
         parser.add_argument(
@@ -121,6 +106,80 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             "-v", "--verbose", default=0, action="count",
             help="be more verbose (can specified more than once)"
         )
+        # -- end basic args
+
+        common_arg_group = parser.add_argument_group(
+            title="common optional arguments"
+        )
+
+        # the following args are mostly consistent with those
+        # of the original project:
+        common_arg_group.add_argument(
+            "-a", "--arch", metavar="<arch>",
+            default=argparse.SUPPRESS,
+            help=with_default(
+                "configuration target architecture", "\"uname -m\""
+            )
+        )
+
+        common_arg_group.add_argument(
+            "-k", "--kernel", dest="srctree", metavar="<srctree>",
+            default=argparse.SUPPRESS,
+            type=arg_types.arg_existing_dir,
+            help=with_default(
+                "path to the unpacked kernel sources directory", "\".\""
+            )
+        )
+        # -- end common_arg_group
+
+        genconfig_arg_group = parser.add_argument_group(
+            title="optional arguments for generate-config"
+        )
+
+        genconfig_arg_group.add_argument(
+            "-s", "--settings", dest="settings_file", metavar="<file>",
+            default=argparse.SUPPRESS,
+            type=arg_types.arg_existing_file_special_relpath,
+            help=with_default(
+                "settings file", "\"default\""
+                # explain relpath lookup
+            )
+        )
+
+        # "--config" is an option and not a positional arg
+        #
+        # In future, with "curated sources" and a settings file,
+        # it will be unlikely to specify the input config via --config.
+        #
+        genconfig_arg_group.add_argument(
+            "--config", dest="inconfig", metavar="<file>",
+            type=arg_types.arg_existing_file,
+            default=argparse.SUPPRESS,
+            help=with_default(
+                "input kernel configuration file", "\"<srctree>/.config\""
+            )
+        )
+
+        genconfig_arg_group.add_argument(
+            "-I", dest="featureset_files", metavar="<file>",
+            type=arg_types.arg_existing_file,
+            default=[], action="append",
+            help=with_default(
+                "config-modifying \"macros\" files", "none"
+            )
+        )
+
+        genconfig_arg_group.add_argument(
+            "-O", "--outconfig", metavar="<file>",
+            type=arg_types.arg_output_file,
+            default=argparse.SUPPRESS,
+            help=with_default(
+                "output kernel configuration file", "\"<srctree>/.config\""
+            )
+        )
+        # -- end genconfig_arg_group
+
+        add_script_mode_args()
     # --- end of _setup_arg_parser_args (...) ---
 
     def init_arg_parser(self):
@@ -231,7 +290,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         config.read_config_file(input_config_file)
     # ---
 
-    def do_main(self, arg_config):
+    def do_main_genconfig(self, arg_config):
         self.do_main_setup_logging(arg_config)
         self.do_main_load_settings(arg_config)
         self.do_main_setup_source_info(arg_config)
@@ -285,6 +344,16 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         # * write output config
         config.write_config_file(arg_config["outconfig"])
 
+    # --- end of do_main_genconfig (...) ---
+
+    def do_main(self, arg_config):
+        script_mode = arg_config["script_mode"]
+
+        if not script_mode or script_mode[0] == "generate-config":
+            return self.do_main_genconfig(arg_config)
+
+        else:
+            raise NotImplementedError("script mode", script_mode)
     # --- end of do_main (...) ---
 
     def run(self, argv):
