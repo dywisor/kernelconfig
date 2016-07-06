@@ -130,12 +130,10 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
     def create_source_by_name(self, source_name):
         self.logger.info("Trying to locate curated source %s", source_name)
 
-        source_def_file = self.senv.get_source_definition_file(source_name)
-        source_script_file = self.senv.get_source_script_file(source_name)
-
-        if source_def_file or source_script_file:
+        sfiles = self.senv.get_source_def_files(source_name)
+        if any(sfiles):
             return self._create_source_by_name_from_files(
-                source_name, source_def_file, source_script_file
+                source_name, sfiles.def_file, sfiles.script_file
             )
         else:
             self.logger.warning(
