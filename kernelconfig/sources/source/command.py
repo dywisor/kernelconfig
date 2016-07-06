@@ -3,7 +3,6 @@
 
 from . import _sourcebase
 from ..abc import exc
-from .._util import _argconfig
 
 __all__ = ["CommandConfigurationSource"]
 
@@ -13,6 +12,15 @@ class CommandConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.cmdv = None
+
+    def check_source_valid(self):
+        if not self.cmdv:
+            raise exc.ConfigurationSourceInvalidError("empty command")
+
+    def _set_cmdv(self, cmdv):
+        self.cmdv = list(cmdv)
+        self.scan_auto_vars_must_exist(cmdv)
+    # --- end of _set_cmdv (...) ---
 
     def init_from_settings(self, subtype, args, data):
         if data:
@@ -27,14 +35,19 @@ class CommandConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
             raise exc.ConfigurationSourceInvalidError("empty command")
         # --
 
-        self.cmdv = list(args)
-        self.scan_auto_vars_must_exist(self.cmdv)
+        self._set_cmdv(args)
+        return []
     # --- end of init_from_settings (...) ---
 
-    def create_cmdv(self, arg_config):
-        if not self.cmdv:
-            raise exc.ConfigurationSourceInvalidError("empty command")
+    def init_from_def(self, source_def):
+        super().init_from_def(source_def)
 
+        cmdv = source_def.get("command")
+        if cmdv:
+            self._set_cmdv(cmdv)
+    # --- end of init_from_def (...) ---
+
+    def create_cmdv(self, arg_config):
         cmdv = []
         cmdv.extend(self.cmdv)
 
@@ -45,11 +58,7 @@ class CommandConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     # --- end of create_cmdv (...) ---
 
     def do_parse_source_argv(self, argv):
-        arg_config = _argconfig.ConfigurationSourceArgConfig()
-        if argv:
-            arg_config.argv.extend(argv)
-
-        return arg_config
+        return super().do_parse_source_argv(argv)
     # --- end of do_parse_source_argv (...) ---
 
 # --- end of CommandConfigurationSource ---
