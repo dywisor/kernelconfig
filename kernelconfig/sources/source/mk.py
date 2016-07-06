@@ -15,13 +15,18 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.base_argv = []
+        self.base_argv = None
         self.make_target = None
 
     def check_source_valid(self):
         if not self.make_target:
             raise exc.ConfigurationSourceInvalidError("no make target")
     # --- end of check_source_valid (...) ---
+
+    def _set_base_argv(self, base_argv):
+        self.base_argv = list(base_argv) if base_argv else []
+        self.scan_auto_vars_must_exist(self.base_argv)
+    # ---
 
     def _set_make_target(self, subtype, name):
         make_target = None
@@ -50,6 +55,8 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         # else keep make_target==None
 
         self.make_target = make_target
+        if make_target:
+            self.scan_auto_vars_must_exist([make_target])
     # --- end of _set_make_target (...) ---
 
     def init_from_settings(self, subtype, args, data):
@@ -75,7 +82,7 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
             args_rem = None
         # --
 
-        self.base_argv.extend(args_rem)
+        self._set_base_argv(args_rem)
         return []
     # --- end of init_from_settings (...) ---
 
@@ -87,6 +94,7 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         self._set_make_target(
             source_type.source_subtype, source_def.get("target")
         )
+        self._set_base_argv(None)
     # --- end of init_from_def (...) ---
 
     def add_auto_var(self, varname, varkey):
@@ -125,13 +133,16 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
             cmdv.extend(gen_make_var_args(mvar_items))
         # --
 
+        str_formatter = self.get_dynamic_str_formatter(arg_config)
+
         # make -C <srctree>
         cmdv = ["make", "-C", self.senv.source_info.get_filepath()]
         #  + base argv
-        cmdv.extend(self.base_argv)
+        if self.base_argv:
+            cmdv.extend(str_formatter.format_list(self.base_argv))
 
         #  + make target
-        cmdv.append(self.make_target)
+        cmdv.append(str_formatter.format(self.make_target))
 
         #  + ARCH=...,
         add_make_vars(self.senv.source_info.iter_make_vars())
