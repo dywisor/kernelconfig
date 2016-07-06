@@ -4,6 +4,8 @@
 import argparse
 import logging
 import os.path
+import sys
+
 
 __all__ = ["KernelConfigMainScript"]
 
@@ -372,14 +374,90 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         if not sources_info:
             return False
 
+        outstream_write = sys.stdout.write
         for name in sorted(sources_info):
-            print(name)
+            outstream_write(name)
+            outstream_write("\n")
             # sfile = any_of(sources_info[name])
             # if sfile:
-            #     print("  ({})".format(sfile))
+            #     outstream_write("  ({})\n".format(sfile))
         # --
 
     # --- end of do_main_script_list_sources (...) ---
+
+    def do_main_script_help_sources(self, arg_config):
+        self.do_main_setup_logging(arg_config)
+        self.do_main_setup_source_info(arg_config)
+
+        conf_sources = self.get_conf_sources()
+        conf_sources.load_available_sources()   # retval ignored
+
+        if not conf_sources:
+            # no sources
+            return False
+
+        outstream_write = sys.stdout.write
+
+        for k, conf_source in enumerate(conf_sources.iter_sources()):
+            if k:
+                outstream_write("\n\n")
+
+            # TODO: add a describe() method to conf_source objects
+            #       maybe use textwrap.TextWrapper()
+            outstream_write("{}:\n".format(conf_source.name))
+
+            if conf_source.arg_parser is None:
+                outstream_write("  No help available.\n")
+
+            else:
+                arg_help_str = conf_source.arg_parser.format_help()
+
+                # reindent
+                help_msg = "\n".join((
+                    (("  " + l) if l else l)
+                    for l in arg_help_str.splitlines()
+                ))
+
+                outstream_write(help_msg)
+                outstream_write("\n")
+            # --
+        # -- end for
+    # --- end of do_main_script_help_sources (...) ---
+
+    def do_main_script_help_source(self, arg_config, source_name):
+        self.do_main_setup_logging(arg_config)
+        self.do_main_setup_source_info(arg_config)
+
+        outstream_write = sys.stdout.write
+
+        conf_sources = self.get_conf_sources()
+        conf_source, conf_source_exc = conf_sources.load_source(source_name)
+
+        if conf_source_exc:
+            outstream_write(
+                "{}: failed to load ({!s})\n".format(
+                    source_name,
+                    getattr(conf_source_exc[0], "__name__", conf_source_exc[0])
+                )
+            )
+            return False
+
+        elif conf_source is None:
+            outstream_write("{}: not found\n".format(source_name))
+            return False
+
+        else:
+            # TODO: describe(), see do_main_script_help_sources()
+
+            if conf_source.arg_parser is None:
+                outstream_write("{}: no help available.\n".format(source_name))
+
+            else:
+                arg_help_str = conf_source.arg_parser.format_help()
+                outstream_write(arg_help_str)
+                outstream_write("\n")
+        # --
+    # --- end of do_main_script_help_source (...) ---
 
     def do_main(self, arg_config):
         script_mode = arg_config["script_mode"]
@@ -389,6 +467,12 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         elif script_mode[0] == "list-sources":
             return self.do_main_script_list_sources(arg_config)
+
+        elif script_mode[0] == "help-sources":
+            return self.do_main_script_help_sources(arg_config)
+
+        elif script_mode[0] == "help-source":
+            return self.do_main_script_help_source(arg_config, script_mode[1])
 
         else:
             raise NotImplementedError("script mode", script_mode)
