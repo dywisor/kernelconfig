@@ -94,7 +94,7 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         self._set_make_target(
             source_type.source_subtype, source_def.get("target")
         )
-        self._set_base_argv(None)
+        self._set_base_argv(source_def.get("command"))
     # --- end of init_from_def (...) ---
 
     def add_auto_var(self, varname, varkey):
