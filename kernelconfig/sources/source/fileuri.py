@@ -6,8 +6,7 @@ import urllib.parse
 
 from . import _sourcebase
 from ..abc import exc
-
-from ...util import fileget
+from .._util import _fileget
 
 
 __all__ = ["FileConfigurationSource"]
@@ -165,7 +164,7 @@ class FileConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
 
     def do_get_conf_basis(self, arg_config):
         if self.file_uri_scheme:
-            fileget.get_file_write_to_file(
+            _fileget.get_file_write_to_file(
                 arg_config.get_outconfig_path(),
                 arg_config.file_uri, logger=self.logger
             )
