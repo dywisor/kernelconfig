@@ -1,6 +1,10 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+
+import sys
+
+
 CONFIG_SOURCE_EXCEPTIONS = [
     "ConfigurationSourceError",
     "ConfigurationSourceInvalidError",
@@ -77,11 +81,23 @@ class ConfigurationSourceArchNotSupported(ConfigurationSourceInitError):
 
         super().__init__(message)
     # ---
-#
+# ---
 
 
 class ConfigurationSourceRunError(ConfigurationSourceError):
     pass
+
+
+class ConfigurationSourceFileGetError(ConfigurationSourceRunError):
+
+    def __init__(self, file_uri, exc_info=None):
+        self.orig_exc = sys.exc_info() if exc_info is None else exc_info
+        self.file_uri = file_uri
+
+        message = "failed to get {file_uri!r}".format(file_uri=self.file_uri)
+        super().__init__(message)
+    # ---
+# ---
 
 
 class ConfigurationSourceExecError(ConfigurationSourceRunError):
