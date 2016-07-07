@@ -177,10 +177,26 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         # FIXME: temporary helper method
         #         replace w/ plain str ret or ConfigurationBasis obj
         if os.path.isfile(filepath):
-            return filepath
+            return [filepath]
         else:
             raise exc.ConfigurationSourceNotFound(filepath)
     # ---
+
+    def create_conf_basis_for_files(self, filepaths):
+        retv = []
+        miss = []
+        for filepath in filepaths:
+            if os.path.isfile(filepath):
+                retv.append(filepath)
+            else:
+                miss.append(filepath)
+        # --
+
+        if miss:
+            raise exc.ConfigurationSourceNotFound(miss)
+
+        return retv
+    # --- end of create_conf_basis_for_files (...) ---
 
     def get_new_str_formatter(self):
         """Returns a copy of the shared 'static' string formatter.
@@ -591,11 +607,8 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         if not outconfig_v:
             raise NotImplementedError("no outconfig")
 
-        elif len(outconfig_v) == 1:
-            return self.create_conf_basis_for_file(outconfig_v[0])
-
         else:
-            raise NotImplementedError("many outconfigs")
+            return self.create_conf_basis_for_files(outconfig_v)
     # ---
 
     def get_dynamic_str_formatter(self, arg_config):
