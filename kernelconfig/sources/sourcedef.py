@@ -286,7 +286,7 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
 
         arch_value = (
             (self.arch.get("value") if self.arch else None)
-            or (self.senv.get_fmt_vars().get("arch"))
+            or (self.senv.get_format_vars().get("arch"))
         )
         if arch_value:
             parser.set_defaults(arch=arch_value)
