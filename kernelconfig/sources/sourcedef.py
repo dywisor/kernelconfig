@@ -26,7 +26,12 @@ class CuratedSourceArgFeatureNotSupportedAction(argparse.Action):
     """
 
     def __call__(self, parser, namespace, values, option_string=None):
-        raise exc.ConfigurationSourceFeatureNotSupported(self.dest)
+        if option_string:
+            err_msg = "{} ({})".format(self.dest, option_string)
+        else:
+            err_msg = self.dest
+
+        raise exc.ConfigurationSourceFeatureNotSupported(err_msg)
 
 # ---
 
@@ -55,7 +60,7 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
         # keep track of all arch/feature parameters
         #  there are ways to re-use what argparse.ArgumentParser already has,
         #  but this is more explicit and just works
-        self.source_params = set()
+        self.source_params = {}
 
         super().__init__(
             prog=source_name,
@@ -65,7 +70,12 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
         )
 
     def register_param(self, name):
-        self.source_params.add(name)
+        if name in self.source_params:
+            raise KeyError("duplicate entry for {}".format(name))
+
+        # empty group
+        self.source_params[name] = None
+    # ---
 
     def add_feature(self, feat_name, feat_node, is_active):
         """
@@ -117,7 +127,12 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
 
         feat_opts.add(feat_longopt)
 
-        feat_dest = "_".join(feat_key)
+        feat_dest = feat_pseudo_pop("dest")
+        if feat_dest:
+            feat_dest = feat_dest.lower()
+        else:
+            feat_dest = "_".join(feat_key).lower()
+
         feat_kwargs["dest"] = feat_dest
         feat_kwargs["help"] = feat_pseudo_pop("description") or None
 
@@ -199,10 +214,35 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
         # --
 
         feat_args = sorted(feat_opts, key=len)
-        arg = self.add_argument(*feat_args, **feat_kwargs)
-        self.register_param(feat_dest)
-        return arg
+        return self._add_feauture_argument(
+            feat_name, feat_dest, feat_args, feat_kwargs
+        )
     # --- end of add_feature_argument (...) ---
+
+    def _add_feauture_argument(
+        self, feat_name, feat_dest, feat_args, feat_kwargs
+    ):
+        # TODO: check for conflicting defaults in group
+
+        if feat_dest in self.source_params:
+            feat_entry = self.source_params[feat_dest]
+            if not feat_entry:
+                raise KeyError("duplicate entry for {}".format(feat_dest))
+
+            return feat_entry[-1].add_argument(*feat_args, **feat_kwargs)
+        # --
+
+        feat_grp = self.add_argument_group(
+            title="{} options".format(feat_dest)
+        )
+
+        feat_mut_grp = feat_grp.add_mutually_exclusive_group()
+        arg = feat_mut_grp.add_argument(*feat_args, **feat_kwargs)
+
+        self.source_params[feat_dest] = (feat_grp, feat_mut_grp)
+        return arg
+    # --- end of _add_feauture_argument (...) ---
+
 
 # --- end of CuratedSourceArgParser ---
 
