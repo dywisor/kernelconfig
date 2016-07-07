@@ -20,8 +20,9 @@ class ConfigurationSourceTypeIdentifier(enum.IntEnum):
         s_command,
         s_make,
         s_script,
+        s_pym,
         s_source
-    ) = range(6)
+    ) = range(7)
 
     def get_name(self):
         return self.name[2:]
@@ -130,6 +131,14 @@ class ConfigurationSourceTypes(object):
             source_subtype=True,
             source_cls=_source.ScriptConfigurationSource,
             aliases=[]
+        )
+
+        obj.add_source_type(
+            "pym",
+            source_type=ConfigurationSourceTypeIdentifier.s_pym,
+            source_subtype=None,
+            source_cls=_source.PymConfigurationSource,
+            aliases=["pymod"]
         )
 
         obj.add_source_type(
