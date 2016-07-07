@@ -279,26 +279,34 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
     def do_main_load_input_config(self, arg_config, config):
         if arg_config.get("inconfig"):
-            input_config_file = arg_config["inconfig"]
+            input_config_files = [arg_config["inconfig"]]
 
         else:
             conf_sources = self.get_conf_sources()
 
-            input_config_file = (
+            input_config_files = (
                 conf_sources.get_configuration_basis_from_settings(
                     self.settings
                 )
             )
+            assert isinstance(input_config_files, list)
         # --
 
-        if not input_config_file:
+        if not input_config_files:
             self.arg_parser.error("No input config!")
-        elif not os.path.isfile(input_config_file):
-            self.arg_parser.error(
-                "input .config does not exist: {!r}".format(input_config_file)
-            )
-        # --
-        config.read_config_file(input_config_file)
+
+        else:
+            if __debug__:
+                missing = [
+                    f for f in input_config_files if not os.path.isfile(f)
+                ]
+                if missing:
+                    self.arg_parser.error(
+                        "input .config does not exist: {!r}".format(missing)
+                    )
+            # --
+
+            config.read_config_files(*input_config_files)
     # ---
 
     def do_main_script_genconfig(self, arg_config):
