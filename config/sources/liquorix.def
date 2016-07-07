@@ -1,0 +1,29 @@
+[Source]
+Name        = Liquorix
+
+Arch        = x86_64 x86
+Features    = pae
+
+Type        = file
+Path        = http://liquorix.net/sources/{kver.version}.{kver.patchlevel}/config.{param_arch}{param_pae}
+
+Description = 
+  Liquorix is a distro kernel replacement built using the best configuration
+  and kernel sources for desktop, multimedia, and gaming workloads.
+
+
+[Arch:x86_64]
+Value = amd64
+
+
+[Arch:x86]
+Value = i386
+
+
+[Feature:PAE]
+Arch        = x86
+Value       = -pae
+
+Description =
+  enable Physical Address Extension on processors supporting it
+  to extend physical address space 4GB
