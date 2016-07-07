@@ -299,14 +299,14 @@ class _Config(loggable.AbstractLoggable, collections.abc.Mapping):
                     # * if the option is not set, ignore it
                     # * if the option is set, create a new symbol
                     #   and log about it
-                    self.logger.warning("Read unknown symbol %s", symbol_name)
+                    self.logger.debug("Read unknown symbol %s", symbol_name)
                     if value is None:
-                        self.logger.info(
+                        self.logger.debug(
                             "Cannot infer type of %s (not set), ignoring",
                             symbol_name
                         )
                     else:
-                        self.logger.info(
+                        self.logger.debug(
                             "Adding unknown symbol %s as new %s symbol",
                             symbol_name, value[0]
                         )
