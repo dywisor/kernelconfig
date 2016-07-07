@@ -1,0 +1,207 @@
+# python module for the ubuntu configuration source
+# -*- coding: utf-8 -*-
+#
+#  This module started as a copy of the "ubuntu" sources script from
+#  the original project
+#  https://github.com/Calchan/kernelconfig/blob/21022840c613919ad3a5fa0e05b6b709710834f2/sources/ubuntu,
+#  but has some differences:
+#
+#  * first, this is a python module that gets imported from kernelconfig
+#    after successful argument parsing (which is defined in ubuntu.def).
+#
+#    It has access to functionality and data that normal scripts do not get,
+#    namely kernel version objects,
+#    direct logging/error reporting and exceptions,
+#    reporting "output" .config files at runtime,
+#    and some download/subprocess helper functions.
+#
+#    However, be careful not to modify kernelconfig's runtime data
+#    in illegal ways such as accessing underscore-prefixed vars
+#    or e.g. by calling sys.exit().
+#
+#  * arg parsing is done before running this module,
+#    env.params provides access to the namespace object
+#
+#  * more explicit errors in corner cases,
+#    e.g. if the downloaded dir content list does not contain a <table>,
+#    or if no suitable version found
+#
+#  * the versions table parsing has been converted into a generator func,
+#    which makes the creation of all_versions simpler
+#
+#    It creates kernel version objects now instead of str,
+#    which allows more precise version checks, but that is not used so far.
+#
+#  * the list of config files is a bit more universal,
+#    allowing practically any ubuntu config that follows
+#    this splitconfig naming scheme:
+#
+#       config.common.ubuntu
+#       <arch>/config.common.<arch>
+#       <arch>/config.flavour.<flavour>
+#
+#    where <arch> and <flavour> are defined in ubuntu.def
+#    and are set by the argparser.
+#
+
+import re
+import operator
+import time
+
+from bs4 import BeautifulSoup
+
+
+def run(env):
+    def iter_parse_table(table):
+        # the versioning is not compatible with
+        # what KernelVersion.new_from_version_str offers:
+        #
+        # * version str starts with "v", ends with "/"
+        # * extraversion->localversion after patchlevel (omitting sublevel)
+        #
+        # it needs to be parsed here
+        version_regexp = re.compile(r'v(\d+(?:\.\d+)*)(?:\-rc(\d+))?.*')
+
+        # the version_str is usually unique and therefore not cache-friendly
+        def create_kver(version_str, *, regexp=version_regexp):
+            lget = lambda l, k: (l[k] if len(l) > k else 0)
+            match = regexp.match(version_str)
+            if match:
+                parts = [int(w) for w in match.group(1).split(".")]
+                return (
+                    version_str,
+                    env.create_kernelversion(
+                        parts[0], lget(parts, 1), lget(parts, 2), parts[3:],
+                        (int(match.group(2)) if match.group(2) else None)
+                    )
+                )
+            return None
+        # ---
+
+        # data conversion has good caching properties
+        # in terms of temporal locality, so use env.create_object()
+        # There's no need to go through the cache twice (strptime, strftime),
+        # so cache the str->key conversion result
+        #   ~75% hit rate when not using the obj cache for anything else than
+        #   create_date_key (hits=4446, misses=1494, maxsize=128, currsize=128)
+        @env.cache_constructor
+        def create_date_key(date_str):
+            try:
+                date_obj = time.strptime(date_str, '%Y-%m-%d %H:%M  ')
+            except (TypeError, ValueError):
+                return None
+
+            return time.strftime('%Y%m%d%H%M', date_obj)
+        # --- end of create_date_key (...) ---
+
+        # The table is made of rows containing a version, a date
+        # and some cruft.
+        for row in filter(lambda r: hasattr(r, "find_all"), table):
+            row_kver, row_date = None, None
+
+            # Find the version number in that row.
+            for cell in row.find_all('a', href=True):
+                tmp_kver = create_kver(cell['href'])
+                if tmp_kver:
+                    row_kver = tmp_kver
+                    # FIXME: break or not?
+                else:
+                    env.log_debug(
+                        "failed to parse version str '%s'", cell['href']
+                    )
+            # -- end for
+
+            if row_kver:
+                # Now try to search all cells
+                # for something looking like a date.
+                for cell in filter(lambda w: w.string, row.find_all('td')):
+                    date_key = create_date_key(cell.string)
+                    # If the cell contents fail to convert to a date,
+                    # skip it.
+                    if date_key is not None:
+                        row_date = date_key
+                        # FIXME: break or not?
+            # -- end if worth trying to parse date
+
+            if row_kver and row_date:
+                # Create a tuple for each valid row with:
+                # - Complete version string as extracted above
+                # - Major kernel version number in the form X.Y (as kver obj)
+                # - Time string in the form YYYYMMDDHHMM
+                yield (row_kver[0], row_kver[1], row_date)
+        # -- end for
+    # --- end of iter_parse_table (...) ---
+
+    def add_splitconfig(splitconfig):
+        env.log_info("Adding splitconfig %s", splitconfig)
+        env.add_config_file("debian.master/config/" + splitconfig)
+    # ---
+
+    params = env.parameters
+    kver = env.kernelversion
+
+    # Everything starts from this page.
+    top_url = 'http://kernel.ubuntu.com/~kernel-ppa/mainline/'
+    # Download it.
+    top_page = env.download(top_url)
+
+    # Parse it.
+    soup = BeautifulSoup(top_page, 'lxml')
+    # The page only has a big table. Extract it.
+    try:
+        table = soup.find_all('table')[0]
+    except IndexError:
+        env.error("Did not find versions table")
+
+    # Just retain those rows whose major kernel version matches kver
+    # and sort them all chronologically using the time string.
+    all_versions = sorted(
+        (
+            (kv_str, kv, date)
+            for kv_str, kv, date in iter_parse_table(table)
+            if (
+                kv.version == kver.version
+                and kv.patchlevel == kver.patchlevel
+            )
+        ),
+        key=operator.itemgetter(2)
+    )
+    if not all_versions:
+        env.error("No suitable config/versions found!")
+
+    # And finally select the last (most recent) one,
+    # and only keep the URL path.
+    version_path = all_versions[-1][0]
+
+    # We can now reconstruct the full URL to the page of the desired kernel.
+    version_page = env.download(top_url + version_path)
+    # And parse it.
+    soup = BeautifulSoup(version_page, 'lxml')
+    # One of the files we need has a variable name, let's figure it out.
+    for cell in soup.find_all('a', href=True):
+        if re.match(r'[0-9]*-configs-based-on-Ubuntu-.*\.patch', cell.string):
+            patch3_name = cell.string
+            break
+    else:
+        env.error("Failed to identify patch3")
+
+    # The two files we need are patches.
+    for patch_name in ['0001-base-packaging.patch', patch3_name]:
+        # Let's download them and save them to disk.
+        patch_fpath = env.download_file(top_url + version_path + patch_name)
+
+        # Apply them to nothing since there are only file creations.
+        env.log_info("Applying %s", patch_name)
+        with open(patch_fpath, 'r') as patch_file:
+            env.run_command(['patch', '--silent', '-p1'], stdin=patch_file)
+
+    # We can start picking the files we need. All architectures need this one.
+    add_splitconfig("config.common.ubuntu")
+
+    # We add the architecture- and option-specific files to the list.
+    add_splitconfig("{0}/config.common.{0}".format(params.arch))
+    add_splitconfig(
+        "{0}/config.flavour.{1}".format(
+            params.arch, (params.flavour or "generic")
+        )
+    )
