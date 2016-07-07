@@ -19,6 +19,9 @@ class ConfigurationSourceArgConfig(object):
     @ivar argv:
     @type argv:        undef
 
+    @ivar _params:     argparse parameters
+    @type _params:
+
     @ivar fmt_vars:    dict containing additional vars for str-formatting
     @type fmt_vars:    C{dict} :: C{str} => object
 
@@ -65,7 +68,7 @@ class ConfigurationSourceArgConfig(object):
             for name, value in vars(params_namespace).items()
         }
 
-        self._params = True
+        self._params = params_namespace
         self.fmt_vars.update(
             ((k, (v or "")) for k, v in param_vars.items())
         )
@@ -73,6 +76,9 @@ class ConfigurationSourceArgConfig(object):
             ((k.upper(), v) for k, v in param_vars.items())
         )
     # --- end of set_params (...) ---
+
+    def get_params(self):
+        return self._params or None
 
     def _iter_outfiles(self, outfile_type):
         for of_type, outfile in self._outfiles.values():
