@@ -66,8 +66,12 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                     "generate a .config file (default mode)"
                 ),
                 (
-                    "list-sources", None,
+                    "list-source-names", None,
                     "list available curated sources"
+                ),
+                (
+                    "list-sources", None,
+                    "list available curated sources and their paths"
                 ),
                 (
                     "help-sources", None,
@@ -365,12 +369,12 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
     # --- end of do_main_script_genconfig (...) ---
 
-    def do_main_script_list_sources(self, arg_config):
-        # def any_of(sfiles):
-        #     for item in filter(None, sfiles):
-        #         return item
-        #     return None
-        # # ---
+    def do_main_script_list_sources(self, arg_config, names_only):
+        def any_of(sfiles):
+            for item in filter(None, sfiles):
+                return item
+            return None
+        # ---
 
         self.do_main_setup_logging(arg_config)
         # FIXME: drop this requirement:
@@ -383,12 +387,16 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             return False
 
         outstream_write = sys.stdout.write
-        for name in sorted(sources_info):
-            outstream_write(name)
-            outstream_write("\n")
-            # sfile = any_of(sources_info[name])
-            # if sfile:
-            #     outstream_write("  ({})\n".format(sfile))
+
+        source_names = sorted(sources_info)
+        if names_only:
+            for name in source_names:
+                outstream_write("{}\n".format(name))
+
+        else:
+            for name in source_names:
+                sfile = any_of(sources_info[name])
+                outstream_write("{}\n  ({})\n".format(name, sfile or "???"))
         # --
 
     # --- end of do_main_script_list_sources (...) ---
@@ -443,9 +451,12 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         if conf_source_exc:
             outstream_write(
-                "{}: failed to load ({!s})\n".format(
-                    source_name,
-                    getattr(conf_source_exc[0], "__name__", conf_source_exc[0])
+                "{name}: failed to load: {what!s} ({why!s})\n".format(
+                    name=source_name,
+                    what=getattr(
+                        conf_source_exc[0], "__name__", conf_source_exc[0]
+                    ),
+                    why=conf_source_exc[1]
                 )
             )
             return False
@@ -473,8 +484,11 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         if not script_mode or script_mode[0] == "generate-config":
             return self.do_main_script_genconfig(arg_config)
 
+        elif script_mode[0] == "list-source-names":
+            return self.do_main_script_list_sources(arg_config, True)
+
         elif script_mode[0] == "list-sources":
-            return self.do_main_script_list_sources(arg_config)
+            return self.do_main_script_list_sources(arg_config, False)
 
         elif script_mode[0] == "help-sources":
             return self.do_main_script_help_sources(arg_config)
