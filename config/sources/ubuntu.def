@@ -1,0 +1,73 @@
+[Source]
+Name        = Ubuntu
+
+# amd64 arm64 armhf i386 powerpc ppc64el s390x x32
+Arch        = x86_64 x86
+Type        = pym
+
+
+[Feature:generic]
+Dest    = flavour
+Value   = generic
+
+
+[Arch:x86_64]
+Value   = amd64
+Feature = generic lowlatency
+
+[Arch:x86]
+Value   = i386
+Feature = generic lowlatency
+
+[Feature:lowlatency]
+Dest    = flavour
+Value   = lowlatency
+
+
+[Arch:arm64]
+Feature = generic
+
+
+[Arch:armhf]
+Feature = generic lpae
+
+# would arm==armhf really be a good assumption?
+#[Arch:arm]
+#Value   = armhf
+#Feature = generic lpae
+
+[Feature:lpae]
+Dest    = flavour
+Value   = generic-lpae
+Description = large physical address extensions
+
+
+# The following arches should work in theory,
+# but the kernel arch => arch value translation is probably incomplete.
+#
+#[Arch:powerpc]
+#Feature = generic powerpc-smp powerpc-e500mc powerpc64-emb
+#
+#[Feature:powerpc-smp]
+#Dest    = flavour
+#Value   = powerpc-smp
+#
+#[Feature:powerpc-e500mc]
+#Dest    = flavour
+#Value   = powerpc-e500mc
+#
+#[Feature:powerpc64-emb]
+#Dest    = flavour
+#Value   = powerpc64-emb
+#
+#
+#[Arch:ppc64el]
+#Feature = generic
+#
+#
+#[Arch:s390]
+#Feature = generic
+#
+#[Arch:s390x]
+#Value = s390
+#Feature = generic
