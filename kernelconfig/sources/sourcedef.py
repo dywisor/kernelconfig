@@ -656,23 +656,30 @@ class CuratedSourceDefIniParser(configparser.ConfigParser):
                 sect_key = self.OPTION_RENAME_MAP.get(
                     sect_parts[0], sect_parts[0]
                 )
-                sect_subkey = sect_parts[1]
 
                 if sect_key in dict_sects:
-                    parent_node = sdef_raw[sect_key]
+                    sect_subkeys = [
+                        w for w
+                        in (s.strip() for s in sect_parts[1].split(",")) if w
+                    ]
 
-                    try:
-                        node = parent_node[sect_subkey]
-                    except KeyError:
-                        self.logger.debug(
-                            "Implicit declaration of %r in %s",
-                            sect_subkey, sect_key
-                        )
-                        node = {}
-                        parent_node[sect_subkey] = node
-                    # --
+                    for sect_subkey in sect_subkeys:
+                        parent_node = sdef_raw[sect_key]
 
-                    node.update(self.items(sect_name))
+                        try:
+                            node = parent_node[sect_subkey]
+                        except KeyError:
+                            self.logger.debug(
+                                "Implicit declaration of %r in %s",
+                                sect_subkey, sect_key
+                            )
+                            node = {}
+                            parent_node[sect_subkey] = node
+                        # --
+
+                        node.update(self.items(sect_name))
+                    # -- end for subkey
+
                     #  Add processed sections to sections_processed
                     #  so that unknown sections can be identified later on.
                     sections_processed.add(sect)
