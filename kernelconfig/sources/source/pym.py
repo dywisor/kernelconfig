@@ -147,6 +147,7 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
             conf_source_env=self.senv,
             config=self.sourcedef_config,
             arg_config=arg_config,
+            str_formatter=self.get_dynamic_str_formatter(arg_config),
             logger_name="pymrun"
         )
 

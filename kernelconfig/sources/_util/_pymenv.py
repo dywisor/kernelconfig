@@ -83,7 +83,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     # which attrs the environment has
     __slots__ = [
         "_exc_types", "_obj_cache",
-        "_name", "_senv", "_config", "_arg_config",
+        "_name", "_senv", "_config", "_arg_config", "_str_formatter"
     ]
 
     VERSION = 1
@@ -156,6 +156,10 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         return self._arg_config.env_vars
 
     @property
+    def str_formatter(self):
+        return self._str_formatter
+
+    @property
     def format_vars(self):
         """
         Format variables which may be passed to a string formatter.
@@ -170,7 +174,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         @return: dict of format variables
         @rtype:  C{dict} :: C{str} => C{object}
         """
-        return self._arg_config.fmt_vars
+        return self._str_formatter.fmt_vars
 
     @property
     def kernelversion(self):
@@ -233,7 +237,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         return self.get_tmpdir_path()
 
     def __init__(
-        self, name, conf_source_env, config, arg_config,
+        self, name, conf_source_env, config, arg_config, str_formatter,
         **kwargs
     ):
         super().__init__(**kwargs)
@@ -243,6 +247,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         self._senv = conf_source_env
         self._config = config
         self._arg_config = arg_config
+        self._str_formatter = str_formatter
 
     def __repr__(self):
         return "{cls.__name__}<{ver}>({name!r})".format(
@@ -285,6 +290,12 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         """
         self.log_error(message)
         raise exc_type(message)
+
+    def str_format(self, fmt_str, *args, **kwargs):
+        return self._str_formatter.vformat(fmt_str, args, kwargs)
+
+    def str_vformat(self, fmt_str, args=(), kwargs={}):
+        return self._str_formatter.vformat(fmt_str, args, kwargs)
 
     def get_config(self, key, fallback=None):
         """
