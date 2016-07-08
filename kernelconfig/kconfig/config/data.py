@@ -317,7 +317,14 @@ class _Config(loggable.AbstractLoggable, collections.abc.Mapping):
             for lino, option, value in reader.read_file(
                 infile_path, filename=infile_name
             ):
-                symbol_name = get_symbol_name(option, lenient=False)
+                try:
+                    symbol_name = get_symbol_name(option, lenient=False)
+                except ValueError:
+                    self.logger.warning(
+                        "Failed to get symbol name for %s, ignoring.",
+                        symbol_name
+                    )
+                    continue
 
                 try:
                     sym = kconfig_syms[symbol_name]
