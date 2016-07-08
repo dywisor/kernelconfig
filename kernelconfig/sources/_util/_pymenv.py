@@ -414,7 +414,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         # get_file() returns bytearray
         return bytes(_fileget.get_file(url, data=data, logger=self.logger))
 
-    def create_subproc(self, cmdv, stdin=subprocess.DEVNULL, cwd=None):
+    def create_subproc(self, cmdv, cwd=None, **kwargs):
         """
         Creates a subprocess using the pym-environment's
         logger, env vars and temporary directory.
@@ -433,7 +433,9 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         @param   cmdv:   the command to be run
         @type    cmdv:   C{list} or C{str}
 
-        @keyword stdin:  stdin
+        @keyword stdin:  stdin  (defaults to /dev/null)
+        @keyword stdout:
+        @keyword stderr:
 
         @keyword cwd:    initial working directory of the process
 
@@ -447,7 +449,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
             tmpdir=tmpdir_path,
             extra_env=self.environ,
             cwd=(os.path.join(tmpdir_path, cwd) if cwd else None),
-            stdin=stdin
+            **kwargs
         )
 
     def _join_subproc(self, proc, return_success=True):
