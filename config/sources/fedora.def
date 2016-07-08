@@ -1,0 +1,52 @@
+[Source]
+Name = Fedora
+Type = pym
+
+
+[Config]
+Repo = git://pkgs.fedoraproject.org/rpms/kernel.git
+
+
+[Arch:x86_64]
+Value   = x86_64
+Feature = release debug
+
+[Arch:x86]
+Value   = i686
+Feature = release debug pae
+
+#[Arch:ppc...]
+
+[Arch:s390,s390x]
+Value   = s390x
+Feature = release
+
+[Arch:armv7hl,arm]
+Value   = armv7hl
+Feature = release debug lpae
+
+[Arch:arm64,aarch64]
+Value   = aarch64
+Feature = release
+
+
+[Feature:release]
+Type = arg
+
+Description =
+  Fedora fedora from which the config should be taken.
+  It will be guessed from the kernel version if unset
+  and falls back to 'master'.
+  Example values: f23, master
+
+
+[Features:debug]
+Value = debug
+
+[Features:pae]
+Dest = pae
+Value = PAE
+
+[Features:lpae]
+Dest = pae
+Value = lpae
