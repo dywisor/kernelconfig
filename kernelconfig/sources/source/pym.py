@@ -57,6 +57,7 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.pym = None
+        self.sourcedef_config = None
 
     def check_source_valid(self):
         if self.pym is None:
@@ -83,6 +84,11 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
         pym_name = self.pym.name
         if not pym_name:
             raise exc.ConfigurationSourceInvalidError("pym_name is not set")
+
+        if self.sourcedef_config is None:
+            raise exc.ConfigurationSourceInvalidError(
+                "sourcedef_config is not set"
+            )
     # --- end of check_source_valid (...) ---
 
     def add_auto_var(self, varname, varkey):
@@ -110,6 +116,8 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
                 filepath=pym_file,
                 logger_name="pym"
             )
+
+        self.sourcedef_config = source_data.get("config") or {}
     # --- end of init_from_def (...) ---
 
     def do_parse_source_argv(self, argv):
@@ -137,6 +145,7 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
             _pymenv.PymConfigurationSourceRunEnv,
             name=self.name,
             conf_source_env=self.senv,
+            config=self.sourcedef_config,
             arg_config=arg_config,
             logger_name="pymrun"
         )

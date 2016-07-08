@@ -83,7 +83,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     # which attrs the environment has
     __slots__ = [
         "_exc_types", "_obj_cache",
-        "_name", "_senv", "_arg_config"
+        "_name", "_senv", "_config", "_arg_config",
     ]
 
     VERSION = 1
@@ -107,6 +107,13 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     def name(self):
         """Name of the confguration source."""
         return self._name
+
+    @property
+    def config(self):
+        """
+        Configuration from [config] section of the source definition file.
+        """
+        return self._config
 
     @property
     def parameters(self):
@@ -225,12 +232,16 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         """
         return self.get_tmpdir_path()
 
-    def __init__(self, name, conf_source_env, arg_config, **kwargs):
+    def __init__(
+        self, name, conf_source_env, config, arg_config,
+        **kwargs
+    ):
         super().__init__(**kwargs)
         self._exc_types = exc
         self._obj_cache = objcache.ObjectCache(maxsize=self.OBJ_CACHE_SIZE)
         self._name = name
         self._senv = conf_source_env
+        self._config = config
         self._arg_config = arg_config
 
     def __repr__(self):
@@ -274,6 +285,33 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         """
         self.log_error(message)
         raise exc_type(message)
+
+    def get_config(self, key, fallback=None):
+        """
+        Returns the value of an option in the
+        [config] section of the source definition file.
+        """
+        if not key:
+            raise ValueError(key)
+
+        normkey = key.lower()
+        try:
+            return self._config[normkey]
+        except KeyError:
+            return fallback
+    # --- end of get_config (...) ---
+
+    def get_config_check_value(self, key, fallback=None, fcheck=bool):
+        self.exc_types.ConfigurationSourceInvalidError
+        value = self.get_config(key, fallback=fallback)
+        if fcheck(value):
+            return value
+        elif not value:
+            self.error("{} is not set.".format(key))
+
+        else:
+            self.error("{} has bad value {!r}".format(key, value))
+    # --- end of get_config_check_value (...) ---
 
     def get_tmpdir(self):
         """Returns the tmpdir object, see tmpdir() for details."""
