@@ -107,7 +107,7 @@ def join_relpaths_v(
 
 def join_relpaths(dirpath, *relpath_elements):
     """var-args variant of join_relpaths_v()."""
-    return join_relpaths_v(dirpath, *relpath_elements)
+    return join_relpaths_v(dirpath, relpath_elements)
 # --- end of join_relpaths (...) ---
 
 
