@@ -26,7 +26,14 @@ class ConfigFileReader(loggable.AbstractLoggable):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.option_expr_str = r'[A-Z_a-z0-9]+'
-        self.value_expr_str = r'(?:\S+(?:\s+\S+)*)'
+        self.value_expr_str = (
+            r'(?:'
+            r'(?:[\"](?:[^\"]|\\[\"])*[\"])'
+            r'|(?:[\'](?:[^\']|\\[\'])*[\'])'
+            r'|(?:\S+)'
+            r')'
+        )
+        # # r'(?:\S+(?:\s+\S+)*)'
     # ---
 
     def read_file(self, infile, filename=None, **kwargs):
@@ -54,7 +61,7 @@ class ConfigFileReader(loggable.AbstractLoggable):
         _unpack_value = symbol.unpack_value_str
 
         option_value_regexp = re.compile(
-            r'^(?P<option>{oexpr})[=](?P<value>{vexpr})$'.format(
+            r'^(?P<option>{oexpr})[=](?P<value>{vexpr})(?:\s+[#].*)?$'.format(
                 oexpr=self.option_expr_str, vexpr=self.value_expr_str
             )
         )
