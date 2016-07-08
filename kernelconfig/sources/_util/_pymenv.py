@@ -1,10 +1,12 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import errno
 import os
 import subprocess
 
 from ...abc import loggable
+from ...util import fs
 from ...util import subproc
 from ...util import objcache
 from ...kernel import kversion
@@ -60,10 +62,24 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
 
     The pym-environment also offers some helper methods, including:
 
-    * download(url)          --  download url, return bytes
-    * download_file(url)     --  download url to temporary file
     * run_command(cmdv)      --  run a command
     * get_tmpfile()          --  create new temporary file
+
+    * download(url)          --  download url, return bytes
+    * download_file(url)     --  download url to temporary file
+
+
+    * git_clone_configured_repo()
+                             --  clone the repo configured in [config]
+                                 and change the working dir to its path
+
+    * git_clone(url)         --  clone a git repo and returns it path,
+                                  using a per-confsource cache dir
+    * git_checkout_branch(branch)
+                             --   switch to git branch
+
+    * run_git(argv)          --  run a git command in $PWD
+    * run_git_in(dir, argv)  --  run a git command in <dir>
 
 
     A few class-wide attributes exist,
@@ -593,5 +609,194 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
 
         return kversion.KernelVersion(version, patchlevel, sublevel, extraver)
     # --- end of create_kernelversion (...) ---
+
+    def run_git(self, argv, *, git_dir=None, nofail=False, **kwargs):
+        """Runs a 'git' command.
+
+        @param   argv:     arguments
+        @keyword git_dir:  git directory. Defaults to None (use cwd)
+        @keyword nofail:   whether failure is tolerated (True) or not (False)
+                           Defaults to False, causing the conf source
+                           to fail on git errors
+        @param   kwargs:   additional keyword arguments for subproc.SubProc()
+
+        @return:  success/error (True/False)
+                    note that if nofail is False,
+                    then only success can be returned
+        @rtype:   C{bool}
+        """
+        if not argv or not argv[0]:
+            self.error("empty git command")
+
+        cmdv = ["git"]
+        if git_dir:
+            cmdv.extend(["-C", str(git_dir)])
+
+        cmdv.extend(argv)
+
+        if nofail:
+            return self.run_command_get_returncode(cmdv, **kwargs)
+        else:
+            self.run_command(cmdv, **kwargs)
+            return True
+    # --- end of run_git (...) ---
+
+    def run_git_in(self, git_dir, argv, **kwargs):
+        """Same as run_git(argv, git_dir=git_dir, **kwargs)."""
+        return self.run_git(argv, git_dir=git_dir, **kwargs)
+    # --- end of run_git_in (...) ---
+
+    def git_clone(self, repo_url, *, name=None, chdir=False):
+        """
+        Clones a git repo and makes use of the per-confsource cache.
+
+        @param   repo_url:   url to clone from
+        @keyword name:       name of the remote repo.
+                             Defaults to None (-> autoset)
+        @keyword chdir:      whether to change the working directory
+                             to the clone repo (True) or not (False)
+                             Defaults to False.
+
+        @return:  path to cloned repository (a temporary directory)
+        """
+        if not name:
+            # use (up to) two components of the url as name
+            name = "_".join(
+                os.path.splitext(w)[0]
+                for w in repo_url.rpartition("://")[-1].split("/")[-2:]
+            )
+            if not name:
+                self.error(
+                    "Could not determine name for repo url {!r}".format(
+                        repo_url
+                    )
+                )
+        # --
+
+        # get tmpdir path first,
+        #  it will be cleaned up on exit/error and there is no point
+        #  in continuing if this operation would fail
+        clone_dst = self.get_tmpdir().get_new_subdir_path()
+        clone_args = []
+
+        use_cache = True
+        try:
+            git_cache_root = (
+                self._senv.install_info.get_cache_dir_path("git/0")
+            )
+        except StopIteration:
+            use_cache = False
+
+        if use_cache:
+            fs.dodir(git_cache_root)
+
+            # caching strategy:
+            #
+            #   one git repo per source that contains all repos
+            #
+            cache_dir = os.path.join(git_cache_root, self.name)
+            cache_dir_need_init = False
+
+            try:
+                os.mkdir(cache_dir)
+            except OSError as oserr:
+                if oserr.errno == errno.EEXIST:
+                    # probe
+                    cache_dir_need_init = not os.access(
+                        os.path.join(cache_dir, "HEAD"), os.F_OK
+                    )
+                    if cache_dir_need_init:
+                        self.logger.warning(
+                            "cache dir %s exists and needs to be initialized",
+                            cache_dir
+                        )
+                else:
+                    raise
+                pass
+            else:
+                cache_dir_need_init = True
+            # --
+
+            # init the git cache if necessary
+            if cache_dir_need_init:
+                self.logger.debug(
+                    "Initializing git cache dir %s", cache_dir
+                )
+                self.run_git_in(cache_dir, ["init", "--bare"])
+            # --
+
+            # add/change remote
+            if (
+                cache_dir_need_init
+                or not self.run_git_in(
+                    cache_dir, ["remote", "set-url", name, repo_url],
+                    stderr=subprocess.DEVNULL, nofail=True
+                )
+            ):
+                self.logger.debug("Adding new remote %s to git cache", name)
+                self.run_git_in(cache_dir, ["remote", "add", name, repo_url])
+            # --
+
+            # fetch
+            self.logger.info("Updating git cache for %s", name)
+            self.run_git_in(cache_dir, ["fetch", name])
+
+            # add --reference cache_dir to clone args
+            clone_args.append("--reference")
+            clone_args.append(cache_dir)
+
+            self.logger.info("Cloning git repo %s (using cache)", repo_url)
+        else:
+            self.logger.info("Cloning git repo %s", repo_url)
+        # --
+
+        # clone
+        self.run_git(["clone"] + clone_args + [repo_url, clone_dst])
+
+        if chdir:
+            os.chdir(clone_dst)
+
+        return clone_dst
+    # --- end of git_clone (...) ---
+
+    def git_checkout_branch(self, branch, git_dir=None):
+        """Switches the git branch.
+
+        @param   branch:   branch to switch to
+        @keyword git_dir:  path to git repo directory
+
+        @return:  path to git directory
+        """
+        if not git_dir:
+            git_dir = os.getcwd()
+
+        self.logger.debug("Checking out git branch %s", branch)
+        self.run_git_in(git_dir, ["checkout", "-q", branch])
+        return git_dir
+    # --- end of git_checkout_branch (...) ---
+
+    def git_clone_configured_repo(self, *, fallback_repo_url=None, chdir=True):
+        """
+        Clones the repo configured in the [config] section
+        of the source definition file.
+
+        Relevant config fields are currently only "Repo=",
+        which sets the repo's remote url.
+
+        @keyword fallback_repo_url:  passed as fallback to
+                                     get_config_check_value
+
+        @keyword chdir:  whether to change the working directory to the
+                         cloned git repo dir (True) or not (False)
+                         Defaults to True (unlike git_clone()).
+        @type    chdir:  C{bool}
+
+        @return:  path to cloned git repo
+        """
+        repo_url = self.get_config_check_value(
+            "repo", fallback=fallback_repo_url
+        )
+        return self.git_clone(repo_url, chdir=chdir)
+    # --- end of git_clone_configured_repo (...) ---
 
 # --- end of PymConfigurationSourceRunEnv ---
