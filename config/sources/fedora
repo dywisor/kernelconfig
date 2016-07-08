@@ -1,0 +1,102 @@
+# python module for the fedora configuration source
+# -*- coding: utf-8 -*-
+#
+#  Dependencies:
+#  * git
+#  * make
+#  * perl (merge-config.pl from the Fedora's kernel git repo)
+#
+import os
+
+
+def run(env):
+    def git_clone(url):
+        env.log_debug("Cloning git repo {}".format(url))
+        dst = env.get_tmpdir().get_new_subdir().get_path()
+        env.run_command(["git", "clone", url, dst])
+        return dst
+    # ---
+
+    def git_checkout_branch(branch):
+        env.log_debug("Checking out branch {}".format(branch))
+        env.run_command(["git",  "checkout", "-q", branch])
+    # ---
+
+    def guess_branch():
+        # Note that there is a way to detect the branch automatically:
+        # * go through each git branch:
+        #   - extract base_sulevel, rpmversion, rcrev from kernel.spec
+        #   - pick best-fitting branch
+        #   but:
+        #   - nomenclature varies across branches
+        #        (e.g. fake 2.6.x version on early 3.x)
+        #   - kernel.spec sets rpmversion in a conditional branch (%if ...)
+        #   - multiple branches for one kver
+        #
+        branches = [
+            ((2, 6, 32), "f12"),
+            ((2, 6, 34), "f13"),
+            ((2, 6, 35), "f14"),
+            ((3, 3), "f15"),
+            ((3, 6), "f16"),
+            ((3, 10), "f17"),
+            ((3, 11), "f18"),
+            ((3, 14), "f19"),
+            ((4, 0), "f20"),
+            ((4, 1), "f21"),
+            ((4, 4), "f22"),
+            # ((4, 6), "f23"),
+            ((4, 6), "f24"),
+        ]
+
+        kver = env.kernelversion
+        branch_candidates = sorted(
+            (
+                (kv, branch) for kv, branch in branches
+                if (
+                    kver.version == kv[0]
+                    and kver.patchlevel == kv[1]
+                    and (len(kv) < 3 or kver.sublevel >= kv[2])
+                )
+            )
+        )
+
+        return branch_candidates[-1][1] if branch_candidates else "master"
+    # --- end of guess_branch (...) ---
+
+    params = env.parameters
+
+    # clone the repo && cd
+    os.chdir(git_clone(env.get_config_check_value("repo")))
+
+    # get the branch - either from "--release <branch>" or guess it
+    branch_name = params.release or guess_branch()
+    # having just cloned the repo, remote is "origin"
+    branch = "origin/{}".format(branch_name)
+    env.log_info("Getting config from the %r branch", branch_name)
+    git_checkout_branch(branch)
+
+    # depending on feature selection, a few word needs to be appended
+    # to the base name of the configuration file,
+    #   -PAE, -lpae, -debug, -PAEdebug
+    #
+    #  The correct feature selection is ensured by the definition file.
+    #
+    conf_feats = "".join(filter(None, [params.pae, params.debug]))
+
+    cfg_file = env.str_format(
+        "kernel-{kver}-{param_arch}{appendix}.config",
+        appendix=(("-" + conf_feats) if conf_feats else "")
+    )
+
+    env.run_command(
+        [
+            "make", "-f", "Makefile.config",
+            # the Makefile uses $(VERSION) in its rules,
+            #  alternatively, set CFG (that whould break the clean target,
+            #  but that is not of interest here)
+            env.str_format("VERSION={kver}"),
+            cfg_file
+        ]
+    )
+    env.add_config_file(cfg_file)
