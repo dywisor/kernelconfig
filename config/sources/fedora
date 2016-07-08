@@ -69,7 +69,7 @@ def run(env):
     #
     #  The correct feature selection is ensured by the definition file.
     #
-    conf_feats = "".join(filter(None,[params.pae, params.debug]))
+    conf_feats = "".join(filter(None, [params.pae, params.debug]))
 
     cfg_file = env.str_format(
         "kernel-{kver}-{param_arch}{appendix}.config",
