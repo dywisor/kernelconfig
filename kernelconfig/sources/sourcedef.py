@@ -591,6 +591,7 @@ class CuratedSourceDefIniParser(configparser.ConfigParser):
     def get_source_def_raw_dict(self):
         # set of section names that accumulate in a dict-like fashion
         dict_sects = {"architectures", "features"}
+        passthrough_sub_sects = {"config", }
         shlex_options = {"command", }
 
         sdef_raw = {}
@@ -609,6 +610,11 @@ class CuratedSourceDefIniParser(configparser.ConfigParser):
                         w.lower(): {"name": w}
                         for w in set(input_value.split())
                     }
+
+                elif option in passthrough_sub_sects:
+                    raise ValueError(
+                        "reserved sub-section field name: {}".format(option)
+                    )
 
                 elif option.endswith("_str"):
                     raise ValueError("reserved field name: {}".format(option))
@@ -636,6 +642,16 @@ class CuratedSourceDefIniParser(configparser.ConfigParser):
         for sect in dict_sects:
             if sect not in sdef_raw:
                 sdef_raw[sect] = {}
+        # --
+
+        # add pass-through sub-sections as-is
+        for sect in passthrough_sub_sects:
+            if sect in sections:
+                sdef_raw[sect] = {
+                    option: value.strip()
+                    for option, value in self.items(sections[sect])
+                }
+                sections_processed.add(sect)
         # --
 
         # process remaining sections,
