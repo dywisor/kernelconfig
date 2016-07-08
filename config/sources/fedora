@@ -6,22 +6,9 @@
 #  * make
 #  * perl (merge-config.pl from the Fedora's kernel git repo)
 #
-import os
 
 
 def run(env):
-    def git_clone(url):
-        env.log_debug("Cloning git repo {}".format(url))
-        dst = env.get_tmpdir().get_new_subdir().get_path()
-        env.run_command(["git", "clone", url, dst])
-        return dst
-    # ---
-
-    def git_checkout_branch(branch):
-        env.log_debug("Checking out branch {}".format(branch))
-        env.run_command(["git",  "checkout", "-q", branch])
-    # ---
-
     def guess_branch():
         # Note that there is a way to detect the branch automatically:
         # * go through each git branch:
@@ -67,14 +54,14 @@ def run(env):
     params = env.parameters
 
     # clone the repo && cd
-    os.chdir(git_clone(env.get_config_check_value("repo")))
+    env.git_clone_configured_repo()
 
     # get the branch - either from "--release <branch>" or guess it
     branch_name = params.release or guess_branch()
     # having just cloned the repo, remote is "origin"
     branch = "origin/{}".format(branch_name)
     env.log_info("Getting config from the %r branch", branch_name)
-    git_checkout_branch(branch)
+    env.git_checkout_branch(branch)
 
     # depending on feature selection, a few word needs to be appended
     # to the base name of the configuration file,
