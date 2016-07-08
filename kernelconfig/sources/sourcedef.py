@@ -174,6 +174,12 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
             feat_action["default"] = "" if is_optin else "y"
             feat_action["const"] = "y" if is_optin else ""
 
+        elif arg_type == "arg":
+            # then use action=store
+            feat_action["action"] = "store"
+            feat_action["default"] = feat_pseudo_pop("default") or ""
+            feat_action["metavar"] = "<{}>".format(feat_arg_name)
+
         else:
             raise exc.ConfigurationSourceInvalidParameterDef(
                 "unknown argument type {} for {}".format(
