@@ -45,13 +45,17 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
         raise NotImplementedError()
 
     @abc.abstractclassmethod
-    def normalize_and_validate(self, value):
+    def normalize_and_validate(self, value, lenient=False):
         """Converts the given value to its normalized form.
 
         @raises ValueError: if value cannot be normalized (is not valid)
 
-        @param value: value to be normalized and validated
-        @type  value: should match the symbol's value type
+        @param value:      value to be normalized and validated
+        @type  value:      should match the symbol's value type
+
+        @keyword lenient:  whether normalizing should be a more tolerant
+                           Defaults to False
+        @type    lenient:  C{bool}
 
         @return: normalized value
         """

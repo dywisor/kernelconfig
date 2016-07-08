@@ -95,7 +95,7 @@ class TristateKconfigSymbol(_KconfigSymbol):
     type_name = "tristate"
 
     @classmethod
-    def normalize_and_validate(cls, value):
+    def normalize_and_validate(cls, value, lenient=False):
         # FIXME: handle "value is True" specially?
         if isinstance(value, numbers.Number):
             # this may raise a ValueError
@@ -117,11 +117,14 @@ class BooleanKconfigSymbol(TristateKconfigSymbol):
     DEP_VALUE_REINTERPRET_MAP = _KconfigSymbol.DEP_VALUE_REINTERPRET_M_AS_Y
 
     @classmethod
-    def normalize_and_validate(cls, value):
+    def normalize_and_validate(cls, value, lenient=False):
         normval = super().normalize_and_validate(value)
 
         if normval == TristateKconfigSymbolValue.m:
-            raise ValueError(value)
+            if lenient:
+                return TristateKconfigSymbolValue.y
+            else:
+                raise ValueError(value)
 
         return normval
     # --- end of normalize_and_validate (...) ---
@@ -155,7 +158,7 @@ class StringKconfigSymbol(_KconfigSymbol):
     # ---
 
     @classmethod
-    def normalize_and_validate(cls, value):
+    def normalize_and_validate(cls, value, lenient=False):
         return value  # which will be converted to str when necessary
     # --- end of normalize_and_validate (...) ---
 
@@ -178,7 +181,7 @@ class IntKconfigSymbol(_KconfigSymbol):
     DEP_VALUE_REINTERPRET_MAP = _KconfigSymbol.DEP_VALUE_REINTERPRET_M_AS_Y
 
     @classmethod
-    def normalize_and_validate(cls, value):
+    def normalize_and_validate(cls, value, lenient=False):
         return int(value)
     # --- end of normalize_and_validate (...) ---
 
@@ -211,7 +214,7 @@ class UndefKconfigSymbol(StringKconfigSymbol):
     type_name = "undef"
 
     @classmethod
-    def normalize_and_validate(cls, value):
+    def normalize_and_validate(cls, value, lenient=False):
         raise ValueError(value)
     # --- end of normalize_and_validate (...) ---
 
