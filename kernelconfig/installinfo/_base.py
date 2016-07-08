@@ -33,6 +33,10 @@ class InstallInfoBase(object, metaclass=abc.ABCMeta):
     get_user_home = staticmethod(fspath.get_home_dir)
     get_user_config_dir = staticmethod(fspath.get_user_config_dir)
 
+    @classmethod
+    def get_user_cache_dir(cls, name):
+        return fspath.join_relpaths(cls.get_user_home(), ".cache", name)
+
     @abc.abstractclassmethod
     def new_instance(cls):
         """Creates a new installation info object.
@@ -88,6 +92,10 @@ class InstallInfoBase(object, metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def get_cache_dirs(self, name=None):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def copy(self):
         """Creates and returns a copy of this installation info object.
 
@@ -140,7 +148,9 @@ class DefaultInstallInfo(InstallInfoBase):
     @ivar sys_config_dirs:    "system config directory" paths
     @type sys_config_dirs:    C{list} of C{str}
     @ivar user_config_dir:    project-specific user config directory
-    @type user_config_dir:    C{list} of C{str}
+    @type user_config_dir:    C{str}
+    @type user_cache_dir:     project-specific user cache directory
+    @type user_cache_dir:     C{str}
     @ivar sys_data_dirs:      "system data directory" paths
     @type sys_data_dirs:      C{list} of C{str}
 
@@ -148,6 +158,8 @@ class DefaultInstallInfo(InstallInfoBase):
     @type settings_dirs:      L{MultiDirEntry}
     @ivar include_file_dirs:  feature set file multi directory
     @type include_file_dirs:  L{MultiDirEntry}
+    @ivar cache_dirs:         project-specific cache directory
+    @type cache_dirs:         L{MultiDirEntry}
     """
 
     CONFDIR_NAME = "kernelconfig"
@@ -199,12 +211,18 @@ class DefaultInstallInfo(InstallInfoBase):
         sys_config_dirs = to_dirlist(sys_config_dir)
         sys_data_dirs = to_dirlist(sys_data_dir)  # unused
         user_config_dir = cls.get_user_config_dir(cls.CONFDIR_NAME)
+        user_cache_dir = cls.get_user_cache_dir(cls.CONFDIR_NAME)
 
         settings_dirs = multidir.MultiDirEntry()
         # data_dirs = multidir.MultiDirEntry()
+        cache_dirs = multidir.MultiDirEntry()
 
         if user_config_dir:
             settings_dirs.add_path(user_config_dir)
+        # --
+
+        if user_cache_dir:
+            cache_dirs.add_path(user_cache_dir)
         # --
 
         if sys_config_dirs:
@@ -218,33 +236,39 @@ class DefaultInstallInfo(InstallInfoBase):
         return cls(
             sys_config_dirs=sys_config_dirs,
             user_config_dir=user_config_dir,
+            user_cache_dir=user_cache_dir,
             sys_data_dirs=sys_data_dirs,
             settings_dirs=settings_dirs,
-            include_file_dirs=include_file_dirs
+            include_file_dirs=include_file_dirs,
+            cache_dirs=cache_dirs
         )
     # --- end of new_instance (...) ---
 
     def __init__(
         self, *,
-        sys_config_dirs, user_config_dir, sys_data_dirs,
-        settings_dirs, include_file_dirs
+        sys_config_dirs, user_config_dir, user_cache_dir, sys_data_dirs,
+        settings_dirs, include_file_dirs, cache_dirs
     ):
         super().__init__()
         self.sys_config_dirs = sys_config_dirs
         self.user_config_dir = user_config_dir
+        self.user_cache_dir = user_cache_dir
         self.sys_data_dirs = sys_data_dirs
 
         self.settings_dirs = settings_dirs
         self.include_file_dirs = include_file_dirs
+        self.cache_dirs = cache_dirs
     # --- end of __init__ (...) ---
 
     def copy(self):
         return self.__class__(
             sys_config_dirs=self.sys_config_dirs.copy(),
             user_config_dir=self.user_config_dir,
+            user_cache_dir=self.user_cache_dir,
             sys_data_dirs=self.sys_data_dirs.copy(),
             settings_dirs=self.settings_dirs.copy(),
-            include_file_dirs=self.include_file_dirs.copy()
+            include_file_dirs=self.include_file_dirs.copy(),
+            cache_dirs=self.cache_dirs.copy()
         )
     # --- end of copy (...) ---
 
@@ -260,5 +284,14 @@ class DefaultInstallInfo(InstallInfoBase):
 
     def get_config_source_dirs(self):
         return self.settings_dirs.get_child("sources")
+
+    def get_cache_dirs(self, name=None):
+        if name:
+            return self.cache_dirs.get_child(name, check_exist=False)
+        else:
+            return self.cache_dirs
+
+    def get_cache_dir_path(self, name=None):
+        return self.get_cache_dirs(name=name).get_path()
 
 # --- end of DefaultInstallInfo ---
