@@ -270,6 +270,33 @@ class _Config(loggable.AbstractLoggable, collections.abc.Mapping):
         @type  infiles:   C{list} of C{str}|2-tuple(C{str}, C{str}|C{None})
         @return:          cfg_dict
         """
+
+        def normalize_sym_value(sym, vtype, inval):
+            try:
+                normval = sym.normalize_and_validate(inval)
+            except ValueError:
+                try:
+                    normval = sym.normalize_and_validate(inval, lenient=True)
+                except ValueError:
+                    self.logger.warning(
+                        "invalid %s value %r for %s symbol %s",
+                        vtype, inval, sym.type_name, sym.name
+                    )
+                    raise
+                else:
+                    self.logger.warning(
+                        (
+                            'improper %s value %r for %s symbol %s, '
+                            'normalized to %r'
+                        ),
+                        vtype, inval, sym.type_name, sym.name, normval
+                    )
+                # -- end try again
+            # -- end try
+
+            return normval
+        # --- end of normalize_sym_value (...) ---
+
         get_symbol_name = self.convert_option_to_symbol_name
 
         reader = self._get_config_file_reader()
@@ -322,17 +349,8 @@ class _Config(loggable.AbstractLoggable, collections.abc.Mapping):
                         cfg_dict[sym] = None
 
                     else:
-                        try:
-                            normval = sym.normalize_and_validate(value[1])
-                        except ValueError:
-                            self.logger.error(
-                                "invalid %s value %r for %s symbol %s",
-                                value[0], value[1], sym.type_name, sym.name
-                            )
-                            raise  # or recover // FIXME
-                        else:
-                            cfg_dict[sym] = normval
-                        # --
+                        normval = normalize_sym_value(sym, value[0], value[1])
+                        cfg_dict[sym] = normval
                     # -- end if value
                 # -- end try to use existing symbol
             # --
