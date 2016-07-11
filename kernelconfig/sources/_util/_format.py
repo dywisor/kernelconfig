@@ -190,7 +190,10 @@ class ConfigurationSourceStrFormatter(StrFormatter):
         return self.senv.get_format_vars()[norm_key]
 
     def get_value(self, key, args, kwargs):
-        if isinstance(key, int):
+        if not key:
+            return args[0]
+
+        elif isinstance(key, int):
             return args[key]
 
         elif key in kwargs:
