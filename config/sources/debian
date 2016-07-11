@@ -1,0 +1,647 @@
+# python module for the Debian configuration source
+# -*- coding: utf-8 -*-
+#
+#  For an explanation about what this script does (and how),
+#  see the comment blocks marked with "=== doc ===".
+#
+
+import re
+import collections
+
+
+def splitchain(vlist):
+    """
+    Split each str in the given iterable
+    and returns all items in a single list.
+
+    Mostly identical to itertools.chain(*(w.split() for w in vlist)),
+    but this variant skips empty lists and strings.
+
+    >>> splitchain(["a", "b b c", None, "", "d a"])
+    ["a", "b", "b", "c", "d", "a"]
+
+    @return: list of split words
+    @rtype:  C{list} of C{str}
+    """
+    def splitchain_iter(vlist):
+        if not vlist:
+            return
+
+        for item in filter(None, vlist):
+            for word in item.split(None):
+                yield word
+    # --
+    return list(splitchain_iter(vlist))
+# --- end of splitchain (...) ---
+
+
+def recur_get(d, *keypath):
+    """Retrieves an entry from a nested dict.
+    Returns None if the any path element does not exist.
+
+    >>> D = {a: {b: {c: X}}}
+    >>> recur_get(D, a, b, c)  ->  X
+    >>> recur_get(D, a, b)     -> {c: X}
+    >>> recur_get(D, a, b, x)  -> None
+    """
+    node = d
+    for key in keypath:
+        if node is None or key not in node:
+            return None
+
+        node = node[key]
+    # --
+    return node
+# --- end of recur_get (...) ---
+
+
+def run(env):
+    kver = env.kernelversion
+    params = env.parameters
+
+    # Repo=, the url for git-mode access (git ls-remote)
+    git_repo_url = env.get_config_check_value("repo")
+    # RepoHTTP=, the url for "plain" file access (download(...))
+    http_repo_url = env.get_config_check_value("repohttp")
+
+    _RefInfo = collections.namedtuple("RefInfo", "ref name kver rev suffix")
+
+    class RefInfo(_RefInfo):
+        """
+        @ivar ref:    git ref
+        @ivar name:   shortened symbolic git ref
+                      ("refs/tags/" prefix removed,
+                      e.g. "debian/4.7_rc3-1_exp1")
+        @ivar kver:   kernel version parsed from the symbolic git ref
+                      (a kernelversion object)
+        @ivar rev:    revision from suffix in sym~gitref (e.g. "-1" => rev=1)
+        @ivar suffix: unparsed remainder of the sym~gitref
+        """
+
+        # get_plain_url is bound to http_repo_url, set above
+
+        def get_plain_url(self, *relpath, _base_url=http_repo_url):
+            # self.name needs to be appended to plain-file urls
+            # (http://...?h=debian/tags/...)
+            if relpath:
+                return "{}/{}?h={}".format(
+                    _base_url, "/".join(map(str, relpath)), self.name
+                )
+            else:
+                return "{}?h={}".format(_base_url, self.name)
+        # ---
+    # ---
+
+    def get_refs_list():
+        """
+        Generator that runs git ls-remote to get a list of 'branch' candidates
+        (tags, actually) and yields RefInfo objects that contain
+        information such a symbolic git ref name and parsed kernelversion.
+
+        @return:  ref info object(s)
+        @rtype:   L{RefInfo}
+        """
+        nonlocal git_repo_url
+
+        def get_match_int(match_val):
+            return int(match_val) if match_val else None
+
+        name_prefix = "refs/tags/debian"
+
+        # pattern which gets send out by ls-remote
+        #  restrict matches to kernelversion.version (e.g. "4.*")
+        tag_pattern = "{}.[0-9]*".format(env.kernelversion.version)
+
+        # pattern which is used to parse the returned refs,
+        #  more strict than tag_pattern
+        tag_regexp_str = (
+            r'(?P<vstr>[0-9]+(?:[.][0-9]+)*)'
+            r'(?:_rc(?P<rclevel>[0-9]+))?'
+            r'(?:[\-](?P<rev_suffix>[0-9]+))?'
+            r'(?P<suffix>[\_\+\-\.]\S+)?'
+        )
+
+        name_regexp = re.compile(r'^{}/{}$'.format(
+            name_prefix, tag_regexp_str)
+        )
+        name_pattern = "{}/{}".format(name_prefix, tag_pattern)
+
+        for ref, name in env.git_list_remote(
+            git_repo_url, name_pattern,
+            opts=["-q", "--refs", "--tags"]
+        ):
+            match = name_regexp.match(name)
+            if match:
+                yield RefInfo(
+                    ref=ref,
+                    name=name.split("/", 2)[-1],   # debian/...
+                    kver=env.create_kernelversion_from_vtuple_str(
+                        match.group("vstr"), match.group("rclevel")
+                    ),
+                    rev=get_match_int(match.group("rev_suffix")),
+                    suffix=match.group("suffix") or None
+                )
+    # ---
+
+    def get_and_parse_defines(url):
+        """Downloads and pre-parses a "defines" file.
+        See "Step 2" below, and parse_defines().
+        """
+        defines_data = env.download(url)
+        return parse_defines(defines_data.decode().splitlines())
+    # ---
+
+    def get_arch_schema(url):
+        """
+        The 'arch' schema is a nested dict that provides information
+        about config file overrides.
+        See "Step 2" below.
+        """
+        defines_map = get_and_parse_defines(url)
+
+        schema = {
+            "configs": None,
+            "kernel-arch": None,
+            "featuresets": {},
+            "flavours": {}
+        }
+
+        fields = defines_map.get("base", None)
+        if fields:
+            schema["flavours"].update(
+                ((w, {}) for w in splitchain(fields.get("flavours")))
+            )
+
+            schema["featuresets"].update(
+                ((w, {}) for w in splitchain(fields.get("featuresets")))
+            )
+
+            schema["kernel-arch"] = fields.get("kernel-arch")
+        # --
+
+        fields = defines_map.get("image", None)
+        if fields:
+            schema["configs"] = fields.get("configs")
+        # --
+
+        # add flavour/featureset-specific configs to the schema
+        for sect_name, fields in defines_map.items():
+            name, sep, subsect = sect_name.rpartition("_")
+            if sep and name and subsect == "image":
+                for sect_type in ("flavours", "featuresets"):
+                    sect_entries = schema[sect_type]
+                    if name in sect_entries:
+                        sect_entries[name]["configs"] = fields.get("configs")
+                        # note that a "break" here
+                        # blocks "name in both flavours and featuresets"
+                        break
+
+        return schema
+    # --- end of get_arch_schema (...) ---
+
+    def splitconfig_append_list(relpaths, must_exist=True):
+        """Appends a list of relpaths to the split config file list."""
+        nonlocal splitconfig
+
+        exist_word = ("must-exist" if must_exist else "optional")
+
+        for relpath in relpaths:
+            env.log_debug(
+                "Adding %s splitconfig file config/%s", exist_word, relpath
+            )
+            splitconfig.append((must_exist, relpath))
+        # --
+    # ---
+
+    def splitconfig_append_fmt_str(relpath_fmt, *args, must_exist=True):
+        """
+        Formats a single string and appends it to the split config file list.
+        """
+        splitconfig_append_list(
+            [env.str_format(relpath_fmt, *args)], must_exist=must_exist
+        )
+
+    def download_file(must_exist, url):
+        """
+        download_file() variants that tolerates
+        a 404 error if must_exist is false.
+        """
+        # TODO: candidate for pymenv
+        try:
+            ret = env.download_file(url)
+        except env.exc_types.ConfigurationSourceFileGetError as err:
+            orig_exc = err.orig_exc[1]
+            if must_exist:
+                raise
+            elif hasattr(orig_exc, "getcode") and orig_exc.getcode() == 404:
+                return None
+            else:
+                raise
+        else:
+            return ret
+    # --- end of download_file (...) ---
+
+    # === doc ===
+    # Debian's linux.git is about 800M size,
+    # whereas the few files that are relevant for kernelconfig sum up to
+    # considerably less than that,the size of a checked out kernelversion tag
+    # is about ~10M.
+    # Unfortunately, the repo does not support "--depth 1" cloning:
+    #
+    #   $ git clone --depth 1 'git://anonscm.debian.org/kernel/linux.git'
+    #   fatal: The remote end hung up unexpectedly
+    #   fatal: early EOF
+    #   fatal: index-pack failed
+    #
+    # So we work around that with "git ls-remote" and plain-file downloads.
+    #
+    # First, git ls-remote is used to determine the tag to download from.
+    # Then, the files to be downloaded are identified.
+    # This involves http-downloads of "defines" file(s).
+    # Finally, the config files get downloaded.
+    #
+    # Step 1: Find a suitable git ref to download from
+    #
+    #   list remote tags refs/tags/debian/<kver>*,
+    #   retain those whose major version (a.b) matches
+    all_versions = sorted(
+        filter(
+            lambda info: (
+                info.kver.version == kver.version
+                and info.kver.patchlevel == kver.patchlevel
+            ),
+            get_refs_list()
+        ),
+
+        # sort key:
+        #   kernel version
+        #     (since major version has been filtered,
+        #     this concerns sublevel(s)/rclevel only)
+        #   then "-[0-9]" suffix from ref name
+        #   then "not suffix"
+        #
+        key=lambda info: (
+            info.kver,
+            (-1 if info.rev is None else info.rev),
+            (-1 if info.suffix else 1)
+        )
+    )
+
+    if not all_versions:
+        env.error("No suitable config/versions found!")
+
+    # pick the best version
+    vinfo = all_versions[-1]
+
+    # === doc ===
+    # Step 2: find out which config files need to be retrieved
+    #
+    #  insights from debians linux.git, bin/gencontrol.py:
+    #
+    #  Debian's kernel config files follow a splitconfig layout,
+    #  where each default file can be overridden by a "configs:" entry
+    #  in the (arch-specific) defines file.
+    #  The "configs:" entry is a list of files.
+    #  The files listed in "configs:" must exist
+    #  even if the default file does not have to (marked as "optional" below).
+    #
+    #  The layout consists of the following files (in config/), in order:
+    #
+    #  * "config"
+    #       must exist
+    #       override in:  ???
+    #       note:         <none>
+    #
+    #  * "kernelarch-<karch>/config"
+    #       optional
+    #       override in:  ???
+    #       note:         kernelarch can be overridden by arch schema,
+    #                     which gets taken into account below
+    #
+    #  * "<arch>/config"
+    #       must exist
+    #       override in:  <arch>/defines [image]
+    #       note:         override taken into account (arch_schema),
+    #                     but no example case found in the git repo
+    #
+    #  * "<arch>/config.<flavour>"
+    #       optional
+    #       override in:  <arch>/defines [<flavour>_image]
+    #       note:         override taken into account (arch_schema)
+    #
+    #  * "featureset-<featureset>/config"
+    #       optional
+    #       override in: featureset-<featureset>/defines [image]?
+    #       note:        override ignored,
+    #                    there is currently no example case in the git repo
+    #
+    #  * "<arch>/<featureset>/config"
+    #       optional
+    #       override in: <arch>/<featureset>/defines [image]
+    #       note:        override ignored,
+    #                    there is currently no example case in the git repo
+    #
+    #  * "<arch>/<featureset>/config.<flavour>"
+    #       optional
+    #       override in: <arch>/<featureset>/defines [<flavour>_image]?
+    #       note:        override ignored,
+    #                    there is currently no example case in the git repo
+    #
+    #
+
+    # start with the list of splitconfig files,
+    # each entry is a 2-tuple
+    # ("must exist", path of the config file relative to the config/ dir)
+    #
+    #  Since the origin of the relpaths varies between
+    #  "constant" string here and unknown input from defines file,
+    #  relpaths of defaults files should be formatted before appending
+    #  them to the list.
+    #  This also means that the arch schema has to be retrieved before
+    #  adding "kernelarch-%s/config".
+    #
+    splitconfig = []
+
+    # "config"
+    splitconfig_append_list(["config"], must_exist=True)
+
+    # === doc ===
+    # The remaining config files can not be determined without parsing the
+    # arch defines file, which we do now.
+    # The result is a "arch schema" dict with the following entries
+    # * configs => arch configs override
+    # * kernel-arch => kernel arch override
+    # * featuresets => (<featureset> => configs => featureset configs override)
+    # * flavours => (<flavour> => configs => flavour configs override)
+    #
+    # Note that "bin/gencontrol.py" handles an an empty "configs:" list
+    # as "no configs", which is equally done here.
+
+    arch_schema = get_arch_schema(
+        vinfo.get_plain_url(env.str_format("config/{param_arch}/defines"))
+    )
+
+    # "kernelarch-<karch>/config", optional
+    karch_override = arch_schema.get("kernel-arch")
+    if karch_override:
+        # is a list, pick first item
+        if len(karch_override) != 1:
+            env.log_warning(
+                "got multiple values for kernel-arch, picking first value: %r",
+                karch_override
+            )
+        # --
+        karch_override = karch_override[0]
+    # --
+
+    splitconfig_append_fmt_str(
+        "kernelarch-{}/config", (karch_override or params.arch),
+        must_exist=False
+    )
+
+    # <arch>/config", must exist
+    configs_override = recur_get(arch_schema, "configs")
+    if configs_override is None:
+        splitconfig_append_fmt_str("{param_arch}/config", must_exist=True)
+    else:
+        splitconfig_append_list(configs_override, must_exist=True)
+
+    # "<arch>/config.<flavour>", optional
+    #  if no flavour was requested, assume none and skip this block
+    if params.flavour:
+        configs_override = recur_get(
+            arch_schema, "flavours", params.flavour, "configs"
+        )
+
+        if configs_override is None:
+            splitconfig_append_fmt_str(
+                "{param_arch}/config.{param_flavour}", must_exist=False
+            )
+        else:
+            # when "configs:" is specified, the files must exist
+            splitconfig_append_list(configs_override, must_exist=True)
+    # -- end if params.flavour
+
+    # now featureset
+    #  if no featureset was requested, assume none and skip this block
+    #
+    #  As stated above, "configs:" overrides are ignored here
+    #
+    if params.featureset:
+        # "featureset-<featureset>/config", optional
+        splitconfig_append_fmt_str(
+            "featureset-{param_featureset}/config", must_exist=False
+        )
+
+        # "<arch>/<featureset>/config", optional
+        splitconfig_append_fmt_str(
+            "{param_arch}/{param_featureset}/config", must_exist=False
+        )
+
+        if params.flavour:
+            # "<arch>/<featureset>/config.<flavour>", optional
+            splitconfig_append_fmt_str(
+                "{param_arch}/{param_featureset}/config.{param_flavour}",
+                must_exist=False
+            )
+        # --
+    # -- end if params.featureset
+
+    # === doc ===
+    # Step 3: get the files in splitconfig
+    #
+    #    This is the easiest part,
+    #    just download the files and register them as input .config,
+    #    handle 404 errors properly for optional files
+    #
+    for must_exist, config_relpath in splitconfig:
+        config_url = vinfo.get_plain_url(
+            "config/{}".format(config_relpath)
+        )
+
+        config_tmpfile = download_file(must_exist, config_url)
+        # config_tmpfile is empty IFF optional and 404 occurred
+        if config_tmpfile:
+            env.add_config_file(config_tmpfile)
+        else:
+            env.log_debug(
+                "Optional config file config/%s does not exist",
+                config_relpath
+            )
+    # --
+# --- end of run (...) ---
+
+
+def parse_defines(lines):
+    # A "defines" file has the following format:
+    #
+    # [section]
+    # # comment
+    # field0:
+    #   value0
+    #   ...
+    #   # comment
+    #   valueN
+    #
+    # fieldK: value
+    #
+    #
+    # This function accepts text lines from a definition file
+    # and creates a dict :: section -> (dict :: field -> list of value).
+    # The motivation here is to extract some information from defines files,
+    # and not parsing deb-control files with section headers accurately.
+    # Therefore, this function is forgiving about discrepancies in the input
+    # data.
+    #
+    # Regular expressions for the various file format elements follow.
+    #
+    # * section name
+    regexp_str_sect = r'\[(?P<header>[^\]]+)\]'
+    #
+    # * field name
+    regexp_str_field = r'(?P<field>[^\:\s]+)'
+    #
+    # * field value
+    regexp_str_fieldval = r'(?P<fieldval>\S+(?:\s+\S+)*?)'
+    #
+    # Comment lines start with a "#"; comment and empty lines are skipped.
+    # Note that end-of-line whitespace gets stripped off
+    # and therefore does not need to be handled in the regexprs.
+    #
+    # As illustrated in the example above, section headers are ini-like,
+    # and do not have preceeding whitespace
+    # * "[<section name>]"
+    re_sect = re.compile(r'^' + regexp_str_sect)  # end-of-line text ignored
+    #
+    # A field is introduced by its name followed by a colon char ":",
+    # no preceeding whitespace is allowed,
+    # and a value may be appear in the field-def line (but does not have to)
+    # * "<field name>:"
+    # * or "<field name>: <field value>"
+    re_field = re.compile(
+        r'^{field}[:](?:\s+{fieldval})?$'.format(
+            field=regexp_str_field, fieldval=regexp_str_fieldval
+        )
+    )
+    # * multiline field values must have leading whitespace
+    re_fieldval = re.compile(r'^\s+{}$'.format(regexp_str_fieldval))
+
+    # the defines output object, is a dict :: str => (dict :: str => list<str>)
+    defines_map = {}
+
+    # The dict of the section currently being read,
+    # is the value of a defines map entry
+    # and therefore a dict :: str => list<str>.
+    # Sections have a name (this var is a a byproduct of the parser loop).
+    # Initially, no section is active and therefore sect is None
+    sect = None
+    sect_name = None
+    # The field currently being read,
+    # is the value of a sect map entry and therefore a list of strings.
+    # Fields also have a name.
+    # Initially, no section is active and hence no field either (-> None).
+    # When a new section starts, field and field_name need to be reset to None.
+    field = None
+    field_name = None
+    #
+    # Now iterate over the input lines and create the defines dict.
+    #
+    for line in lines:
+        # strip end-of-line whitespace
+        sline = line.rstrip()
+        #
+        # Skip comment and empty lines
+        if sline and sline[0] != "#":
+            # Now try each regexp and see which one matches.
+            # m1 = regexp1.match(...)
+            # if m1:
+            #    ...
+            # else:
+            #    m2 = regexp2.match(...)
+            #    if m2: ... else: ...
+            #
+            # We do this with a "for match: if match: break" loop
+            # to keep the indentation readable.
+            #
+            # The order in which the regexes are tried is important
+            # since e.g. re_fieldval is highly permissive
+            for idx, match in enumerate(
+                (r.match(sline) for r in (re_sect, re_field, re_fieldval))
+            ):
+                if not match:
+                    # ~ guardian ~
+                    # regexp did not match, continue with the next match
+                    pass
+
+                elif idx == 0:
+                    # sect
+                    # reset field, field name
+                    field_name = None
+                    field = None
+
+                    # convert name to lowercase
+                    sect_name = match.group("header").lower()
+                    if sect_name in defines_map:
+                        # redefinition of section
+                        #  just append to previous entry
+                        sect = defines_map[sect_name]
+                    else:
+                        # new section
+                        sect = {}
+                        defines_map[sect_name] = sect
+
+                    # break since a section match has been found
+                    break
+
+                elif sect is None:
+                    # ~ guardian ~
+                    # no section active => break match loop
+                    break
+
+                elif idx == 1:
+                    # field,    convert name to lowercase
+                    field_name = match.group("field").lower()
+                    if field_name in sect:
+                        # redefinition of field
+                        #  just append to previous entry
+                        field = sect[field_name]
+                    else:
+                        # new field
+                        field = []
+                        sect[field_name] = field
+
+                    # if there was a value on the field-def line, append it
+                    fieldval = match.group("fieldval")
+                    if fieldval:
+                        field.append(fieldval)
+                    fieldval = None
+
+                    # break since a field-def match has been found
+                    break
+
+                elif field is None:
+                    # ~ guardian ~
+                    # no field active => break match loop
+                    #  (this does not actually end the loop prematurely,
+                    #  since idx must be > 1 to reach this branch)
+                    #
+                    break
+
+                elif idx == 2:
+                    # fieldval
+                    field.append(match.group("fieldval"))
+
+                    # break since a field-value match has been found
+                    break
+
+                else:
+                    # then a new regexp has been added to the loop header,
+                    # but it does not get handled in the loop body
+                    raise AssertionError(idx)
+            # -- end for
+        # -- end if
+    # -- end for
+
+    # the defines map is ready
+    return defines_map
+# --- end of parse_defines (...) ---
