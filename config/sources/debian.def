@@ -1,0 +1,36 @@
+# This is the definition file of the "Debian" source.
+#
+# Currently, it is very restrictive on the supported archs
+# and overly permissive on arch flavour and the featureset.
+#
+# Archs should can be enabled by adding them to "Arch =".
+# If a rename is required, an "[Arch:<match>]" section
+# with "Value=<rename>" should be added, see x86_64 for an example.
+#
+
+[Source]
+Name        = Debian
+Type        = pym
+
+# alpha amd64 arm64 armel armhf hppa i386
+# m68k mips mips64 mips64el mipsel mipsn32 mipsn32el
+# or1k powerpc powerpcspe ppc64 ppc64el s390 s390x
+# sh4 sparc sparc64 tilegx x32
+Arch        = x86_64 x86
+
+[Config]
+Repo = git://anonscm.debian.org/kernel/linux.git
+RepoHTTP = https://anonscm.debian.org/git/kernel/linux.git/plain/debian
+
+
+[Arch:x86_64]
+Value = amd64
+
+[Arch:x86]
+Value = i386
+
+[Feature:flavour]
+Type = arg
+
+[Feature:featureset]
+Type = arg
