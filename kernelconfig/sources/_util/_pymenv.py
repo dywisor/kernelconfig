@@ -810,6 +810,45 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         return git_dir
     # --- end of git_checkout_branch (...) ---
 
+    def git_list_remote(
+        self, repo_url, *refs,
+        opts=["-q", "--refs"], allow_empty=False, nofail=False
+    ):
+        def parse_git_list_remote(proc_output):
+            for line in filter(
+                None, (l.strip() for l in proc_output.splitlines())
+            ):
+                lparts = line.split(None, 1)
+                if len(lparts) == 2:
+                    yield lparts
+                else:
+                    self.logger.warning(
+                        "Could not parse ls-remote line %r", line
+                    )
+                    # raise?
+        # ---
+
+        argv = ["ls-remote"]
+        if opts:
+            argv.extend(opts)
+
+        if not allow_empty:
+            argv.append("--exit-code")
+
+        argv.append(repo_url)
+        argv.extend(refs)
+
+        result = self._run_git_in(
+            None, argv, nofail=nofail,
+            kwargs={"stdout": subprocess.PIPE, "universal_newlines": True}
+        )
+
+        if result.success:
+            return list(parse_git_list_remote(result.stdout))
+        else:
+            return []
+    # --- end of git_list_remote (...) ---
+
     def git_clone_configured_repo(self, *, fallback_repo_url=None, chdir=True):
         """
         Clones the repo configured in the [config] section
