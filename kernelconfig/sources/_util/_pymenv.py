@@ -39,7 +39,8 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     @ivar exc_types:      exception types (namespace object/module)
     @ivar parameters:     arg parse result (namespace object)
     @ivar environ:        extra-env vars dict
-    @ivar format_vars:    str-format vars dict
+    @ivar str_formatter:  string formatter
+    @ivar format_vars:    string formatter's vars dict
     @ivar kernelversion:  kernel version object
     @ivar tmpdir:         temporary dir object
     @ivar tmpdir_path:    path to temporary dir
@@ -173,6 +174,22 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
 
     @property
     def str_formatter(self):
+        """
+        The "configuration source" string formatter,
+        which is charged with config-source format variables.
+
+        Example:
+
+            >>> env.str_formatter.format("{arch}-{kver.version}")
+            x86-4
+
+        For a list of format variables,
+        refer to the config source documentation
+        or see kernelconfig.sources.sourceenv.SourcesEnv._create_base_vars().
+
+        @return:  string formatter
+        @rtype:   L{ConfigurationSourceStrFormatter}
+        """
         return self._str_formatter
 
     @property
@@ -186,6 +203,11 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
 
         Keys must be strings, values can be anything, but setting a format
         variable to None may result in printing out "None".
+
+        Note that unlike environ, this dict is only useful
+        for adding new entries, since it does not exhibit all the variables
+        used by the string formatter, only those that have been added by
+        e.g. argument parsing.
 
         @return: dict of format variables
         @rtype:  C{dict} :: C{str} => C{object}
