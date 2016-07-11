@@ -100,7 +100,7 @@ class ConfigurationSourceFileGetError(ConfigurationSourceFileMissingError):
 
     def __init__(self, file_uri, exc_info=None):
         self.orig_exc = sys.exc_info() if exc_info is None else exc_info
-        super().__init__(self.file_uri)
+        super().__init__(file_uri)
 # ---
 
 
