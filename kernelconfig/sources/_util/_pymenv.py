@@ -610,6 +610,23 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         return kversion.KernelVersion(version, patchlevel, sublevel, extraver)
     # --- end of create_kernelversion (...) ---
 
+    def _run_git_in(self, git_dir, argv, *, nofail=False, kwargs={}):
+        if not argv or not argv[0]:
+            self.error("empty git command")
+
+        cmdv = ["git"]
+        if git_dir:
+            cmdv.extend(["-C", str(git_dir)])
+
+        cmdv.extend(argv)
+
+        if nofail:
+            return self.run_command_get_returncode(cmdv, **kwargs)
+        else:
+            self.run_command(cmdv, **kwargs)
+            return True
+    # --- end of _run_git_in (...) ---
+
     def run_git(self, argv, *, git_dir=None, nofail=False, **kwargs):
         """Runs a 'git' command.
 
@@ -625,25 +642,12 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
                     then only success can be returned
         @rtype:   C{bool}
         """
-        if not argv or not argv[0]:
-            self.error("empty git command")
-
-        cmdv = ["git"]
-        if git_dir:
-            cmdv.extend(["-C", str(git_dir)])
-
-        cmdv.extend(argv)
-
-        if nofail:
-            return self.run_command_get_returncode(cmdv, **kwargs)
-        else:
-            self.run_command(cmdv, **kwargs)
-            return True
+        return self._run_git_in(git_dir, argv, nofail=nofail, kwargs=kwargs)
     # --- end of run_git (...) ---
 
-    def run_git_in(self, git_dir, argv, **kwargs):
+    def run_git_in(self, git_dir, argv, *, nofail=False, **kwargs):
         """Same as run_git(argv, git_dir=git_dir, **kwargs)."""
-        return self.run_git(argv, git_dir=git_dir, **kwargs)
+        return self._run_git_in(git_dir, argv, nofail=nofail, kwargs=kwargs)
     # --- end of run_git_in (...) ---
 
     def git_clone(self, repo_url, *, name=None, chdir=False):
