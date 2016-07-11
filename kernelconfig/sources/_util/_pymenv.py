@@ -241,7 +241,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         using its public methods (not underscore "_" prefixed) is fine.
 
         @return:  tmpdir object
-        @rtype:   ]subclass of] L{TmpdirView}
+        @rtype:   [subclass of] L{TmpdirView}
         """
         return self.get_tmpdir()
 
