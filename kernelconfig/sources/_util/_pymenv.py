@@ -647,6 +647,29 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         return kversion.KernelVersion(version, patchlevel, sublevel, extraver)
     # --- end of create_kernelversion (...) ---
 
+    def create_kernelversion_from_vtuple(self, vtuple, rclevel=None):
+        numparts = len(vtuple)
+        if not numparts:
+            raise self.exc_types.ConfigurationSourceExecError("empty vtuple")
+
+        return self.create_kernelversion(
+            version=vtuple[0],
+            patchlevel=(vtuple[1] if numparts > 1 else 0),
+            sublevel=(vtuple[2] if numparts > 2 else 0),
+            subsublevels=vtuple[3:],
+            rclevel=rclevel
+        )
+    # --- end of create_kernelversion_from_vtuple (...) ---
+
+    def create_kernelversion_from_vtuple_str(
+        self, vtuple_str, rclevel_str=None, *, vsep="."
+    ):
+        return self.create_kernelversion_from_vtuple(
+            [int(w, 10) for w in vtuple_str.split(vsep)] if vtuple_str else [],
+            int(rclevel_str) if rclevel_str else None
+        )
+    # --- end of create_kernelversion_from_vtuple_str (...) ---
+
     def _run_git_in(self, git_dir, argv, *, nofail=False, kwargs={}):
         if not argv or not argv[0]:
             self.error("empty git command")
