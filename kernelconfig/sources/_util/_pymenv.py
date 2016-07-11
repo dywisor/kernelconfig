@@ -1,6 +1,7 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import collections
 import errno
 import os
 import subprocess
@@ -17,6 +18,18 @@ from . import _fileget
 
 
 __all__ = ["PymConfigurationSourceRunEnv"]
+
+
+_RunCommandResult = collections.namedtuple(
+    "RunCommandResult", "success returncode stdout stderr"
+)
+
+
+class RunCommandResult(_RunCommandResult):
+
+    def __bool__(self):
+        return bool(self.success)
+# ---
 
 
 class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
@@ -452,7 +465,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         # get_file() returns bytearray
         return bytes(_fileget.get_file(url, data=data, logger=self.logger))
 
-    def create_subproc(self, cmdv, cwd=None, **kwargs):
+    def create_subproc(self, cmdv, *, cwd=None, **kwargs):
         """
         Creates a subprocess using the pym-environment's
         logger, env vars and temporary directory.
@@ -480,8 +493,17 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         @return: subprocess object
         @rtype:  L{SubProc}
         """
+        if any(
+            (k in kwargs for k in ("extra_env", "logger", "tmpdir"))
+        ):
+            raise exc.ConfigurationSourceExecError(
+                "duplicate or forbidden keyword arg passed to create_subproc",
+                kwargs
+            )
+        # --
+
         tmpdir_path = self.get_tmpdir_path()
-        return subproc.SubProc(
+        return PymConfigurationSourceRunEnvSubProc(
             cmdv,
             logger=self.logger,
             tmpdir=tmpdir_path,
@@ -489,37 +511,24 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
             cwd=(os.path.join(tmpdir_path, cwd) if cwd else None),
             **kwargs
         )
+    # --- end of create_subproc (...) ---
 
-    def _join_subproc(self, proc, return_success=True):
-        """
-        Waits for a subprocess to finish and returns its exit code.
-
-        Similar to SubProc.join(),
-        but rewrites the exception on process timeout.
-
-        @raises ConfigurationSourceExecError:  on timeout
-
-        @return:  retcode
-        @rtype:   C{int} or C{bool}, depending on return_success
-        """
-        retcode = None
-        try:
-            retcode = proc.join(return_success=return_success)
-        except subprocess.TimeoutExpired:
-            raise self.exc_types.ConfigurationSourceExecError(
-                "process timed out"
-            ) from None
-        # --
-        return retcode
-    # --- end of _join_subproc (...) ---
-
-    def run_command_get_returncode(self, cmdv, return_success=True, **kwargs):
+    def _run_command(
+        self, cmdv, *, nofail, timeout=None, exit_codes_ok=None, **kwargs
+    ):
         with self.create_subproc(cmdv, **kwargs) as proc:
-            retcode = self._join_subproc(proc, return_success=return_success)
-        return retcode
-    # --- end of run_command_get_returncode (...) ---
+            result = proc.join(
+                nofail=nofail, exit_codes_ok=exit_codes_ok, timeout=timeout
+            )
 
-    def run_command(self, cmdv, *, exit_codes_ok=None, **kwargs):
+        return result
+    # --- end of _run_command (...) ---
+
+    def run_command_get_result(self, cmdv, *, nofail=False, **kwargs):
+        return self._run_command(cmdv, nofail=nofail, **kwargs)
+    # --- end of run_command_get_result (...) ---
+
+    def run_command(self, cmdv, **kwargs):
         """Runs a command as subprocess.
 
         The subprocess must succeed,
@@ -533,17 +542,23 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
 
         @return: None
         """
-        if exit_codes_ok is None:
-            exit_codes_ok = {os.EX_OK, }
-
-        with self.create_subproc(cmdv, **kwargs) as proc:
-            retcode = self._join_subproc(proc, return_success=False)
-
-        if retcode not in exit_codes_ok:
-            raise self.exc_types.ConfigurationSourceExecError(
-                "command failed", cmdv
-            )
+        self._run_command(cmdv, nofail=False, **kwargs)
     # --- end of run_command (...) ---
+
+    def run_command_get_returncode(self, cmdv, return_success=True, **kwargs):
+        result = self._run_command(cmdv, nofail=True, **kwargs)
+        return result.success if return_success else result.returncode
+    # --- end of run_command_get_returncode (...) ---
+
+    def run_command_get_stdout(
+        self, cmdv, *, nofail=False,
+        stdout=subprocess.PIPE, universal_newlines=True, **kwargs
+    ):
+        return self._run_command(
+            cmdv, nofail=False,
+            stdout=stdout, universal_newlines=universal_newlines, **kwargs
+        ).stdout
+    # --- end of run_command_get_stdout (...) ---
 
     def create_object(self, constructor, *args):
         """
@@ -642,11 +657,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
 
         cmdv.extend(argv)
 
-        if nofail:
-            return self.run_command_get_returncode(cmdv, **kwargs)
-        else:
-            self.run_command(cmdv, **kwargs)
-            return True
+        return self._run_command(cmdv, nofail=nofail, **kwargs)
     # --- end of _run_git_in (...) ---
 
     def run_git(self, argv, *, git_dir=None, nofail=False, **kwargs):
@@ -659,10 +670,8 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
                            to fail on git errors
         @param   kwargs:   additional keyword arguments for subproc.SubProc()
 
-        @return:  success/error (True/False)
-                    note that if nofail is False,
-                    then only success can be returned
-        @rtype:   C{bool}
+        @return:  command result object
+        @rtype:   L{RunCommandResult}
         """
         return self._run_git_in(git_dir, argv, nofail=nofail, kwargs=kwargs)
     # --- end of run_git (...) ---
@@ -757,7 +766,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
                 or not self.run_git_in(
                     cache_dir, ["remote", "set-url", name, repo_url],
                     stderr=subprocess.DEVNULL, nofail=True
-                )
+                ).success
             ):
                 self.logger.debug("Adding new remote %s to git cache", name)
                 self.run_git_in(cache_dir, ["remote", "add", name, repo_url])
@@ -826,3 +835,47 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     # --- end of git_clone_configured_repo (...) ---
 
 # --- end of PymConfigurationSourceRunEnv ---
+
+
+class PymConfigurationSourceRunEnvSubProc(subproc.SubProc):
+
+    def join(self, *, nofail, timeout=None, exit_codes_ok=None, **kwargs):
+        """
+        Waits for a subprocess to finish and returns its exit code.
+
+        Similar to SubProc.join(),
+        but rewrites the exception on process timeout.
+
+        @raises ConfigurationSourceExecError:  on timeout
+
+        @return:  command result object
+        @rtype:   L{RunCommandResult}
+        """
+        if exit_codes_ok is None:
+            exit_codes_ok = {os.EX_OK, }
+
+        try:
+            returncode = super().join(
+                timeout=timeout, return_success=False, **kwargs
+            )
+        except subprocess.TimeoutExpired:
+            raise exc.ConfigurationSourceExecError(
+                "process timed out"
+            ) from None
+
+        result = RunCommandResult(
+            (returncode in exit_codes_ok),
+            returncode,
+            self.stdout,
+            self.stderr
+        )
+
+        if not nofail and not result.success:
+            raise exc.ConfigurationSourceExecError(
+                "command failed", returncode, self.cmdv
+            )
+
+        return result
+    # --- end of join (...) ---
+
+# --- end of PymConfigurationSourceRunEnvSubProc ---
