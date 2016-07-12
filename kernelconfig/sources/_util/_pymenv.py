@@ -684,6 +684,14 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         return self._run_command(cmdv, nofail=nofail, **kwargs)
     # --- end of _run_git_in (...) ---
 
+    def _run_git_in_capture_stdout(
+        self, git_dir, argv, *, nofail=False, **kwargs
+    ):
+        kwargs["stdout"] = subprocess.PIPE
+        kwargs["universal_newlines"] = True
+        return self._run_git_in(git_dir, argv, nofail=nofail, kwargs=kwargs)
+    # ---
+
     def run_git(self, argv, *, git_dir=None, nofail=False, **kwargs):
         """Runs a 'git' command.
 
@@ -862,11 +870,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         argv.append(repo_url)
         argv.extend(refs)
 
-        result = self._run_git_in(
-            None, argv, nofail=nofail,
-            kwargs={"stdout": subprocess.PIPE, "universal_newlines": True}
-        )
-
+        result = self._run_git_in_capture_stdout(None, argv, nofail=nofail)
         if result.success:
             return list(parse_git_list_remote(result.stdout))
         else:
