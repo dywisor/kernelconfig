@@ -283,6 +283,7 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
             )
         # --
 
+        source_def.autoset()
         return source_def
     # --- end of new_from_ini (...) ---
 
@@ -358,12 +359,21 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
         self.data = data
         if source:
             self.def_files.append(source)
+
+    def autoset(self):
         self._fillup_data()
 
     def _fillup_data(self):
+        self._add_missing_entries()
         self._autodetect_type()
         self._link_arch_x_feat()
         self._pick_arch()
+
+    def _add_missing_entries(self):
+        for key in "architectures", "features":
+            if key not in self.data:
+                self.data[key] = {}
+    # ---
 
     def _autodetect_type(self):
         type_name = self.data.get("type") or None
