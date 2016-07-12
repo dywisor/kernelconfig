@@ -119,6 +119,12 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         """
         raise NotImplementedError()
 
+    def format_help(self):
+        if self.arg_parser is None:
+            return None
+
+        return self.arg_parser.format_help()
+
     def __init__(self, name, conf_source_env, **kwargs):
         super().__init__(name, **kwargs)
         self._str_formatter = None
