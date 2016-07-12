@@ -4,6 +4,7 @@
 import collections
 import errno
 import os
+import re
 import subprocess
 
 from ...abc import loggable
@@ -900,6 +901,135 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         )
         return self.git_clone(repo_url, chdir=chdir)
     # --- end of git_clone_configured_repo (...) ---
+
+    def git_rev_parse_object(
+        self, filepath, branch="HEAD", *, git_dir=None, nofail=False
+    ):
+        """
+        Returns the git identifier for a blob-type object,
+        which can be used to retrieve the file's content,
+        e.g. with git show or git cat-file.
+
+        @param filepath:  path of the file
+                          (relative to the git_dir
+                          or relative to os.getcwd() if it starts with "./")
+        @param branch:    branch/tag/commit containing the requested file
+
+        @return: the file's object identifier
+        @rtype:  C{str}
+        """
+        if not filepath:
+            raise ValueError()
+
+        # branch may be empty
+
+        argv = [
+            "rev-parse", "--verify", "--quiet",
+            "{}:{}".format((branch or ""), filepath)
+        ]
+
+        result = self._run_git_in_capture_stdout(git_dir, argv, nofail=nofail)
+        if not result.success:
+            return None
+
+        object_id = None
+        for line in result.stdout.splitlines():
+            parts = line.split()
+            if len(parts) != 1:
+                self.log_warning(
+                    "Could not interpret git-rev-parse result line %r",
+                    line
+                )
+            elif object_id is not None:
+                self.log_warning("FIXME: got multiple git-rev-parse results")
+            else:
+                object_id = parts[0]
+        # --
+
+        return object_id
+    # --- end of git_rev_parse_object (...) ---
+
+    def git_get_text_file_content(
+        self, filepath, branch="HEAD", *, git_dir=None, nofail=False
+    ):
+        object_id = self.git_rev_parse_object(
+            filepath, branch=branch, git_dir=git_dir, nofail=nofail
+        )
+        if object_id is None:
+            return None
+
+        argv = ["cat-file", "blob", object_id]
+
+        # the object is known to exist, pass nofail=False
+        result = self._run_git_in_capture_stdout(git_dir, argv, nofail=False)
+        return result.stdout if result.success else None   # ifexpr redundant
+    # --- end of git_get_text_file_content (...) ---
+
+    def get_git_remote_branch_regexp(
+        self, branch_name_pattern=None, remote_pattern=None, do_compile=True
+    ):
+        """
+        Returns a regular expression string that can be used for filtering
+        the output of "git rev-parse --symbolic-full-name".
+
+        @keyword branch_name_pattern:  regular expression string for
+                                       matching the branch's name
+                                       Defaults to '\S+'.
+                                       Example: '\S+-(?P<ver>\d+(?:[.]\d+))'
+        @keyword remote_pattern:       regular expression string for
+                                       matching the remote's name
+                                       Defaults to '[^/]+'.
+                                       Example: 'origin'
+
+        @return:  regular expression string
+        @rtype:   C{str}
+        """
+        regexp_str = (
+            (
+                r'^refs/remotes/'
+                r'(?P<branch>(?P<remote>(?:{rpat}))/(?P<name>(?:{bpat})))$'
+            ).format(
+                rpat=(remote_pattern or r'[^/]+'),
+                bpat=(branch_name_pattern or r'\S+')
+            )
+        )
+
+        return regexp_str
+    # ---
+
+    def git_list_branches(self, regexp=None, *, git_dir=None, nofail=False):
+        """Generator.
+
+        Runs "git rev-parse --symbolic-full-name --all" to get list of
+        symbolic names, and yields those who match the input regexp.
+        When no regexp is given, get_git_remote_branch_regexp() is called
+        to create the default expression.
+        The result are a 2-tuples (name, dict of regexp match group vars).
+
+        When using the default regexp, the following named groups exist
+        in the group vars dict:
+
+        * branch -- branch name, e.g. origin/a/b
+        * remote -- remote name, e.g. origin
+        * name   -- name,        e.g. a/b
+        """
+        if regexp is None:
+            regexp = re.compile(self.get_git_remote_branch_regexp())
+        elif isinstance(regexp, str):
+            regexp = re.compile(regexp)
+
+        argv = ["rev-parse", "--symbolic-full-name", "--all"]
+        result = self._run_git_in_capture_stdout(git_dir, argv, nofail=nofail)
+        if not result.success:
+            return
+
+        for line in result.stdout.splitlines():
+            match = regexp.match(line)
+            if match:
+                match_vars = dict(enumerate(match.groups()))
+                match_vars.update(match.groupdict())
+                yield (line, match_vars)
+    # --- end of git_list_branches (...) ---
 
 # --- end of PymConfigurationSourceRunEnv ---
 
