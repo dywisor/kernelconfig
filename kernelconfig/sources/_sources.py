@@ -68,13 +68,13 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
     # --- end of load_available_sources (...) ---
 
     def _create_curated_source_def_by_name_from_files(
-        self, source_name, source_def_file, source_script_file
+        self, source_key, source_def_file, source_script_file
     ):
-        self.logger.debug("Initializing curated source %s", source_name)
+        self.logger.debug("Initializing curated source %s", source_key)
 
         source_def = sourcedef.CuratedSourceDef.new_from_ini(
             conf_source_env=self.senv,
-            name=source_name,
+            name=source_key,
             parent_logger=self.logger,
             source_def_file=source_def_file,
             source_script_file=source_script_file
@@ -88,10 +88,10 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
             if source_def_file:
                 # raising same, but new exception? FIXME
                 raise exc.ConfigurationSourceMissingType(
-                    "source {} has unknown type".format(source_name)
+                    "source {} has unknown type".format(source_key)
                 ) from None
             else:
-                raise exc.ConfigurationSourceNotFound(source_name) from None
+                raise exc.ConfigurationSourceNotFound(source_key) from None
 
         except KeyError:
             # if there is no source type matching source_type_name,
@@ -101,21 +101,21 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
             #   so it indicates an error here
             #
             raise exc.ConfigurationSourceInvalidError(
-                "{}: could not detect source type".format(source_name)
+                "{}: could not detect source type".format(source_key)
             ) from None
         # --
 
         if source_type.is_source():
             # type of source is source => error
             raise exc.ConfigurationSourceInvalidError(
-                "{}: type of source must not be 'source'".format(source_name)
+                "{}: type of source must not be 'source'".format(source_key)
             )
 
         elif source_type.source_subtype:
             # couldfix - shouldfix
             raise exc.ConfigurationSourceInvalidError(
                 "{}: subtypes are not supported: {}".format(
-                    source_name, source_type.source_subtype
+                    source_key, source_type.source_subtype
                 )
             )
 
@@ -126,21 +126,21 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
             # implies a no source_type or a "source" source_type)
             #
             raise exc.ConfigurationSourceInvalidError(
-                "{}: has no source type class".format(source_name)
+                "{}: has no source type class".format(source_key)
             )
         # --
 
-        self.logger.debug("%s is a %s source", source_name, source_type)
+        self.logger.debug("%s is a %s source", source_key, source_type)
 
         return (source_def, source_type)
     # --- end of _create_curated_source_def_by_name_from_files (...) ---
 
     def _create_source_by_name_from_files(
-        self, source_name, source_def_file, source_script_file
+        self, source_key, source_def_file, source_script_file
     ):
         source_def, source_type = (
             self._create_curated_source_def_by_name_from_files(
-                source_name, source_def_file, source_script_file
+                source_key, source_def_file, source_script_file
             )
         )
 
@@ -152,7 +152,7 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
             # simply no point in creating unusable source objects,
             # so fail early.
             raise exc.ConfigurationSourceArchNotSupported(
-                source_name,
+                source_key,
                 archs=(
                     name for _, name
                     in self.senv.source_info.iter_target_arch_dedup()
@@ -163,7 +163,7 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
         # --
 
         return source_type.source_cls.new_from_def(
-            name=source_name,
+            name=source_key,
             conf_source_env=self.senv,
             source_def=source_def,
             parent_logger=self.logger
@@ -171,21 +171,22 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
     # --- end of _create_source_by_name_from_files (...) ---
 
     def create_source_by_name(self, source_name):
-        self.logger.info("Trying to locate curated source %s", source_name)
+        source_key = self.get_source_name_key(source_name)
+        self.logger.info("Trying to locate curated source %s", source_key)
 
-        sfiles = self.senv.get_source_def_files(source_name)
+        sfiles = self.senv.get_source_def_files(source_key)
         if any(sfiles):
             return self._create_source_by_name_from_files(
-                source_name, sfiles.def_file, sfiles.script_file
+                source_key, sfiles.def_file, sfiles.script_file
             )
         else:
             self.logger.warning(
-                "Could not locate curated source %s", source_name
+                "Could not locate curated source %s", source_key
             )
 
             # redundant,
             #  _create_source_by_name_from_files() would handle this, too
-            raise exc.ConfigurationSourceNotFound(source_name)
+            raise exc.ConfigurationSourceNotFound(source_key)
     # --- end of create_source_by_name (...) ---
 
     def create_source_by_name_from_settings(self, subtype, args, data):
@@ -267,8 +268,9 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
                 # then the type is implicit, and we have to "guess":
                 #
                 # (a) is source_def[0] the name of a curated source?
+                source_key = self.get_source_name_key(source_def[0])
                 try:
-                    sfiles = self.senv.get_source_def_files(source_def[0])
+                    sfiles = self.senv.get_source_def_files(source_key)
                 except ValueError:
                     sfiles = None
 
