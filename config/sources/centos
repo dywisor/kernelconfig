@@ -1,0 +1,177 @@
+# python module for the CentOS configuration source
+# -*- coding: utf-8 -*-
+#
+#  Dependencies:
+#  * git
+#
+
+import io
+import collections
+
+
+def run(env):
+    kver = env.kernelversion
+    params = env.parameters
+
+    # clone the repo && cd
+    env.git_clone_configured_repo()
+
+    # Similar to Fedora, CentOS has per-release branches
+    # that correspond to a specific kernel version.
+    # list_and_parse_branches() below takes care of identifying
+    # the release<>kver mapping,
+    # and pick_branch() is used to determine the "best" branch
+    # (where the version is closest to env.kernelversion).
+    #
+    BranchInfo = collections.namedtuple(
+        "BranchInfo", "name branch branch_suffix kv_str kv kv_dist"
+    )
+
+    def list_and_parse_branches():
+        # this is hacky:
+        parse_makefile_vars_from_file = kver.__class__.read_makefile_vars
+
+        def parse_makefile_vars(string, varnames):
+            return parse_makefile_vars_from_file(varnames, io.StringIO(string))
+        # ---
+
+        # iterate over all branches,
+        #  extract KVERSION from SOURCES/Makefile.common
+        #  and return a 4-tuple
+        #    (name, branch, branch_suffix, KVERSION, parsed KVERSION, kv dist)
+        #
+        #  where kv distance is a value >= 0 that indicates how far
+        #  the parsed KVERSION deviates from env.kernelversion
+        #  CentOS's versioning is a.b.0,
+        #  so it's unlikely that the distance is 0.
+        kver_code = kver.get_version_code()
+        #
+        #  In addition to the version code,
+        #  kver.version and kver.patchlevel are also taken into account
+        #  so that 4.5.1 gets preferred over 4.6 for e.g. kver==4.5.9.
+        #
+        #  skip branches that cannot be handled
+        #  (e.g. master is an empty branch,
+        #  and older branches are empty as well)
+        #
+        for sym_name, match_vars in env.git_list_branches(
+            env.get_git_remote_branch_regexp(r'c[0-9]+(?P<suffix>\S+)?')
+        ):
+            branch = match_vars["branch"]
+            suffix = (match_vars.get("suffix") or "").lstrip("-")
+
+            mkfile_content = env.git_get_text_file_content(
+                "SOURCES/Makefile.common", branch, nofail=True
+            )
+            if mkfile_content:
+                mkvars = list(
+                    parse_makefile_vars(mkfile_content, ["KVERSION"])
+                )
+
+                if mkvars:
+                    br_kv_str = mkvars[0][1]
+                    br_kv = env.create_kernelversion_from_vtuple_str(br_kv_str)
+
+                    yield BranchInfo(
+                        match_vars["name"],
+                        branch,
+                        suffix,
+                        br_kv_str,
+                        br_kv,
+                        (
+                            # primary key is "version and patchlevel matches"
+                            -1 if (
+                                br_kv.version == kver.version
+                                and br_kv.patchlevel == kver.patchlevel
+                            ) else 1,
+                            # secondary key is distance
+                            abs(kver_code - br_kv.get_version_code())
+                        )
+                    )
+                else:
+                    env.log_debug(
+                        "could not get KVERSION from makefile, branch %s",
+                        branch
+                    )
+            else:
+                env.log_debug(
+                    "Could not get Makefile content for branch %s, ignored",
+                    branch
+                )
+        # --
+    # ---
+
+    def get_branches():
+        return {
+            br_info.name: br_info
+            for br_info in list_and_parse_branches()
+        }
+    # ---
+
+    def pick_branch(branches):
+        # get the minimal kv distance
+        kv_dist_min = min(branches.values(), key=lambda b: b.kv_dist).kv_dist
+
+        # the distance cannot be assumed to be unique (e.g. c7 <> c7-i686),
+        # so get all branches with kv_dist_min
+        candidates = sorted(
+            (b for b in branches.values() if b.kv_dist == kv_dist_min),
+            key=lambda b: b.branch_suffix
+        )
+
+        # now pick the "best" branch
+        # * if there is a branch whose name ends with the target arch,
+        #   pick that one
+        # * otherwise, pick the first branch of the candidates list
+        #   branches without a suffix are preferred (due to sorting)
+        for candidate in reversed(candidates):
+            if candidate.branch_suffix.endswith(params.arch):
+                ret_branch = candidate
+                break
+        else:
+            # TODO/COULDFIX: prefer branches ending with "-plus"
+            #                 (but: how does that mix with the -i686 suffix?)
+            ret_branch = candidates[0]
+        # --
+
+        env.log_info(
+            "Picking branch %s with version %s",
+            ret_branch.name, ret_branch.kv_str
+        )
+        env.log_debug(
+            "distance of branch %s: kv %s, dist=%s",
+            ret_branch.name,
+            ("equals" if ret_branch.kv_dist[0] < 0 else "differs"),
+            ret_branch.kv_dist[1]
+        )
+        return ret_branch
+    # --- end of pick_branch (...) ---
+
+    branches = get_branches()
+    if not branches:
+        env.error("No suitable git branches found!")
+
+    # if a specific release version has been requested, use that
+    # otherwise, pick tje branch that is closest to env.kernelversion
+    if params.release:
+        try:
+            branch_info = branches[params.release]
+        except KeyError:
+            env.error(
+                "Request release version branch does not exist: {}".format(
+                    params.release
+                )
+            )
+    else:
+        branch_info = pick_branch(branches)
+    # --
+
+    # now checkout the branch and tell env about the config file
+    env.git_checkout_branch(branch_info.branch)
+    env.add_config_file(
+        env.str_format(
+            "SOURCES/kernel-{0}-{param_arch}{param_debug}.config",
+            branch_info.kv_str
+        )
+    )
+# --- end of run (...) ---
