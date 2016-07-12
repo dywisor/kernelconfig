@@ -423,6 +423,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         if not os.path.isfile(filepath):
             raise self.exc_types.ConfigurationSourceFileMissingError(path)
 
+        self.log_info("Adding config file %s", path)  # not filepath
         self._arg_config.add_outconfig(filepath)
     # --- end of add_config_file (...) ---
 
