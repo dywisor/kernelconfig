@@ -11,6 +11,9 @@ S := $(_PRJROOT)
 O := $(S)
 SRC_FILESDIR := $(S:/=)/files
 SRC_DOCDIR := $(S:/=)/doc
+SRC_CONFDIR := $(S:/=)/config
+SRC_CONFSOURCEDIR := $(SRC_CONFDIR:/=)/sources
+
 _BUILD_DIR := $(O:/=)/build
 _PYMOD_DIRS := $(addprefix $(S:/=)/,$(_PRJNAME))
 _SETUP_PY := $(S:/=)/setup.py
@@ -53,6 +56,19 @@ define _f_sanity_check_output_dir
 	test '$(1)' != '$(S)'
 endef
 f_sanity_check_output_dir = $(call _f_sanity_check_output_dir,$(strip $(1)))
+
+define __f_list_conf_sources_with_type
+	test -n '$(1)' && \
+	find '$(SRC_CONFSOURCEDIR)' \
+		-type f -name '*.def' \
+		-exec grep -lEi -- '^type\s*=\s*$(1)\s*$$' '{}' ';' \
+		-print | sed -e 's=[.]def$$=='
+endef
+
+_f_list_conf_sources_with_type = $(shell \
+	$(call __f_list_conf_sources_with_type,$(strip $(1))) | sort)
+
+f_list_pym_conf_sources = $(call _f_list_conf_sources_with_type,pym)
 
 
 PHONY += all
@@ -138,11 +154,18 @@ check-typo:
 PHONY += check-pep8
 check-pep8:
 # setup.py does not need to be pep8-compliant
-	$(X_PEP8) $(_PYMOD_DIRS) $(foreach x,$(PEP8_EXCLUDE),--exclude '$(x)')
+	$(X_PEP8) \
+		$(_PYMOD_DIRS) \
+		$(call f_list_pym_conf_sources) \
+		$(foreach x,$(PEP8_EXCLUDE),--exclude '$(x)')
 
 PHONY += check-pyflakes
 check-pyflakes:
-	$(X_PYFLAKES) $(_SETUP_PY) $(_PYMOD_DIRS) $(PYFLAKES_EXTRA_FILES)
+	$(X_PYFLAKES) \
+		$(_SETUP_PY) \
+		$(_PYMOD_DIRS) \
+		$(call f_list_pym_conf_sources) \
+		$(PYFLAKES_EXTRA_FILES)
 
 PHONY += check
 check: $(addprefix check-,typo pep8 pyflakes)
