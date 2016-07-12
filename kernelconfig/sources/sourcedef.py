@@ -278,11 +278,17 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
                 logger=source_def.get_child_logger("parser")
             )
             parser.read_filepath(source_def_file)
-            source_def.load_ini_data(parser.get_source_def_raw_dict())
+            source_def.load_ini_data(
+                parser.get_source_def_raw_dict(), source=source_def_file
+            )
         # --
 
         return source_def
     # --- end of new_from_ini (...) ---
+
+    @property
+    def has_definition_file(self):
+        return bool(self.def_files)
 
     def __init__(
         self, conf_source_env, name, *, default_script_file=None,
@@ -297,6 +303,7 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
         self.data = {}  # gets replaced by a new dict in load_*()
 
         self.default_script_file = default_script_file
+        self.def_files = []
 
         self.arch = None
         self.feat = None
@@ -347,8 +354,10 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
         return parser
     # --- end of build_parser (...) ---
 
-    def load_ini_data(self, data):
+    def load_ini_data(self, data, source=None):
         self.data = data
+        if source:
+            self.def_files.append(source)
         self._fillup_data()
 
     def _fillup_data(self):
