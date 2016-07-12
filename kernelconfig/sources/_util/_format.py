@@ -161,9 +161,7 @@ class ConfigurationSourceStrFormatter(StrFormatter):
     @type senv:      L{ConfigurationSourcesEnv}
     """
 
-    FIELD_RENAME_MAP = {
-        "s": "srctree"   # FIXME: remove dup, see sources env
-    }
+    FIELD_RENAME_MAP = {}
 
     @classmethod
     def merge_field_rename_map(cls, rename_map):
