@@ -304,6 +304,14 @@ class KernelVersion(_kversion_base.KernelVersionBaseObject):
     # --- end of decode_version_code (...) ---
 
     @classmethod
+    def encode_version_code(cls, version, patchlevel, sublevel):
+        return sum((
+            (version or 0) << 16,
+            (patchlevel or 0) << 8,
+            (sublevel or 0)
+        ))
+
+    @classmethod
     def new_from_version_code(cls, vcode, name=None):
         version, patchlevel, sublevel = cls.decode_version_code(vcode)
         return cls(version, patchlevel, sublevel, name=name)
@@ -372,6 +380,13 @@ class KernelVersion(_kversion_base.KernelVersionBaseObject):
         self.extraversion = extraversion
         self.name = name
     # --- end of __init__ (...) ---
+
+    def get_version_code(self):
+        return self.encode_version_code(
+            self.version,
+            self.patchlevel,
+            self.sublevel
+        )
 
     def _cmp_none(self):
         raise TypeError()
