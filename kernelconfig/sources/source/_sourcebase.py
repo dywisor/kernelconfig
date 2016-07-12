@@ -103,7 +103,6 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
 
     @abc.abstractmethod
     def init_from_def(self, source_def):
-        # TODO: add implementations to the various types
         self.arg_parser = source_def.build_parser()
     # --- end of init_from_def (...) ---
 
