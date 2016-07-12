@@ -313,8 +313,8 @@ class AbstractConfigurationSources(
         @param args:         unspecified for now
         @param kwargs:       unspecified for now
 
-        @return:  configuration basis object
-        @rtype:   subclass of L{AbstractConfigurationBasis}
+        @return:  configuration basis (a list of config files)
+        @rtype:   C{list} of C{str}
         """
         source = self.get_source(source_name)
         return source.get_configuration_basis(*args, **kwargs)
