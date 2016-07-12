@@ -56,11 +56,16 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
 
     RE_FEAT_SPLIT = re.compile(r'[^a-zA-Z0-9]+')
 
-    def __init__(self, source_name, description=None, epilog=None):
+    def __init__(
+        self, source_name,
+        description=None, epilog=None, accept_unknown_args=False
+    ):
         # keep track of all arch/feature parameters
         #  there are ways to re-use what argparse.ArgumentParser already has,
         #  but this is more explicit and just works
         self.source_params = {}
+
+        self.accept_unknown_args = accept_unknown_args
 
         super().__init__(
             prog=source_name,
@@ -75,6 +80,14 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
 
         # empty group
         self.source_params[name] = None
+    # ---
+
+    def parse_args(self, argv, **kwargs):
+        if self.accept_unknown_args:
+            return self.parse_known_args(argv, **kwargs)
+        else:
+            parsed = super().parse_args(argv, **kwargs)
+            return (parsed, None)
     # ---
 
     def add_feature(self, feat_name, feat_node, is_active):
@@ -335,7 +348,8 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
     def build_parser(self):
         parser = CuratedSourceArgParser(
             self.name,
-            description=self.data.get("description")
+            description=self.data.get("description"),
+            accept_unknown_args=self.get("passunknownargs")
         )
 
         arch_value = (
@@ -408,6 +422,10 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
             if self.default_script_file and not self.data.get("path"):
                 self.data["path"] = self.default_script_file
         # --
+
+        self.data.setdefault(
+            "passunknownargs", (not self.has_definition_file)
+        )
     # --- end of _autodetect_type (...) ---
 
     def _link_arch_x_feat(self):
@@ -611,6 +629,7 @@ class CuratedSourceDefIniParser(configparser.ConfigParser):
         # set of section names that accumulate in a dict-like fashion
         dict_sects = {"architectures", "features"}
         passthrough_sub_sects = {"config", }
+        source_bool_opts = {"passunknownargs", }
         shlex_options = {"command", }
 
         sdef_raw = {}
@@ -634,6 +653,9 @@ class CuratedSourceDefIniParser(configparser.ConfigParser):
                     raise ValueError(
                         "reserved sub-section field name: {}".format(option)
                     )
+
+                elif option in source_bool_opts:
+                    value = self.getboolean(sections["source"], option)
 
                 elif option.endswith("_str"):
                     raise ValueError("reserved field name: {}".format(option))

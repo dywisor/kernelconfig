@@ -461,9 +461,12 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
 
         if self.arg_parser is not None:
             # allow None argv
-            params = self.arg_parser.parse_args(argv or [])
+            params, argv_rem = self.arg_parser.parse_args(argv or [])
             if params:
                 arg_config.set_params(params)
+
+            if argv_rem:
+                arg_config.argv.extend(argv_rem)
 
         elif argv:
             raise exc.ConfigurationSourceFeatureUsageError(
