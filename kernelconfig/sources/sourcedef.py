@@ -345,11 +345,21 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
     def __len__(self):
         return len(self.data)
 
+    def gen_parser_description(self):
+        archs = self.data["architectures"]
+        yield "Supported architectures: {}.".format(
+            (
+                ", ".join(sorted(archs)) if archs
+                else "unknown (no restrictions)"
+            )
+        )
+
     def build_parser(self):
         parser = CuratedSourceArgParser(
             self.name,
-            description=self.data.get("description"),
-            accept_unknown_args=self.get("passunknownargs")
+            description="\n".join(self.gen_parser_description()),
+            accept_unknown_args=self.get("passunknownargs"),
+            epilog=self.data.get("description")
         )
 
         arch_value = (

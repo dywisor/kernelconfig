@@ -433,16 +433,13 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             if k:
                 outstream_write("\n\n")
 
-            # TODO: add a describe() method to conf_source objects
-            #       maybe use textwrap.TextWrapper()
             outstream_write("{}:\n".format(conf_source.name))
 
-            if conf_source.arg_parser is None:
+            arg_help_str = conf_source.format_help()
+            if not arg_help_str:
                 outstream_write("  No help available.\n")
 
             else:
-                arg_help_str = conf_source.arg_parser.format_help()
-
                 # reindent
                 help_msg = "\n".join((
                     (("  " + l) if l else l)
@@ -481,13 +478,12 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             return False
 
         else:
-            # TODO: describe(), see do_main_script_help_sources()
+            arg_help_str = conf_source.format_help()
 
-            if conf_source.arg_parser is None:
+            if not arg_help_str:
                 outstream_write("{}: no help available.\n".format(source_name))
 
             else:
-                arg_help_str = conf_source.arg_parser.format_help()
                 outstream_write(arg_help_str)
                 outstream_write("\n")
         # --
