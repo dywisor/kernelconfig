@@ -674,7 +674,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         if not argv or not argv[0]:
             self.error("empty git command")
 
-        cmdv = ["git"]
+        cmdv = ["git", "--no-pager"]
         if git_dir:
             cmdv.extend(["-C", str(git_dir)])
 
