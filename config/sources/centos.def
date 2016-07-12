@@ -1,0 +1,28 @@
+[Source]
+Name = CentOS
+Type = pym
+
+Arch = x86_64 x86 ppc64 ppc64le s390x
+
+
+
+[Config]
+Repo = git://git.centos.org/rpms/kernel
+
+[Arch:x86_64]
+
+[Arch:x86]
+Value = i686
+
+
+[Feature:debug]
+Value = -debug
+
+[Feature:release]
+Type = arg
+
+Description =
+  CentOS release version from which the config should be taken.
+  It will be guessed from the kernel version if unset.
+  Depending on the target architecture, it should include an appropriate suffix.
+  Example values: c7, c7-i686
