@@ -5,6 +5,7 @@ import os
 
 from . import _sourcebase
 from ..abc import exc
+from .._util import _misc
 
 
 __all__ = ["LocalFileConfigurationSource"]
@@ -120,11 +121,9 @@ class LocalFileConfigurationSource(_sourcebase.ConfigurationSourceBase):
         if self.arg_parser is not None:
             # allow None args
             params = self.arg_parser.parse_args(args or [])
-            # code dup!
-            fmt_vars.update((
-                ("param_{}".format(name.lower()), (value or ""))
-                for name, value in vars(params).items()
-            ))
+            fmt_vars.update(
+                _misc.get_parameter_format_vars_from_parsed_args(params)
+            )
 
         elif args:
             raise exc.ConfigurationSourceFeatureUsageError(

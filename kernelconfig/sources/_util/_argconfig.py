@@ -4,6 +4,7 @@
 import collections
 
 from . import _outfile
+from . import _misc
 
 
 __all__ = ["ConfigurationSourceArgConfig"]
@@ -63,10 +64,9 @@ class ConfigurationSourceArgConfig(object):
             self._params = False
             return
 
-        param_vars = {
-            "param_{}".format(name.lower()): value
-            for name, value in vars(params_namespace).items()
-        }
+        param_vars = _misc.get_parameter_format_vars_from_parsed_args(
+            params_namespace
+        )
 
         self._params = params_namespace
         self.fmt_vars.update(
