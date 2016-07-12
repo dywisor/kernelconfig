@@ -46,8 +46,8 @@ class AbstractConfigurationSource(
         @param kwargs:   unspecified for now
 
 
-        @return:  configuration basis object
-        @rtype:   subclass of L{AbstractConfigurationBasis}
+        @return:  configuration basis (a list of config files)
+        @rtype:   C{list} of C{str}
         """
         raise NotImplementedError()
     # --- end of get_configuration_basis (...) ---
