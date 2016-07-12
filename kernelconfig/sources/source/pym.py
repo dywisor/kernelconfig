@@ -104,9 +104,7 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
     def init_from_def(self, source_data):
         super().init_from_def(source_data)
 
-        pym_file = (
-            source_data.get("path") or source_data.default_script_file
-        )
+        pym_file = source_data.get("path")
         if pym_file:
             self.pym = self.create_loggable(
                 PymConfigurationSourceModule,
