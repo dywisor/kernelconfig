@@ -247,7 +247,6 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
         source_args = None
         # source_data is already set
 
-        # fixme: file uri
         if os.path.isabs(source_def[0]):
             # implicit file
             source_type = sourcetype.get_source_type("local_file")
