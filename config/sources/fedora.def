@@ -34,7 +34,7 @@ Feature = release
 Type = arg
 
 Description =
-  Fedora fedora from which the config should be taken.
+  Fedora release version from which the config should be taken.
   It will be guessed from the kernel version if unset
   and falls back to 'master'.
   Example values: f23, master
