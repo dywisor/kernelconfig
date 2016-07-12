@@ -385,7 +385,7 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
 
         self.data["type"] = type_name  # possibly None
 
-        if type_name == "script":
+        if type_name in {"script", "pym"}:
             if self.default_script_file and not self.data.get("path"):
                 self.data["path"] = self.default_script_file
         # --
