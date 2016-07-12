@@ -36,7 +36,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         self.arg_parser = None
         self.arg_types = None
         self.install_info = kernelconfig.installinfo.get_install_info().copy()
-        self.settings = kernelconfig.util.settings.SettingsFileReader()
+        self.settings = None
 
         self.source_info = None
         self.conf_sources = None
@@ -52,6 +52,14 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             )
             self.conf_sources = conf_sources
         return conf_sources
+    # ---
+
+    def get_settings(self):
+        settings = self.settings
+        if settings is None:
+            settings = kernelconfig.util.settings.SettingsFileReader()
+            self.settings = settings
+        return settings
     # ---
 
     def _setup_arg_parser_args(self, parser, arg_types):
@@ -261,7 +269,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         # --
 
         self.logger.info("Reading settings from %s", settings_file)
-        self.settings.read_file(settings_file)
+        self.get_settings().read_file(settings_file)
     # --- end of do_main_load_settings (...) ---
 
     def do_main_setup_source_info(self, arg_config):
@@ -284,6 +292,11 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
     def do_main_load_input_config(self, arg_config, config):
         if arg_config.get("inconfig"):
             input_config_files = [arg_config["inconfig"]]
+
+        elif self.settings is None:
+            raise AssertionError(
+                "settings must be initialized before config file loaded"
+            )
 
         else:
             conf_sources = self.get_conf_sources()
@@ -316,6 +329,8 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
     def do_main_script_genconfig(self, arg_config):
         self.do_main_setup_logging(arg_config)
         self.do_main_load_settings(arg_config)
+        if self.settings is None:
+            raise AssertionError("settings not loaded!")
         self.do_main_setup_source_info(arg_config)
 
         # default output config
