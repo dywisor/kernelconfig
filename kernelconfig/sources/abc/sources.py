@@ -235,7 +235,7 @@ class AbstractConfigurationSources(
 
         elif assert_key is not None and (key != assert_key):
             raise ValueError(
-                "key does meet callers expectations: {} != {}".format(
+                "key does not meet callers expectations: {} != {}".format(
                     key, assert_key
                 )
             )
