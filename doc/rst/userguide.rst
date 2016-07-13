@@ -381,7 +381,7 @@ It is served by a *configuration source*
 and can be a single ``.config`` file or multiple files
 
 The first non-comment, non-empty line specifies the *configuration source*.
-It starts with a keyword that describing the source's type,
+It starts with a keyword describing the source's type,
 which can be a local file,
 a remote file that can be downloaded via http(s) or ftp,
 a ``make defconfig`` target, a command or a script,
@@ -398,7 +398,7 @@ is controlled by kernelconfig.
 
 Except for *curated sources*,
 the *configuration source* line gets string-formatted,
-see the examples below, or `Python String Formatting`.
+see the examples below, or `Python String Formatting`_.
 While this allows for some variance in file paths and commands,
 it also requires to escape ``{`` and ``}`` characters,
 especially for shell scripts.
