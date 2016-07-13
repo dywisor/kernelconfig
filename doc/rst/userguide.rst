@@ -52,7 +52,7 @@ Running kernelconfig
 
 In the simplest case,
 run :code:`kernelconfig` without any arguments
-from wihin the kernel sources directory.
+from within the kernel sources directory.
 It uses the ``default`` `settings`_ and creates a ``.config`` file.
 
 .. N.B:
@@ -92,8 +92,8 @@ The input and output config file can point to the same file.
 Prior to writing the output file,
 a backup of the old file is created (``<output>.bak``).
 
-| The target architecture is usually determined by ``uname -m``.
-| For cross-compilation scenarios, it is possible to specify it manually::
+The target architecture is usually determined by ``uname -m``.
+For cross-compilation scenarios, it is possible to specify it manually::
 
     $ kernelconfig -a arm
 
