@@ -777,3 +777,524 @@ Globbing is supported and expands to a combined list of glob matches
 from all directories, but with the usual order of preference.
 
 See `macros file format`_ for a more detailed explanation of the format.
+
+
+Curated Sources
+---------------
+
+This section covers how to add new *curated sources* to kernelconfig.
+
+As previously noted,
+the purpose of configuration sources is to provide a *configuration basis*,
+a non-empty list of files that is used as input ``.config``.
+
+*Curated sources* are configuration sources
+that exist separately from the settings file,
+in the ``sources`` subdirectory of the settings directories.
+
+A curated source consists of
+
+* a script ``sources/<name>`` (*script only*)
+
+* a *source definition file* ``sources/<name>.def`` (*sourcedef only*)
+
+* a *source definition file* ``sources/<name>.def``
+  plus a script ``sources/<name>`` (*sourcedef with script*)
+  or a Python module ``sources/<name>`` (*sourcedef with pym*)
+
+
+Script-Only Curated Sources
++++++++++++++++++++++++++++
+
+The simplest case is *script only*,
+which is limited to single-file configuration bases.
+Just put a script in ``<settings>/source``, e.g.
+``$HOME/.config/kernelconfig/sources/my_source``,
+and make it executable.
+
+It can then be referenced in the settings file with::
+
+    [source]
+    my_source
+
+When run,
+it receives a file path to which the configuration basis
+should be written to as first argument,
+the target architecture as second argument,
+and the short kernel version (kernel version and patchlevel, e.g. ``4.1``)
+as third argument.
+Parameters from the settings file are passed as-is to the script,
+starting at the fourth argument::
+
+    my_source {outconfig} {arch} {kmaj}.{kpatch} ...
+
+The script has also access to the `config source environment variables`_.
+
+
+At some point, it might be useful
+to restrict the accepted architectures to what is actually supported
+and provide a more meaningful help message
+when ``kernelconfig --help-source my_source`` is run.
+
+This can be done by creating a ``my_source.def`` source definition file
+in the same directory with the following content::
+
+    [source]
+    Architectures = x86_64
+
+    # use the script-only script calling convention,
+    #  which passes all unknown parameters as-is to the script
+    PassUnknownArgs = 1
+
+    Description = my source is ...
+
+
+Source Definition File
+++++++++++++++++++++++
+
+Curated sources that are not script-type sources,
+or sources that want to benefit from argument parsing,
+need to be described in a source definition file.
+
+Source definition files reside in the same directory as scripts,
+and their filename must end with ``.def``.
+
+.. _Liquorix Example:
+
+Example: Liquorix (``sources/liquorix.def``)::
+
+    [source]
+    Name = Liquorix
+
+    Architectures = x86_64 x86
+    Features = pae
+
+    Type = file
+    Path = http://liquorix.net/sources/{kmaj}.{kpatch}/config.{param_arch}{param_pae}
+
+    Description =
+      Liquorix is a distro kernel replacement built using the best configuration
+      and kernel sources for desktop, multimedia, and gaming workloads.
+
+    [Arch:x86_64]
+    Value = amd64
+
+    [Arch:x86]
+    Value = i386
+
+    [Feature:PAE]
+    Arch = x86
+    Value = -pae
+    Description = enable Physical Address Extensions ...
+
+Liquorix supports 32-bit and 64-bit x86 architectures
+and has a ``-pae`` config variant for 32-bit x86.
+The config file can be downloaded via http,
+and the url can be constructed with the information
+from the source definition file.
+
+The ``Description`` options are used for creating the help message that can
+be viewed with ``kernelconfig --help-source liquorix``.
+
+|
+
+The source definition file is an ini file.
+Empty lines are ignored, comment lines start with ``#``,
+sections are introduced with ``[<name>]``,
+and options are set with ``<option> = <value>``.
+Option and section names are case-insensitive.
+Long values can span over multiple lines by indenting subsequent lines
+with whitespace.
+
+
+The ``[source]`` section describes the source,
+how to run it, and states which architectures and features are supported.
+
+The following options are recognized in the ``[source]`` section:
+
+.. table:: source definition ``[source]`` section options
+
+    +-----------------+---------------+-----------+---------------------------------------+
+    | field name      | value type    | required  | description                           |
+    +=================+===============+===========+=======================================+
+    | Name            | str           | *default* | Name of the curated source            |
+    |                 |               |           |                                       |
+    |                 |               |           | Defaults to the name of the           |
+    |                 |               |           | definition file (file suffix removed) |
+    +-----------------+---------------+-----------+---------------------------------------+
+    | Description     | str           | no        | Description of the curated source,    |
+    |                 |               |           | for informational purposes            |
+    +-----------------+---------------+-----------+---------------------------------------+
+    | Type            | str           | *depends* | The type of the source,               |
+    |                 |               |           | which can be                          |
+    |                 |               |           |                                       |
+    |                 |               |           | * file                                |
+    |                 |               |           | * script                              |
+    |                 |               |           | * pym                                 |
+    |                 |               |           | * command                             |
+    |                 |               |           | * make                                |
+    |                 |               |           |                                       |
+    |                 |               |           | If not set, kernelconfig tries to     |
+    |                 |               |           | autodetect the type:                  |
+    |                 |               |           |                                       |
+    |                 |               |           | * *script* if ``Path=`` is set,       |
+    |                 |               |           |   or if a file with the source's      |
+    |                 |               |           |   name was found in the ``sources``   |
+    |                 |               |           |   directory,                          |
+    |                 |               |           |                                       |
+    |                 |               |           | * *command* if ``Command=`` is set    |
+    |                 |               |           |   and does not reference the          |
+    |                 |               |           |   ``{script_file}`` format variable   |
+    +-----------------+---------------+-----------+---------------------------------------+
+    | Path            | format str    | *depends* | For file-type sources, this is the    |
+    |                 |               |           | path to the config file and required. |
+    |                 |               |           |                                       |
+    |                 |               |           | For script- and pym-type sources,     |
+    |                 |               |           | this is the path to the script        |
+    |                 |               |           | or Python module, and optional.       |
+    |                 |               |           | It defaults to                        |
+    |                 |               |           | ``<settings dirs>/sources/<name>``    |
+    |                 |               |           |                                       |
+    |                 |               |           | Ignored for command and make.         |
+    +-----------------+---------------+-----------+---------------------------------------+
+    | Command         | format str    | *depends* | For command-type sources,             |
+    |                 |               |           | this field specifies the command      |
+    |                 |               |           | to be run and is mandatory.           |
+    | *also*: Cmd     |               |           |                                       |
+    |                 |               |           | For script-type sources,              |
+    |                 |               |           | this field can be used to override    |
+    |                 |               |           | the calling convention.               |
+    |                 |               |           | It should include ``{script_file}``,  |
+    |                 |               |           | which gets replaced with the          |
+    |                 |               |           | script specified in ``Path``          |
+    |                 |               |           |                                       |
+    |                 |               |           | For make-type sources,                |
+    |                 |               |           | this field can be used to pass        |
+    |                 |               |           | additional arguments to the           |
+    |                 |               |           | ``make`` command.                     |
+    +-----------------+---------------+-----------+---------------------------------------+
+    | Target          | str           | yes       | Target for make-type sources          |
+    +-----------------+---------------+-----------+---------------------------------------+
+    | Architectures   | str-list      | no        | List of supported architectures       |
+    |                 |               |           |                                       |
+    | *also*: Arch    |               |           | Defaults to *all*.                    |
+    +-----------------+---------------+-----------+---------------------------------------+
+    | Features        | str-list      | no        | List of source variants               |
+    |                 |               |           |                                       |
+    | *also*: Feat    |               |           | Defaults to none (the empty string).  |
+    +-----------------+---------------+-----------+---------------------------------------+
+    | PassUnknown\    | bool          | no        | Controls whether unknown parameters   |
+    | Args            |               |           | should be accepted. By default,       |
+    |                 |               |           | kernelconfig refuses to operate when  |
+    |                 |               |           | unknown parameters are encountered.   |
+    |                 |               |           |                                       |
+    |                 |               |           | For script-type sources,              |
+    |                 |               |           | the unknown parameters are passed     |
+    |                 |               |           | as-is after ``Command``.              |
+    +-----------------+---------------+-----------+---------------------------------------+
+
+|
+|
+
+If a list of supported architectures is specified,
+all other architectures are considered unsupported for a particular source,
+and kernelconfig refuses to operate.
+
+Since naming of target architectures varies between sources,
+``[Arch:<name>]`` sections can be used to provide a name mapping.
+They only have one option, ``Value``, which sets the alternative name.
+
+For example, ``x86_64`` is often named ``amd64``::
+
+    [Arch:x86_64]
+    Value = amd64
+
+The *architecture-rename* sections are tried to match
+with the most specific arch first (``$(uname -r)``, e.g. ``x86_64``),
+and the most generic arch last (kernel arch, e.g. ``x86``).
+
+For renaming ``x86`` to ``i386``, it is necessary to provide an empty
+rename section for ``x86_64`` since the kernel architecture
+is ``x86`` in both cases::
+
+    [Arch:x86]
+    Value = i386
+
+    [Arch:x86_64]
+    #Value = x86_64
+
+Supported architectures can also be listed with the ``Architectures`` option
+in the ``[source]`` section.
+
+The renamed architecture is available via the ``{param_arch}``
+format variable.
+If rename action has been taken, ``{param_arch}`` equals ``{arch}``.
+
+|
+|
+
+Each curated source has an argument parser that verifies and processes
+the parameters it receives from the settings file.
+
+By default, no parameters are accepted, unless ``PassUnknownArgs`` is true.
+
+Configuration sources usually offer several config variants,
+e.g. a ``debug`` variant or a ``PAE`` variant for ``x86``.
+Such variants can be declared with ``[Feat:<name>]`` sections,
+which are converted to ``argparse`` arguments
+and can be specified in the settings file with ``--<name>``.
+
+In the source definition file,
+they are then available as ``param_{<name>}`` format variables
+for options with *format str* values
+Depending on the source type,
+they can also be accessed via ``PARAM_{<NAME>}`` environment variables.
+
+For script-type sources,
+if no ``Command=`` has been specified in the ``[source]`` section,
+the parameters are put in the default command
+after the kernel version and before the unknown parameters::
+
+    {script_file} {outconfig} {arch} {kmaj}.{kpatch} [<param>...] [<unknown>...]
+
+
+A ``[Feat:<name>]`` section can contain the following options:
+
+.. table:: source definition ``[Feature:<name>]`` section options
+
+    +-----------------+---------------+-----------+---------------------------------------+
+    | field name      | value type    | required  | description                           |
+    +=================+===============+===========+=======================================+
+    | Name            | str           | no        | Name of the parameter,                |
+    |                 |               |           | for informational purposes.           |
+    |                 |               |           |                                       |
+    |                 |               |           | Defaults to ``<name>``.               |
+    +-----------------+---------------+-----------+---------------------------------------+
+    | Description     | str           | no        | Description of the parameter,         |
+    |                 |               |           | for informational purposes.           |
+    +-----------------+---------------+-----------+---------------------------------------+
+    | Dest            | str           | no        | Parameter group name,                 |
+    |                 |               |           | parameters with the same ``Dest``     |
+    |                 |               |           | are mutually exclusive.               |
+    |                 |               |           |                                       |
+    |                 |               |           | The group name is used as name        |
+    |                 |               |           | for the format and environment        |
+    |                 |               |           | variables.                            |
+    |                 |               |           |                                       |
+    |                 |               |           | Defaults to ``<name>``.               |
+    +-----------------+---------------+-----------+---------------------------------------+
+    | Type            | str           | no        | The argument type of the parameter,   |
+    |                 |               |           | which can be                          |
+    |                 |               |           |                                       |
+    |                 |               |           | * const                               |
+    |                 |               |           |     parameter accepts no value        |
+    |                 |               |           |     and a constant value (``Value``)  |
+    |                 |               |           |     gets stored in ``Dest``           |
+    |                 |               |           |     if the parameter is given,        |
+    |                 |               |           |     and the default value             |
+    |                 |               |           |     (``Default``) otherwise.          |
+    |                 |               |           |                                       |
+    |                 |               |           | * optin                               |
+    |                 |               |           |     Similar to *const*,               |
+    |                 |               |           |     stores ``y`` and defaults to      |
+    |                 |               |           |     the empty string                  |
+    |                 |               |           |                                       |
+    |                 |               |           | * optout                              |
+    |                 |               |           |     Similar to *const*,               |
+    |                 |               |           |     stores the empty string           |
+    |                 |               |           |     and defaults to ``y``.            |
+    |                 |               |           |                                       |
+    |                 |               |           | * arg                                 |
+    |                 |               |           |     parameter accepts one value       |
+    |                 |               |           |     and stores it in ``Dest``,        |
+    |                 |               |           |                                       |
+    |                 |               |           | Defaults to *const*.                  |
+    +-----------------+---------------+-----------+---------------------------------------+
+    | Default         | str           | no        | Default value if the parameter        |
+    |                 |               |           | is not specified.                     |
+    |                 |               |           |                                       |
+    |                 |               |           | Only meaningful for *const*- and      |
+    |                 |               |           | *arg*-type parameters.                |
+    |                 |               |           |                                       |
+    |                 |               |           | Defaults to the empty string.         |
+    +-----------------+---------------+-----------+---------------------------------------+
+    | Value           | str           | no        | Value gets set if the parameter       |
+    |                 |               |           | is given                              |
+    |                 |               |           |                                       |
+    |                 |               |           | Only meaningful for *const*-type      |
+    |                 |               |           | parameters, in which case it defaults |
+    |                 |               |           | to ``--<name>``.                      |
+    +-----------------+---------------+-----------+---------------------------------------+
+
+|
+|
+
+Another section exists that is only relevant to ``pym``-type sources,
+``[Config]``.
+It can be accessed by the source via ``env.get_config(<option>)``,
+which options are recognized is therefore up to the source.
+
+
+
+Python-Module Configuration Sources
++++++++++++++++++++++++++++++++++++
+
+Python-Module Configuration Sources gain access
+to kernelconfig's functionality such as error reporting and logging,
+and also temporary files/directories, file downloading and git repo handling.
+
+A python module source must implement a ``run()`` function that takes
+exactly one argument, which is an object that acts as interface
+between the source and kernelconfig. It should be named ``env``.
+
+Additionally, a source definition file is required for this type,
+and its ``Type`` needs to be set to ``pym`` (in the ``[source]`` section).
+
+Here is what a Python module looks like:
+
+.. code:: Python
+
+    # Python Module for the <name> configuration source
+    # -*- coding: utf-8 -*-
+
+    def reset():
+        """
+        The reset() function is optional.
+
+        It is called whenever the Python Module gets loaded.
+
+        It takes no arguments and does not have access
+        to kernelconfig's pymenv interface.
+
+        Usage scenarios include initializing module-level global variables.
+        """
+        pass
+    # --- end of reset (...) ---
+
+
+    def run(env):
+        """
+        The run() function must be implemented
+        and is responsible for setting up the configuration basis,
+        e.g. by downloading files.
+
+        To facilitate this, it has to access to kernelconfig's pymenv interface,
+        which provides some useful helper methods
+        as well as error reporting and logging.
+
+        If this function returns False (or false value that is not None),
+        kernelconfig prints an error message and exits.
+        """
+
+        # The parsed parameters can be accessed via the "parameters" attribute
+        params = env.parameters
+
+        # The kernel version for which a configuration basis should be provided
+        # can be accessed via the "kernelversion" attribute
+        kver = env.kernelversion
+        #
+        # The kernel version provides access to individual version components via
+        # the version, patchlevel, sublevel, subsublevel and rclevel attributes.
+
+        # As an example,
+        # the Liquorix source presented before
+        # could also be written as a Python-Module source.
+        # It needs to
+        # (1) construct the url by means of string formatting
+        # (2) download the config file
+        # (3) register the downloaded file as (part of the) configuration basis
+        #
+        # It can be done by chaining 3 function calls to pymenv,
+        # which also takes care of error handling:
+        env.add_config_file(
+            env.download_file(
+                env.str_format(
+                    'http://liquorix.net/sources/{kmaj}.{kpatch}/config.{param_arch}{param_pae}'
+                )
+            )
+        )
+
+        # the configuration basis can consist of multiple files,
+        # just register them in the order as they should be read later on
+        #
+        # env.add_config_file(another_config_file)
+    # --- end of run (...) ---
+
+
+Template files for *pym*-type configuration sources can be found
+in ``<settings>/sources/skel``,
+named ``pymsource.def`` (source definition file)
+and ``pymsource`` (Python module).
+
+
+The methods and attributes available via the ``pymenv`` interface
+are covered in detail as in-code documentation,
+which can be read with ``pydoc kernelconfig.sources.pymenv``.
+
+The class-level documentation gives a quick reference over what is offered:
+
+.. code:: Python
+
+
+    class PymConfigurationSourceRunEnv(...):
+        """
+        This is the runtime environment that gets passed
+        to configuration source python modules, version 1.
+
+        The python module's run() function
+        receives the environment as first arg,
+        interfacing with kernelconfig should only occur via this environment.
+
+        The following attributes can be referenced by the python module,
+        they should all be treated as readonly except where noted otherwise,
+        see the @property in-code doc for details:
+
+        * logger:         logger, can also be accessed via log_*() methods
+
+        * name:           conf source name
+        * exc_types:      exception types (namespace object/module)
+        * parameters:     arg parse result (namespace object)
+        * environ:        extra-env vars dict
+        * str_formatter:  string formatter
+        * format_vars:    string formatter's vars dict
+        * kernelversion:  kernel version object
+        * tmpdir:         temporary dir object
+        * tmpdir_path:    path to temporary dir
+
+        The following methods can be used for communicating with kernelconfig:
+
+        * log_debug(...)         --  log a debug-level message
+        * log_info(...)          --  log an info-level message
+        * log_warning(...)       --  log a warning-level message
+        * log_error(...)         --  log an error-level message
+
+        * error([msg])           --  signal a "config uncreatable" error
+                                     (log an error-level message
+                                      and raise an appropriate exception)
+
+        * add_config_file(file)  --  add a .config file that will later be
+                                     used as configuration basis
+                                     (can be called multiple times
+                                     in splitconfig scenarios)
+
+        The pym-environment also offers some helper methods, including:
+
+        * run_command(cmdv)      --  run a command
+        * get_tmpfile()          --  create new temporary file
+
+        * download(url)          --  download url, return bytes
+        * download_file(url)     --  download url to temporary file
+
+
+        * git_clone_configured_repo()
+                                 --  clone the repo configured in [config]
+                                     and change the working dir to its path
+
+        * git_clone(url)         --  clone a git repo and returns it path,
+                                      using a per-confsource cache dir
+        * git_checkout_branch(branch)
+                                 --   switch to git branch
+
+        * run_git(argv)          --  run a git command in $PWD
+        * run_git_in(dir, argv)  --  run a git command in <dir>
+        """
