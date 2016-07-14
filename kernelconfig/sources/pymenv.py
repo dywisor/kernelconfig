@@ -66,7 +66,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     * log_warning(...)       --  log a warning-level message
     * log_error(...)         --  log an error-level message
 
-    * error(msg)             --  signal a "config uncreatable" error
+    * error([msg])           --  signal a "config uncreatable" error
                                  (log an error-level message
                                   and raise an appropriate exception)
 
@@ -329,17 +329,22 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         """Writes an "error"-level log message."""
         return self.logger.error(*args, **kwargs)
 
-    def error(self, message, *, exc_type=exc.ConfigurationSourceExecError):
+    def error(
+        self, message=None, *, exc_type=exc.ConfigurationSourceExecError
+    ):
         """
         Writes an "error"-level log message
         and raises a "cannot get config source" exception.
 
-        @param    message:   (formatted) error message
+        @keyword  message:   (formatted) error message
+                             If not set or empty, defaults to "unknown error".
         @type     message:   C{str}
         @keyword  exc_type:  type of the exception that should be created,
                              defaults to ConfigurationSourceExecError
         @type     exc_type:  type a, a is subclass of BaseException
         """
+        if not message:
+            message = "unknown error"
         self.log_error(message)
         raise exc_type(message)
 
