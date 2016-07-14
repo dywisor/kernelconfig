@@ -259,6 +259,6 @@ class DefaultInstallInfo(InstallInfoBase):
         ))
 
     def get_config_source_dirs(self):
-        return self.settings_dirs.get_child("source")
+        return self.settings_dirs.get_child("sources")
 
 # --- end of DefaultInstallInfo ---
