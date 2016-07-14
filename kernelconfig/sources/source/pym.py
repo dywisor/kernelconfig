@@ -11,7 +11,7 @@ from ...abc import loggable
 # from ...util import fs
 
 from ..abc import exc
-from .._util import _pymenv
+from .. import pymenv
 
 from . import _sourcebase
 
@@ -43,7 +43,7 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
        def run(env):
            env.add_config_file(env.download_file("http://the/config/file"))
 
-    See _pymenv (kernelconfig.sources._util._pymenv) for details about 'env'.
+    See pymenv (kernelconfig.sources.pymenv) for details about 'env'.
     """
 
     @property
@@ -140,7 +140,7 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
         # arg_config.pym should spawn the run_env,
         #  so that versioning is actually possibly
         run_env = self.create_loggable(
-            _pymenv.PymConfigurationSourceRunEnv,
+            pymenv.PymConfigurationSourceRunEnv,
             name=self.name,
             conf_source_env=self.senv,
             config=self.sourcedef_config,

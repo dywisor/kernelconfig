@@ -7,15 +7,15 @@ import os
 import re
 import subprocess
 
-from ...abc import loggable
-from ...util import fs
-from ...util import subproc
-from ...util import objcache
-from ...kernel import kversion
+from ..abc import loggable
+from ..util import fs
+from ..util import subproc
+from ..util import objcache
+from ..kernel import kversion
 
-from ..abc import exc
+from .abc import exc
 
-from . import _fileget
+from ._util import _fileget
 
 
 __all__ = ["PymConfigurationSourceRunEnv"]
