@@ -201,6 +201,12 @@ class KernelVersion(_kversion_base.KernelVersionBaseObject):
     @type extraversion:  C{str} or C{None}
     @ivar name:
     @type name:          C{str} or C{None}
+
+    @ivar subsublevel:   tuple of additional int version components (readonly)
+    @type subsublevel:   C{None} or tuple of C{int}
+    @ivar rclevel:       the rclevel of the kernel version,
+                         or None if it is not a -rc version (readonly)
+    @type rclevel:       C{None} or C{int}
     """
     __slots__ = [
         "version", "patchlevel", "sublevel", "extraversion", "name"
@@ -367,6 +373,16 @@ class KernelVersion(_kversion_base.KernelVersionBaseObject):
             else:
                 return cls.new_from_version_code(ival, name=name)
     # --- end of new_from_str (...) ---
+
+    @property
+    def subsublevel(self):
+        ever = self.extraversion
+        return None if ever is None else ever.subsublevel
+
+    @property
+    def rclevel(self):
+        ever = self.extraversion
+        return None if ever is None else ever.rclevel
 
     def __init__(
         self,
