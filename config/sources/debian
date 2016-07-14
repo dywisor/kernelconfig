@@ -486,11 +486,12 @@ def parse_defines(lines):
     # fieldK: value
     #
     #
-    # This function accept text lines from a definition file
+    # This function accepts text lines from a definition file
     # and creates a dict :: section -> (dict :: field -> list of value).
-    # The motivation here is extract some information from defines files,
-    # not parsing deb-control files with section headers accurately.
-    # Therefore, this function is forgiving about discrepancies in input data.
+    # The motivation here is to extract some information from defines files,
+    # and not parsing deb-control files with section headers accurately.
+    # Therefore, this function is forgiving about discrepancies in the input
+    # data.
     #
     # Regular expressions for the various file format elements follow.
     #
