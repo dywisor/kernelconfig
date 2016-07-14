@@ -1,0 +1,48 @@
+# Python Module for the <name> configuration source
+# -*- coding: utf-8 -*-
+
+
+def reset():
+    """
+    The reset() method is optional and is called whenever
+    the Python Module gets loaded.
+
+    It takes no arguments and does not have access
+    to kernelconfig's pymenv interface.
+
+    Usage scenarios include initializing module-level global variables.
+    """
+    pass
+# --- end of reset (...) ---
+
+
+def run(env):
+    """
+    The run() method must be implemented
+    and is responsible for setting up the configuration basis,
+    e.g. by downloading files.
+
+    To facilitate this, it has to access to kernelconfig's pymenv interface,
+    which provides some useful helper methods
+    as well as error reporting and logging.
+
+    If this function returns False (or false value that is not None),
+    kernelconfig prints an error message and exits.
+    """
+
+    # The parsed parameters can be accessed via the "parameters" attribute
+    params = env.parameters
+
+    # The kernel version for which a configuration basis should be provided
+    # can be accessed via the "kernelversion" attribute
+    kver = env.kernelversion
+    #
+    # The kernel version provides access to individual version components via
+    # the version, patchlevel, sublevel, subsublevel and rclevel attributes.
+
+    # get the configuration file
+    env.error("missing code for get-configuration-basis")
+
+    # register it as configuration basis
+    env.add_config_file(config_file)
+# --- end of run (...) ---
