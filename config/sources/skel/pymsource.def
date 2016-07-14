@@ -1,0 +1,11 @@
+[Source]
+Name = my source
+Type = pym
+
+Arch = x86_64 x86
+
+Description =
+  my Python-Module configuration source is ...
+
+[Config]
+#Repo = git repo url

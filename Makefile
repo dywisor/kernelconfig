@@ -60,7 +60,7 @@ f_sanity_check_output_dir = $(call _f_sanity_check_output_dir,$(strip $(1)))
 define __f_list_conf_sources_with_type
 	test -n '$(1)' && \
 	find '$(SRC_CONFSOURCEDIR)' \
-		-type f -name '*.def' \
+		-type f -name '*.def' -not -path "*/skel/*" \
 		-exec grep -lEi -- '^type\s*=\s*$(1)\s*$$' '{}' ';' \
 		-print | sed -e 's=[.]def$$=='
 endef
