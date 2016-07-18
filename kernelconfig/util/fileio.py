@@ -8,6 +8,7 @@ import io
 import mimetypes
 import os
 
+
 __all__ = ["read_text_file_lines", "write_text_file_lines"]
 
 
@@ -172,3 +173,42 @@ def write_text_file_lines(outfile, lines, filename=None, **kwargs):
                 fh, lines, filename=(filename or outfile), **kwargs
             )
 # --- end of write_text_file_lines (...) ---
+
+
+class LineContBuffer(object):
+
+    def __init__(self):
+        super().__init__()
+        self.buf = []
+
+    def __bool__(self):
+        return bool(self.buf)
+
+    def append(self, line):
+        self.buf.append(line.lstrip() if self.buf else line)
+
+    def emit(self):
+        ret = "".join(self.buf)
+        self.buf = []
+        return ret
+# ---
+
+
+def accumulate_line_cont(lines, ignore_eof=True):
+    lbuf = LineContBuffer()
+    for line in lines:
+        if line and line[-1] == '\\':
+            lbuf.append(line[:-1])
+        else:
+            lbuf.append(line)
+            yield lbuf.emit()
+
+    if not lbuf:
+        pass
+    elif ignore_eof:
+        yield lbuf.emit()
+    else:
+        raise ValueError(
+            "reached EOF while reading a line continuation sequence"
+        )
+# ---
