@@ -11,7 +11,8 @@ __all__ = [
     "dodir", "dodir_for_file",
     "rmfile",
     "backup_file",
-    "prepare_output_file"
+    "prepare_output_file",
+    "walk_relpath"
 ]
 
 
@@ -127,3 +128,12 @@ def prepare_output_file(filepath, move=False):
     dodir_for_file(filepath)
     backup_file(filepath, move=move, ignore_missing=True)
 # --- end of prepare_output_file (...) ---
+
+
+def walk_relpath(root, **walk_kwargs):
+    abs_root = os.path.abspath(root)
+    relpath_begin = 1 + len(abs_root)
+
+    for dirpath, dirnames, filenames in os.walk(abs_root, **walk_kwargs):
+        yield (dirpath, dirpath[relpath_begin:], dirnames, filenames)
+# --- end of walk_relpath (...) ---
