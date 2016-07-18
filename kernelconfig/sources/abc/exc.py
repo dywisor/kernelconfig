@@ -6,9 +6,21 @@ import sys
 
 
 CONFIG_SOURCE_EXCEPTIONS = [
+    "ConfigurationSourceArchNotSupported",
     "ConfigurationSourceError",
+    "ConfigurationSourceExecError",
+    "ConfigurationSourceFeatureError",
+    "ConfigurationSourceFeatureNotSupported",
+    "ConfigurationSourceFeatureUnknown",
+    "ConfigurationSourceFeatureUsageError",
+    "ConfigurationSourceFileGetError",
+    "ConfigurationSourceFileMissingError",
+    "ConfigurationSourceInitError",
     "ConfigurationSourceInvalidError",
+    "ConfigurationSourceInvalidParameterDef",
+    "ConfigurationSourceMissingType",
     "ConfigurationSourceNotFound",
+    "ConfigurationSourceRunError",
 ]
 
 
