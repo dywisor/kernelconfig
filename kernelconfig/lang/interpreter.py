@@ -731,6 +731,50 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
     # --- end of lookup_include_file (...) ---
 
     def process_command(self, cmdv, conditional):
+        def _iter_evaluate_conditional(context_obj, conditional, items):
+            # When processing multiple options/include files,
+            # try to reuse the conditional part.
+            # This is not possible if it contains "placeholder" conditions
+            # such as a plain "exists" condition.
+            cached_cond = None
+
+            for item in items:
+                if cached_cond is None:
+                    try:
+                        cond_dynamic, cond_eval = self.evaluate_conditional(
+                            conditional, context_obj.bind(item)
+                        )
+                    except KernelConfigLangInterpreterCondOpNotSupported:
+                        cond_dynamic = True  # unused
+                        cond_eval = None
+                    else:
+                        if not cond_dynamic:
+                            cached_cond = cond_eval
+                else:
+                    # FIXME: push one cond_eval per directive,
+                    #         and not one cond_eval per option
+                    self.push_cond_result(cached_cond)
+                    cond_eval = cached_cond
+                # --
+
+                yield (cond_eval, item)
+            # -- end for
+        # --- end of _iter_evaluate_conditional (...) ---
+
+        def iter_options_evaluate_conditional(conditional, options):
+            return _iter_evaluate_conditional(
+                self._config_option_cond_context, conditional, options
+            )
+        # --- end of iter_options_evaluate_conditional (...) ---
+
+        def iter_include_files_evaluate_conditional(
+            conditional, include_files
+        ):
+            return _iter_evaluate_conditional(
+                self._include_file_cond_context, conditional, include_files
+            )
+        # --- end of iter_include_files_evaluate_conditional (...) ---
+
         _KernelConfigOp = parser.KernelConfigOp
 
         cmd_arg = cmdv[0]
@@ -764,25 +808,14 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
             include_files_to_load = []
             include_files_filtered = []
 
-            cached_cond = None
-            for include_file in include_files_in:
-                if cached_cond is None:
-                    try:
-                        cond_dynamic, cond_eval = self.evaluate_conditional(
-                            conditional,
-                            self._include_file_cond_context.bind(include_file)
-                        )
-                    except KernelConfigLangInterpreterCondOpNotSupported:
-                        return False
-
-                    if not cond_dynamic:
-                        cached_cond = cond_eval
-                else:
-                    self.push_cond_result(cached_cond)
-                    cond_eval = cached_cond
-                # --
-
-                if cond_eval:
+            for cond_eval, include_file in (
+                iter_include_files_evaluate_conditional(
+                    conditional, include_files_in
+                )
+            ):
+                if cond_eval is None:
+                    return False
+                elif cond_eval:
                     # -- self.add_input_file(include_file) -- below
                     include_files_to_load.append(include_file)
                 else:
@@ -841,35 +874,13 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
             # dispatcher X options
             dispatcher = self._choice_op_dispatchers[cmd_arg]
 
-            # When processing multiple options,
-            # try to reuse the conditional part.
-            # This is not possible if it contains "placeholder" conditions
-            # such as a plain "exists" condition.
-            cached_cond = None
-            for option in cmdv[1]:
-                if cached_cond is None:
-                    try:
-                        cond_dynamic, cond_eval = self.evaluate_conditional(
-                            conditional,
-                            self._config_option_cond_context.bind(option)
-                        )
-                    except KernelConfigLangInterpreterCondOpNotSupported:
-                        return False
-
-                    if not cond_dynamic:
-                        cached_cond = cond_eval
-                    # --
-
-                else:
-                    # FIXME: push one cond_eval per directive,
-                    #         and not one cond_eval per option
-                    self.push_cond_result(cached_cond)
-                    cond_eval = cached_cond
-                # --
-
-                if not cond_eval:
+            for cond_eval, option in iter_options_evaluate_conditional(
+                conditional, cmdv[1]
+            ):
+                if cond_eval is None:
+                    return False
+                elif not cond_eval:
                     pass
-
                 elif not dispatcher(option):
                     return False
             # -- end for
