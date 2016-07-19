@@ -12,6 +12,8 @@ from ..util import objcache
 from . import cond
 from . import parser
 
+from ..kconfig.hwdetection import sysfs_scan
+
 
 __all__ = ["KernelConfigLangInterpreter"]
 
@@ -993,10 +995,72 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
             return True
 
         elif cmd_arg is _KernelConfigOp.op_hwdetect:
-            if conditional is not None:
-                raise NotImplementedError("hwdetect conditional")
+            # hwdetect conditionals are context free,
+            #  pass an empty context function dict
+            cond_dynamic, cond_eval = self.evaluate_conditional(
+                conditional, {}
+            )
 
-            raise NotImplementedError("hwdetect", cmdv[1:])
+            # don't bother scanning /sys if the conditional evaluated to false
+            if not cond_eval:
+                self.logger.debug(
+                    'hardware-detect directive disabled by unmet conditions'
+                )
+                return True
+            # --
+
+            # get driver names from "driver" symlinks in /sys
+            #  drivers_origin_map is a dict :: driver => {origin}
+            self.logger.info("Detecting hardware: loaded drivers")
+            drivers_origin_map = sysfs_scan.scan_drivers()
+            self.logger.debug("Found %d modules", len(drivers_origin_map))
+
+            # translate modules into options
+            modules_missing, options = (
+                self.translate_module_names_to_config_options(
+                    drivers_origin_map
+                )
+            )
+
+            # failure to resolve some modules is tolerated
+            # as long as at least one module could be resolved
+            if modules_missing and not options:
+                self.logger.warning(
+                    "Could not successfully detect at least one kernel module"
+                )
+                return False
+
+            # for now, "enable-or-module" options detected by hwdetect
+            # TODO/MAYBE: add "all builtin" option to instruction
+            self.logger.info("Found %d config options", len(options))
+
+            if self.logger.isEnabledFor(logging.DEBUG):
+                # FIXME: hidden function
+                def join_sort_modules(module_names):
+                    return ", ".join(
+                        sorted(module_names, key=lambda w: w.lower())
+                    )
+                # ---
+
+                self.logger.debug(
+                    "Setting options for these modules: %s",
+                    join_sort_modules(
+                        set(drivers_origin_map) - set(modules_missing)
+                    )
+                )
+
+                self.logger.debug(
+                    "Not setting options for these modules: %s",
+                    join_sort_modules(modules_missing)
+                )
+            # --
+            opcode_rewrite = _KernelConfigOp.op_builtin_or_module
+            dispatcher = self._choice_op_dispatchers[opcode_rewrite]
+            for option in options:
+                if not dispatcher(option):
+                    return False
+
+            return True
 
         elif cmd_arg in self._choice_op_dispatchers:
             # dispatcher X options

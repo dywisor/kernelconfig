@@ -138,3 +138,16 @@ class IncludeFileConditionContext(BaseConditionContext):
     # ---
 
 # --- end of IncludeFileConditionContext ---
+
+
+# class HardwareDetectionConditionContext(BaseConditionContext):
+#
+#     COND_OPS = []
+#
+#     def get_context_desc(self):
+#         return "hardware-detection"
+#
+#     def bind(self):
+#         return self
+#
+# # --- end of HardwareDetectionConditionContext ---
