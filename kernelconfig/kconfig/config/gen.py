@@ -3,7 +3,10 @@
 
 from ...abc import loggable
 from ...lang import interpreter
+
+from ..hwdetection import modulesmap
 from .. import symbolgen
+
 from . import data
 from . import choices
 
@@ -36,6 +39,11 @@ class ConfigGenerator(loggable.AbstractLoggable):
 
         self.source_info = source_info
         self.source_info.set_logger(parent_logger=self.logger)
+
+        # modules map lazy-inits itself
+        self._modules_map = self.create_loggable(
+            modulesmap.ModulesMap, self.source_info
+        )
 
         self._kconfig_symbols = None
         self._config = None
@@ -71,6 +79,10 @@ class ConfigGenerator(loggable.AbstractLoggable):
     get_config_choices = _lazy_constructor("_config_choices")
     get_config_choices_interpreter = \
         _lazy_constructor("_config_choices_interpreter")
+
+    def get_modules_map(self):
+        return self._modules_map
+    # --- end of get_modules_map (...) ---
 
     def commit(self):
         if self._config_choices is None:
