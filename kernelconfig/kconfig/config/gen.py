@@ -71,7 +71,10 @@ class ConfigGenerator(loggable.AbstractLoggable):
     def _create_config_choices_interpreter(self):
         return self.create_loggable(
             interpreter.KernelConfigLangInterpreter,
-            self.install_info, self.source_info, self.get_config_choices()
+            self.install_info,
+            self.source_info,
+            self.get_config_choices(),
+            self.get_modules_map()
         )
 
     get_kconfig_symbols = _lazy_constructor("_kconfig_symbols")

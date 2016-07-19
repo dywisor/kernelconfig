@@ -604,7 +604,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
     """
 
     def __init__(
-        self, install_info, source_info, config_choices, *,
+        self, install_info, source_info, config_choices, modules_map, *,
         object_cache_size=32, **kwargs
     ):
         super().__init__(**kwargs)
@@ -614,6 +614,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         self.install_info = install_info
         self.source_info = None
         self.config_choices = None
+        self.modules_map = None
         self._choice_op_dispatchers = None
         self._choice_str_op_dispatchers = None
         self._config_option_cond_context = None
@@ -622,6 +623,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
 
         self.bind_config_choices(config_choices)
         self.bind_source_info(source_info)
+        self.bind_modules_map(modules_map)
         self.bind_cmp_vars()
     # --- end of __init__ (...) ---
 
@@ -659,6 +661,10 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
 
     def bind_source_info(self, source_info):
         self.source_info = source_info
+    # ---
+
+    def bind_modules_map(self, modules_map):
+        self.modules_map = modules_map
     # ---
 
     def bind_cmp_vars(self):
