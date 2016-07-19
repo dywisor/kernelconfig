@@ -731,6 +731,8 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
     # --- end of lookup_include_file (...) ---
 
     def process_command(self, cmdv, conditional):
+        _KernelConfigOp = parser.KernelConfigOp
+
         def _iter_evaluate_conditional(context_obj, conditional, items):
             # When processing multiple options/include files,
             # try to reuse the conditional part.
@@ -761,7 +763,22 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
             # -- end for
         # --- end of _iter_evaluate_conditional (...) ---
 
-        def iter_options_evaluate_conditional(conditional, oper_type, options):
+        def iter_options_evaluate_conditional(conditional, oper_type, args):
+            nonlocal _KernelConfigOp
+
+            if oper_type is _KernelConfigOp.oper_option:
+                options = args
+
+            elif oper_type is _KernelConfigOp.oper_driver:
+                options = NotImplemented
+                raise NotImplementedError(
+                    "driver name => config options lookup"
+                )
+
+            else:
+                self.logger.error("Unknown operand type %r", oper_type)
+                raise NotImplementedError("unknown operand type", oper_type)
+
             return _iter_evaluate_conditional(
                 self._config_option_cond_context, conditional, options
             )
@@ -774,8 +791,6 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 self._include_file_cond_context, conditional, include_files
             )
         # --- end of iter_include_files_evaluate_conditional (...) ---
-
-        _KernelConfigOp = parser.KernelConfigOp
 
         cmd_arg = cmdv[0]
 
