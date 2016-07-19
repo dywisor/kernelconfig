@@ -189,30 +189,42 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
         )
 
     # ---
-    # disable|module|builtin|builtin-or-module module NAME [NAME...]
+    # disable|module|builtin|builtin-or-module driver|module NAME [NAME...]
     #
 
     def p_command_disable_driver(self, p):
-        '''command : OP_DISABLE OP_MODULE str_list'''
+        '''command : OP_DISABLE OP_MODULE str_list
+                   | OP_DISABLE KW_DRIVER str_list
+        '''
         p[0] = None
 
     def p_command_module_driver(self, p):
-        '''command : OP_MODULE OP_MODULE str_list'''
+        '''command : OP_MODULE OP_MODULE str_list
+                   | OP_MODULE KW_DRIVER str_list
+        '''
         p[0] = None
 
     def p_command_builtin_driver(self, p):
-        '''command : OP_BUILTIN OP_MODULE str_list'''
+        '''command : OP_BUILTIN OP_MODULE str_list
+                   | OP_BUILTIN KW_DRIVER str_list
+        '''
         p[0] = None
 
     def p_command_builtin_or_module_driver(self, p):
-        '''command : OP_BUILTIN_OR_MODULE OP_MODULE str_list'''
+        '''command : OP_BUILTIN_OR_MODULE OP_MODULE str_list
+                   | OP_BUILTIN_OR_MODULE KW_DRIVER str_list
+        '''
         p[0] = None
 
     def p_command_dmb_driver_bad_no_options(self, p):
         '''command : OP_DISABLE OP_MODULE error
+                   | OP_DISABLE KW_DRIVER error
                    | OP_MODULE  OP_MODULE error
+                   | OP_MODULE  KW_DRIVER error
                    | OP_BUILTIN OP_MODULE error
+                   | OP_BUILTIN KW_DRIVER error
                    | OP_BUILTIN_OR_MODULE OP_MODULE error
+                   | OP_BUILTIN_OR_MODULE KW_DRIVER error
         '''
         self.handle_parse_error(
             p, 3,

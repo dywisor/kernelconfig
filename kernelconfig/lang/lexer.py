@@ -38,6 +38,9 @@ class KernelConfigLangLexer(object):
         "module":            "OP_MODULE",
         "m":                 "OP_MODULE",
 
+        "driver":            "KW_DRIVER",
+        "drv":               "KW_DRIVER",
+
         "builtin":           "OP_BUILTIN",
         "y":                 "OP_BUILTIN",
 
