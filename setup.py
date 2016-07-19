@@ -80,6 +80,8 @@ class ProjectSetup(object):
                 "kconfig",
                 "kconfig.abc",
                 "kconfig.config",
+                "kconfig.hwdetection",
+                "kconfig.hwdetection.mkscanner",
                 "scripts",
                 "sources",
                 "sources.abc",
