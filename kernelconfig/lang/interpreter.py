@@ -736,6 +736,93 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
             return None
     # --- end of lookup_include_file (...) ---
 
+    def translate_module_names_to_config_options(self, module_names):
+        """
+        Translates a sequence of kernel module names into config option names.
+
+        @param module_names:  iterable containing kernel module names
+        @type  module_names:  iterable of C{str}
+
+        @return: 2-tuple (
+                    list of modules that could not be translated,
+                    deduplicated list of config options
+                 )
+        @rtype:  2-tuple (C{list} of C{str}, C{list} of C{str})
+        """
+
+        def iter_lookup_options(modules_map, module_names):
+            for module_name in module_names:
+                try:
+                    options = modules_map[module_name]
+                except KeyError:
+                    yield (module_name, None)
+                else:
+                    assert options is not None
+                    yield (module_name, options)
+            # --
+        # ---
+
+        if self.logger.isEnabledFor(logging.DEBUG):
+            def log_module_lookup_result(module_name, options):
+                self.logger.debug(
+                    "config options for module %s: %s",
+                    module_name,
+                    (
+                        "<not found>" if options is None
+                        else (
+                            "<none>" if not options
+                            else", ".join(sorted(options))
+                        )
+                    )
+                )
+            # ---
+        else:
+            def log_module_lookup_result(module_name, options):
+                pass
+            # ---
+        # --
+
+        modules_map = self.modules_map
+        modlist = list(module_names)
+
+        if modules_map is None:
+            self.logger.warning(
+                (
+                    "Cannot translate module names to config options,"
+                    " no mapping has been provided: %r"
+                ),
+                modlist
+            )
+
+            modules_unstranslated = modlist
+            options_translated = None
+
+        else:
+            modules_unstranslated = []
+            options_translated = []
+            # dedup options
+            options_seen = set()
+
+            for module_name, options in (
+                iter_lookup_options(modules_map, modlist)
+            ):
+                log_module_lookup_result(module_name, options)
+
+                if options is None:
+                    modules_unstranslated.append(module_name)
+
+                else:
+                    for option in options:
+                        if option not in options_seen:
+                            options_translated.append(option)
+                            options_seen.add(option)
+                # -- end if
+            # -- end for
+        # --
+
+        return (modules_unstranslated, options_translated)
+    # --- end of translate_module_names_to_config_options (...) ---
+
     def process_command(self, cmdv, conditional):
         _KernelConfigOp = parser.KernelConfigOp
 
@@ -776,10 +863,24 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 options = args
 
             elif oper_type is _KernelConfigOp.oper_driver:
-                options = NotImplemented
-                raise NotImplementedError(
-                    "driver name => config options lookup"
+                modules_missing, options = (
+                    self.translate_module_names_to_config_options(args)
                 )
+
+                if modules_missing:
+                    for module_name in modules_missing:
+                        # "if exist":
+                        #   affects config options, not module names
+                        #
+                        # otherwise,
+                        # add dummy entry to options and keep going
+                        self.logger.warning(
+                            "Could not get config options for module %r",
+                            module_name
+                        )
+                    # --
+                    return [(None, None)]
+                # -- end if modules missing
 
             else:
                 self.logger.error("Unknown operand type %r", oper_type)
