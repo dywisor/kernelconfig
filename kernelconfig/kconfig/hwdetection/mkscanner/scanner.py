@@ -10,6 +10,7 @@ from ....util import fileio
 from ....util import fs
 from ....util import accudict
 
+from .. import util
 from . import preference
 
 
@@ -18,9 +19,7 @@ __all__ = ["ModuleConfigOptionsScanner"]
 
 class ModuleConfigOptionsScanner(loggable.AbstractLoggable):
 
-    def normalize_module_name(self, name):
-        # TODO: this will become a code dup
-        return name.lower().replace("-", "_")
+    normalize_module_name = staticmethod(util.normalize_module_name)
 
     def get_module_options_map(self):
         # create a dict that maps object names to config options
