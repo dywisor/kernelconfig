@@ -906,7 +906,28 @@ if __name__ == "__main__":
     def main():
         import sys
 
-        ipret = KernelConfigLangInterpreter(None)
+        class MiniInterpreter(AbstractKernelConfigLangInterpreter):
+
+            def lookup_cmp_operand(self, arg):
+                return None
+
+            def lookup_load_file(self, load_file):
+                fpath = os.path.realpath(load_file) if load_file else None
+                if fpath and os.path.exists(fpath):
+                    return fpath
+                else:
+                    return None
+
+            def lookup_include_file(self, include_file):
+                fpath = self.lookup_load_file(include_file)
+                return [fpath] if fpath else None
+
+            def process_command(self, cmdv, conditional):
+                print("COMMAND      ", cmdv)
+                print("  CONDITIONAL", conditional)
+        # ---
+
+        ipret = MiniInterpreter()
         for arg in sys.argv[1:]:
             ipret.process_file(arg)
     # ---
