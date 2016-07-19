@@ -96,6 +96,12 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
         # --
         return [cond_type, cond_func, cond_args]
 
+    def create_dmb_command(self, opcode, options):
+        return [opcode, options]
+
+    def create_seapad_command(self, opcode, option, value):
+        return [opcode, option, value]
+
     def p_lang(self, p):
         '''lang : command_list'''
         p[0] = p[1]
@@ -163,19 +169,21 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
 
     def p_command_disable(self, p):
         '''command : OP_DISABLE str_list'''
-        p[0] = [KernelConfigOp.op_disable, p[2]]
+        p[0] = self.create_dmb_command(KernelConfigOp.op_disable, p[2])
 
     def p_command_module(self, p):
         '''command : OP_MODULE str_list'''
-        p[0] = [KernelConfigOp.op_module, p[2]]
+        p[0] = self.create_dmb_command(KernelConfigOp.op_module, p[2])
 
     def p_command_builtin(self, p):
         '''command : OP_BUILTIN str_list'''
-        p[0] = [KernelConfigOp.op_builtin, p[2]]
+        p[0] = self.create_dmb_command(KernelConfigOp.op_builtin, p[2])
 
     def p_command_builtin_or_module(self, p):
         '''command : OP_BUILTIN_OR_MODULE str_list'''
-        p[0] = [KernelConfigOp.op_builtin_or_module, p[2]]
+        p[0] = self.create_dmb_command(
+            KernelConfigOp.op_builtin_or_module, p[2]
+        )
 
     def p_command_dmb_bad_no_options(self, p):
         '''command : OP_DISABLE error
@@ -241,15 +249,15 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
 
     def p_command_set_to(self, p):
         '''command : OP_SET_TO STR STR'''
-        p[0] = [KernelConfigOp.op_set_to, p[2], p[3]]
+        p[0] = self.create_seapad_command(KernelConfigOp.op_set_to, p[2], p[3])
 
     def p_command_append(self, p):
         '''command : OP_APPEND STR STR'''
-        p[0] = [KernelConfigOp.op_append, p[2], p[3]]
+        p[0] = self.create_seapad_command(KernelConfigOp.op_append, p[2], p[3])
 
     def p_command_add(self, p):
         '''command : OP_ADD STR STR'''
-        p[0] = [KernelConfigOp.op_add, p[2], p[3]]
+        p[0] = self.create_seapad_command(KernelConfigOp.op_add, p[2], p[3])
 
     def p_command_seapad_bad_missing_option(self, p):
         '''command : OP_SET_TO error
@@ -281,39 +289,41 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
         '''command : STR EQ     OP_DISABLE
                    | STR COL_EQ OP_DISABLE
         '''
-        p[0] = [KernelConfigOp.op_disable, [p[1]]]
+        p[0] = self.create_dmb_command(KernelConfigOp.op_disable, [p[1]])
 
     def p_command_module_assignop(self, p):
         '''command : STR EQ     OP_MODULE
                    | STR COL_EQ OP_MODULE
         '''
-        p[0] = [KernelConfigOp.op_module, [p[1]]]
+        p[0] = self.create_dmb_command(KernelConfigOp.op_module, [p[1]])
 
     def p_command_builtin_assignop(self, p):
         '''command : STR EQ     OP_BUILTIN
                    | STR COL_EQ OP_BUILTIN
         '''
-        p[0] = [KernelConfigOp.op_builtin, [p[1]]]
+        p[0] = self.create_dmb_command(KernelConfigOp.op_builtin, [p[1]])
 
     def p_command_builtin_or_module_assignop(self, p):
         '''command : STR EQ     OP_BUILTIN_OR_MODULE
                    | STR COL_EQ OP_BUILTIN_OR_MODULE
         '''
-        p[0] = [KernelConfigOp.op_builtin_or_module, [p[1]]]
+        p[0] = self.create_dmb_command(
+            KernelConfigOp.op_builtin_or_module, [p[1]]
+        )
 
     def p_command_set_to_assignop(self, p):
         '''command : STR EQ     STR
                    | STR COL_EQ STR
         '''
-        p[0] = [KernelConfigOp.op_set_to, p[1], p[3]]
+        p[0] = self.create_seapad_command(KernelConfigOp.op_set_to, p[1], p[3])
 
     def p_command_append_assignop(self, p):
         '''command : STR PLUS_EQ STR'''
-        p[0] = [KernelConfigOp.op_append, p[1], p[3]]
+        p[0] = self.create_seapad_command(KernelConfigOp.op_append, p[1], p[3])
 
     def p_command_add_assignop(self, p):
         '''command : STR BITOR_EQ STR'''
-        p[0] = [KernelConfigOp.op_add, p[1], p[3]]
+        p[0] = self.create_seapad_command(KernelConfigOp.op_add, p[1], p[3])
 
     def p_command_assignop_bad(self, p):
         '''command : STR EQ       error
