@@ -28,9 +28,24 @@ Instructions that operate on Kconfig symbols:
 The language is case-insensitive and ignores whitespace.
 String values should be quoted.
 
-There is also an alternative syntax
+To refer to module names instead of config options,
+put the ``driver`` keyword after the command and before the module names:
+
+.. code:: text
+
+    module             driver  MODULE_NAME [MODULE_NAME...]
+    builtin            driver  MODULE_NAME [MODULE_NAME...]
+    builtin-or-module  driver  MODULE_NAME [MODULE_NAME...]
+    disable            driver  MODULE_NAME [MODULE_NAME...]
+
+    # likewise for m, y, ym, n
+
+    # not supported for set, append, add
+
+
+There is an alternative syntax
 that is more in line with the original format of ``.config`` files,
-which can be used interchangeably:
+which can be used interchangeably, but supports config option names only:
 
 .. code:: text
 
@@ -55,7 +70,7 @@ Each statement may be followed by a ``if``\-condition,
 which disables the entire statement if the condition is not met,
 or a ``unless``\-condition with the opposite meaning.
 
-Overall, the following $things$ can be checked:
+Overall, the following conditions can be checked:
 
 * existence of config options or include files with the ``exists`` or ``exist``
   keyword
@@ -174,99 +189,125 @@ Kconfig Instructions
    if it is not already part of that list.
 
 
+Some of the instructions also accept kernel module names,
+which must be explicitly requested
+by putting the ``driver`` keyword in front of the module name list.
+The module names get expanded to a list of config options
+to which the instruction is then applied.
+Alternative names for the ``driver`` keyword are ``drv`` and ``module``.
+
+``module driver MODULE_NAME [MODULE_NAME...]``
+   Enable one or more kernel config options as module.
+
+   The modified options must be of *tristate* type.
+
+``builtin driver MODULE_NAME [MODULE_NAME...]``
+   Enable one or more kernel config options as builtin.
+
+   The modified options must be of *tristate* or *boolean* type.
+
+``builtin-or-module driver MODULE_NAME [MODULE_NAME...]``
+   Enable one or more kernel config options as builtin or module.
+
+   The modified options must be of *tristate* or *boolean* type.
+   The effective value is ``y`` or ``m``, out of which ``m`` gets preferred.
+
+``disable driver MODULE_NAME [MODULE_NAME...]``
+   Disable one or more kernel config options.
+
 
 The table below gives a quick overview of the instructions
 that modify the value of kernel config options:
 
 .. table:: kconfig instructions
 
-   +------------+---------------+---------------------------------------------+
-   | keyword    | symbol type   | description                                 |
-   +============+===============+=============================================+
-   | builtin    |               |                                             |
-   |            | tristate      | set option to ``y``                         |
-   |            +---------------+---------------------------------------------+
-   |            | boolean       | set option to ``y``                         |
-   |            +---------------+---------------------------------------------+
-   |            | string        | *illegal*                                   |
-   |            +---------------+---------------------------------------------+
-   |            | int           | *illegal*                                   |
-   |            +---------------+---------------------------------------------+
-   |            | hex           | *illegal*                                   |
-   +------------+---------------+---------------------------------------------+
-   | module     |               |                                             |
-   |            | tristate      | set option to ``m`` or ``y``                |
-   |            +---------------+---------------------------------------------+
-   |            | boolean       | *illegal*                                   |
-   |            +---------------+---------------------------------------------+
-   |            | string        | *illegal*                                   |
-   |            +---------------+---------------------------------------------+
-   |            | int           | *illegal*                                   |
-   |            +---------------+---------------------------------------------+
-   |            | hex           | *illegal*                                   |
-   +------------+---------------+---------------------------------------------+
-   | builtin\-\ |               |                                             |
-   | or\-\      | tristate      | set option to ``y`` or ``m``                |
-   | module     +---------------+---------------------------------------------+
-   |            | boolean       | set option to ``y``                         |
-   |            +---------------+---------------------------------------------+
-   |            | string        | *illegal*                                   |
-   |            +---------------+---------------------------------------------+
-   |            | int           | *illegal*                                   |
-   |            +---------------+---------------------------------------------+
-   |            | hex           | *illegal*                                   |
-   +------------+---------------+---------------------------------------------+
-   | disable    |               | set option to ``n`` (``# ... is not set``)  |
-   |            | tristate      |                                             |
-   |            +---------------+                                             |
-   |            | boolean       |                                             |
-   |            +---------------+                                             |
-   |            | string        |                                             |
-   |            +---------------+                                             |
-   |            | int           |                                             |
-   |            +---------------+                                             |
-   |            | hex           |                                             |
-   +------------+---------------+---------------------------------------------+
-   | set        |               | set option to any value,                    |
-   |            |               | provided that the symbol accepts this value |
-   |            +---------------+---------------------------------------------+
-   |            | tristate      | ``y``, ``m`` or ``n``                       |
-   |            +---------------+---------------------------------------------+
-   |            | boolean       | ``y`` or ``n``                              |
-   |            +---------------+---------------------------------------------+
-   |            | string        | ``<str>``                                   |
-   |            +---------------+---------------------------------------------+
-   |            | int           | ``<int>``                                   |
-   |            +---------------+---------------------------------------------+
-   |            | hex           | ``<hex>``                                   |
-   +------------+---------------+---------------------------------------------+
-   | append     |               |                                             |
-   |            | tristate      | *illegal*                                   |
-   |            +---------------+---------------------------------------------+
-   |            | boolean       | *illegal*                                   |
-   |            +---------------+---------------------------------------------+
-   |            | string        | add ``<str>`` to the end of the existing    |
-   |            |               | value, preceeded by a separator             |
-   |            |               | (whitespace)                                |
-   |            |               |                                             |
-   |            |               | Same as ``set`` if no value defined.        |
-   |            +---------------+---------------------------------------------+
-   |            | int           | *illegal*                                   |
-   |            +---------------+---------------------------------------------+
-   |            | hex           | *illegal*                                   |
-   +------------+---------------+---------------------------------------------+
-   | add        |               |                                             |
-   |            | tristate      | *illegal*                                   |
-   |            +---------------+---------------------------------------------+
-   |            | boolean       | *illegal*                                   |
-   |            +---------------+---------------------------------------------+
-   |            | string        | same as ``append``,                         |
-   |            |               | but set-like operation (membership test)    |
-   |            +---------------+---------------------------------------------+
-   |            | int           | *illegal*                                   |
-   |            +---------------+---------------------------------------------+
-   |            | hex           | *illegal*                                   |
-   +------------+---------------+---------------------------------------------+
+   +------------+---------------+-------------+---------------------------------------------+
+   | keyword    | symbol type   | ``driver``? | description                                 |
+   +============+===============+=============+=============================================+
+   | builtin    |               | yes         |                                             |
+   |            | tristate      |             | set option to ``y``                         |
+   |            +---------------+             +---------------------------------------------+
+   |            | boolean       |             | set option to ``y``                         |
+   |            +---------------+             +---------------------------------------------+
+   |            | string        |             | *illegal*                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | int           |             | *illegal*                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | hex           |             | *illegal*                                   |
+   +------------+---------------+-------------+---------------------------------------------+
+   | module     |               | yes         |                                             |
+   |            | tristate      |             | set option to ``m`` or ``y``                |
+   |            +---------------+             +---------------------------------------------+
+   |            | boolean       |             | *illegal*                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | string        |             | *illegal*                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | int           |             | *illegal*                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | hex           |             | *illegal*                                   |
+   +------------+---------------+-------------+---------------------------------------------+
+   | builtin\-\ |               | yes         |                                             |
+   | or\-\      | tristate      |             | set option to ``y`` or ``m``                |
+   | module     +---------------+             +---------------------------------------------+
+   |            | boolean       |             | set option to ``y``                         |
+   |            +---------------+             +---------------------------------------------+
+   |            | string        |             | *illegal*                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | int           |             | *illegal*                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | hex           |             | *illegal*                                   |
+   +------------+---------------+-------------+---------------------------------------------+
+   | disable    |               | yes         | set option to ``n`` (``# ... is not set``)  |
+   |            | tristate      |             |                                             |
+   |            +---------------+             |                                             |
+   |            | boolean       |             |                                             |
+   |            +---------------+             |                                             |
+   |            | string        |             |                                             |
+   |            +---------------+             |                                             |
+   |            | int           |             |                                             |
+   |            +---------------+             |                                             |
+   |            | hex           |             |                                             |
+   +------------+---------------+-------------+---------------------------------------------+
+   | set        |               | no          | set option to any value,                    |
+   |            |               |             | provided that the symbol accepts this value |
+   |            +---------------+             +---------------------------------------------+
+   |            | tristate      |             | ``y``, ``m`` or ``n``                       |
+   |            +---------------+             +---------------------------------------------+
+   |            | boolean       |             | ``y`` or ``n``                              |
+   |            +---------------+             +---------------------------------------------+
+   |            | string        |             | ``<str>``                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | int           |             | ``<int>``                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | hex           |             | ``<hex>``                                   |
+   +------------+---------------+-------------+---------------------------------------------+
+   | append     |               | no          |                                             |
+   |            | tristate      |             | *illegal*                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | boolean       |             | *illegal*                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | string        |             | add ``<str>`` to the end of the existing    |
+   |            |               |             | value, preceeded by a separator             |
+   |            |               |             | (whitespace)                                |
+   |            |               |             |                                             |
+   |            |               |             | Same as ``set`` if no value defined.        |
+   |            +---------------+             +---------------------------------------------+
+   |            | int           |             | *illegal*                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | hex           |             | *illegal*                                   |
+   +------------+---------------+-------------+---------------------------------------------+
+   | add        |               | no          |                                             |
+   |            | tristate      |             | *illegal*                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | boolean       |             | *illegal*                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | string        |             | same as ``append``,                         |
+   |            |               |             | but set-like operation (membership test)    |
+   |            +---------------+             +---------------------------------------------+
+   |            | int           |             | *illegal*                                   |
+   |            +---------------+             +---------------------------------------------+
+   |            | hex           |             | *illegal*                                   |
+   +------------+---------------+-------------+---------------------------------------------+
 
 
 Load-File Instructions
