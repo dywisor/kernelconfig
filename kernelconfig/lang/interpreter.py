@@ -794,11 +794,11 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 modlist
             )
 
-            modules_unstranslated = modlist
+            modules_not_translated = modlist
             options_translated = None
 
         else:
-            modules_unstranslated = []
+            modules_not_translated = []
             options_translated = []
             # dedup options
             options_seen = set()
@@ -809,7 +809,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 log_module_lookup_result(module_name, options)
 
                 if options is None:
-                    modules_unstranslated.append(module_name)
+                    modules_not_translated.append(module_name)
 
                 else:
                     for option in options:
@@ -820,7 +820,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
             # -- end for
         # --
 
-        return (modules_unstranslated, options_translated)
+        return (modules_not_translated, options_translated)
     # --- end of translate_module_names_to_config_options (...) ---
 
     def process_command(self, cmdv, conditional):
