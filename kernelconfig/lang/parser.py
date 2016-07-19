@@ -24,6 +24,7 @@ class KernelConfigOp(enum.IntEnum):
         op_set_to,
         op_append,
         op_add,
+        oper_option,
         cond_if,
         cond_unless,
         # FIXME: simplify, introduce cond_type with bitmask
@@ -33,7 +34,7 @@ class KernelConfigOp(enum.IntEnum):
         condop_operator_cmp_func,
         condop_exists,
         condop_hwmatch,
-    ) = range(16)
+    ) = range(17)
 
     @classmethod
     def is_op(cls, value):
@@ -97,10 +98,10 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
         return [cond_type, cond_func, cond_args]
 
     def create_dmb_command(self, opcode, options):
-        return [opcode, options]
+        return [opcode, KernelConfigOp.oper_option, options]
 
     def create_seapad_command(self, opcode, option, value):
-        return [opcode, [option], value]
+        return [opcode, KernelConfigOp.oper_option, [option], value]
 
     def p_lang(self, p):
         '''lang : command_list'''

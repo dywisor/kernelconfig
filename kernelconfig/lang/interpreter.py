@@ -761,7 +761,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
             # -- end for
         # --- end of _iter_evaluate_conditional (...) ---
 
-        def iter_options_evaluate_conditional(conditional, options):
+        def iter_options_evaluate_conditional(conditional, oper_type, options):
             return _iter_evaluate_conditional(
                 self._config_option_cond_context, conditional, options
             )
@@ -875,7 +875,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
             dispatcher = self._choice_op_dispatchers[cmd_arg]
 
             for cond_eval, option in iter_options_evaluate_conditional(
-                conditional, cmdv[1]
+                conditional, cmdv[1], cmdv[2]
             ):
                 if cond_eval is None:
                     return False
@@ -892,13 +892,13 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
             dispatcher = self._choice_str_op_dispatchers[cmd_arg]
 
             for cond_eval, option in iter_options_evaluate_conditional(
-                conditional, cmdv[1]
+                conditional, cmdv[1], cmdv[2]
             ):
                 if cond_eval is None:
                     return False
                 elif not cond_eval:
                     pass
-                elif not dispatcher(option, cmdv[2]):
+                elif not dispatcher(option, cmdv[3]):
                     return False
             # -- end for
 
