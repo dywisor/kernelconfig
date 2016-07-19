@@ -70,6 +70,12 @@ class AccumulatorDict(collections.UserDict):
         return self.__class__(data=self.gen_reverse())
     # ---
 
+    def get_dict(self):
+        return self.data
+
+    def to_dict(self):
+        return dict(self)
+
 # ---
 
 
@@ -119,4 +125,10 @@ class DictAccumulatorDict(AccumulatorDict):
             for value, sub_values in value_map.items()
             for sub_value in sub_values
         )
+
+    def get_dict(self):
+        return {k: v.get_dict() for k, v in self.items()}
+
+    def to_dict(self):
+        return {k: dict(v) for k, v in self.items()}
 # --- end of DictAccumulatorDict ---
