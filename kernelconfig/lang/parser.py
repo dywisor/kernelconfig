@@ -157,7 +157,8 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
         )
 
     # ---
-    # disable|module|builtin|builtin-or-module OPTION [OPTION...]
+    # "d-m-b option"
+    #   disable|module|builtin|builtin-or-module OPTION [OPTION...]
     #
 
     def p_command_disable(self, p):
@@ -186,6 +187,11 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
             p, 2,
             "expected one or more config options after %s directive" % p[1]
         )
+
+    # ---
+    # "se-ap-ad option"
+    #   set|append|add OPTION VALUE
+    #
 
     def p_command_set_to(self, p):
         '''command : OP_SET_TO STR STR'''
