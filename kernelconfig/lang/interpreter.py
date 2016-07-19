@@ -890,20 +890,19 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         elif cmd_arg in self._choice_str_op_dispatchers:
             # dispatcher X option X value
             dispatcher = self._choice_str_op_dispatchers[cmd_arg]
-            option = cmdv[1]
 
-            try:
-                cond_dynamic, cond_eval = self.evaluate_conditional(
-                    conditional,
-                    self._config_option_cond_context.bind(option)
-                )
-            except KernelConfigLangInterpreterCondOpNotSupported:
-                return False
+            for cond_eval, option in iter_options_evaluate_conditional(
+                conditional, cmdv[1]
+            ):
+                if cond_eval is None:
+                    return False
+                elif not cond_eval:
+                    pass
+                elif not dispatcher(option, cmdv[2]):
+                    return False
+            # -- end for
 
-            if not cond_eval:
-                return True
-            else:
-                return dispatcher(option, cmdv[2])
+            return True
 
         else:
             self.logger.error("Unknown command %r", cmd_arg)

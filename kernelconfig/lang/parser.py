@@ -100,7 +100,7 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
         return [opcode, options]
 
     def create_seapad_command(self, opcode, option, value):
-        return [opcode, option, value]
+        return [opcode, [option], value]
 
     def p_lang(self, p):
         '''lang : command_list'''
