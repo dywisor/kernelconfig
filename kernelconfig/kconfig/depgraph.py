@@ -423,8 +423,9 @@ class ConfigGraph(loggable.AbstractLoggable):
     ):
         _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
         _is_tristate_symbol = symbol.is_tristate_symbol
+        _is_stringlike_symbol = symbol.is_stringlike_symbol
 
-        def check_tristate_within_range(sym, sym_vis_dep_val, new_val):
+        def check_value_within_vis_range(sym, sym_vis_dep_val, new_val):
             if not sym_vis_dep_val:
                 return False
 
@@ -434,9 +435,12 @@ class ConfigGraph(loggable.AbstractLoggable):
             ):
                 return False
 
+            elif _is_stringlike_symbol(sym):
+                return True
+
             else:
                 return new_val <= sym_vis_dep_val
-        # --- end of check_tristate_within_range (...) ---
+        # --- end of check_value_within_vis_range (...) ---
 
         def iter_pick_tristate_decision_value(value_candidates):
             if _TristateKconfigSymbolValue.m in value_candidates:
@@ -524,7 +528,7 @@ class ConfigGraph(loggable.AbstractLoggable):
                                 )
                             # --
 
-                            if check_tristate_within_range(
+                            if check_value_within_vis_range(
                                 sym, dep_eval, sym_value
                             ):
                                 self.logger.debug(
