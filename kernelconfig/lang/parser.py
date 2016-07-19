@@ -25,6 +25,7 @@ class KernelConfigOp(enum.IntEnum):
         op_append,
         op_add,
         oper_option,
+        oper_driver,
         cond_if,
         cond_unless,
         # FIXME: simplify, introduce cond_type with bitmask
@@ -34,7 +35,7 @@ class KernelConfigOp(enum.IntEnum):
         condop_operator_cmp_func,
         condop_exists,
         condop_hwmatch,
-    ) = range(17)
+    ) = range(18)
 
     @classmethod
     def is_op(cls, value):
@@ -99,6 +100,9 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
 
     def create_dmb_command(self, opcode, options):
         return [opcode, KernelConfigOp.oper_option, options]
+
+    def create_dmb_driver_command(self, opcode, module_names):
+        return [opcode, KernelConfigOp.oper_driver, module_names]
 
     def create_seapad_command(self, opcode, option, value):
         return [opcode, KernelConfigOp.oper_option, [option], value]
@@ -205,25 +209,27 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
         '''command : OP_DISABLE OP_MODULE str_list
                    | OP_DISABLE KW_DRIVER str_list
         '''
-        p[0] = None
+        p[0] = self.create_dmb_driver_command(KernelConfigOp.op_disable, p[3])
 
     def p_command_module_driver(self, p):
         '''command : OP_MODULE OP_MODULE str_list
                    | OP_MODULE KW_DRIVER str_list
         '''
-        p[0] = None
+        p[0] = self.create_dmb_driver_command(KernelConfigOp.op_module, p[3])
 
     def p_command_builtin_driver(self, p):
         '''command : OP_BUILTIN OP_MODULE str_list
                    | OP_BUILTIN KW_DRIVER str_list
         '''
-        p[0] = None
+        p[0] = self.create_dmb_driver_command(KernelConfigOp.op_builtin, p[3])
 
     def p_command_builtin_or_module_driver(self, p):
         '''command : OP_BUILTIN_OR_MODULE OP_MODULE str_list
                    | OP_BUILTIN_OR_MODULE KW_DRIVER str_list
         '''
-        p[0] = None
+        p[0] = self.create_dmb_driver_command(
+            KernelConfigOp.op_builtin_or_module, p[3]
+        )
 
     def p_command_dmb_driver_bad_no_options(self, p):
         '''command : OP_DISABLE OP_MODULE error
