@@ -53,6 +53,9 @@ class KernelConfigLangLexer(object):
 
         "include":           "OP_INCLUDE",
 
+        "hardware-detect":   "OP_HWDETECT",
+        "hwdetect":          "OP_HWDETECT",
+
         "if":                "KW_IF",
         "unless":            "KW_UNLESS",
 

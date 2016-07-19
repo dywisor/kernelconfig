@@ -992,6 +992,12 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
 
             return True
 
+        elif cmd_arg is _KernelConfigOp.op_hwdetect:
+            if conditional is not None:
+                raise NotImplementedError("hwdetect conditional")
+
+            raise NotImplementedError("hwdetect", cmdv[1:])
+
         elif cmd_arg in self._choice_op_dispatchers:
             # dispatcher X options
             dispatcher = self._choice_op_dispatchers[cmd_arg]

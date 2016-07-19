@@ -17,6 +17,7 @@ __all__ = ["KernelConfigLangParser", "KernelConfigOp"]
 class KernelConfigOp(enum.IntEnum):
     (
         op_include,
+        op_hwdetect,
         op_disable,
         op_module,
         op_builtin,
@@ -35,7 +36,7 @@ class KernelConfigOp(enum.IntEnum):
         condop_operator_cmp_func,
         condop_exists,
         condop_hwmatch,
-    ) = range(18)
+    ) = range(19)
 
     @classmethod
     def is_op(cls, value):
@@ -166,6 +167,14 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
         self.handle_parse_error(
             p, 2, "expected file or name after %s directive" % p[1]
         )
+
+    # ---
+    # hardware detection
+    #
+
+    def p_command_hwdetect_basic(self, p):
+        '''command : OP_HWDETECT'''
+        p[0] = [KernelConfigOp.op_hwdetect, None]
 
     # ---
     # "d-m-b option"
