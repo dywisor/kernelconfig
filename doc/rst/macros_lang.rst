@@ -49,14 +49,14 @@ which can be used interchangeably, but supports config option names only:
 
 .. code:: text
 
-    KCONFIG_OPTION=m
-    KCONFIG_OPTION=y
-    KCONFIG_OPTION=ym
-    KCONFIG_OPTION=n
+    KCONFIG_OPTION=m            # module
+    KCONFIG_OPTION=y            # builtin
+    KCONFIG_OPTION=ym           # builtin-or-module
+    KCONFIG_OPTION=n            # disable
 
-    KCONFIG_OPTION="STR"
-    KCONFIG_OPTION+="STR"
-    KCONFIG_OPTION|="STR"
+    KCONFIG_OPTION="STR"        # set
+    KCONFIG_OPTION+="STR"       # append
+    KCONFIG_OPTION|="STR"       # add
 
 Spaces around the assignment operators are ignored.
 
