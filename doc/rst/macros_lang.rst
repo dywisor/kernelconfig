@@ -25,6 +25,9 @@ Instructions that operate on Kconfig symbols:
    append             KCONFIG_OPTION  STR
    add                KCONFIG_OPTION  STR
 
+   hardware-detect
+   hwdetect
+
 The language is case-insensitive and ignores whitespace.
 String values should be quoted.
 
@@ -41,6 +44,8 @@ put the ``driver`` keyword after the command and before the module names:
     # likewise for m, y, ym, n
 
     # not supported for set, append, add
+
+    # not supported for hardware-detect
 
 
 There is an alternative syntax
@@ -155,6 +160,15 @@ Conditions can be negated or combined with:
 
 Kconfig Instructions
 --------------------
+
+``hardware-detect``
+   Scans ``/sys`` for kernel modules that are currently used by any device,
+   and enables corresponding config options as builtin or module.
+
+   Modules for which no config options can be found are ignored,
+   but get logged.
+
+   Alternative names: ``hwdetect``.
 
 ``module KCONFIG_OPTION [KCONFIG_OPTION...]``
    Enable one or more kernel config options as module.
@@ -307,6 +321,9 @@ that modify the value of kernel config options:
    |            | int           |             | *illegal*                                   |
    |            +---------------+             +---------------------------------------------+
    |            | hex           |             | *illegal*                                   |
+   +------------+---------------+-------------+---------------------------------------------+
+   | hardware-\ | *n/a*         | *n/a*       | scan ``/sys`` for hardware identifiers and  |
+   | detect     |               |             | enable config options accordingly           |
    +------------+---------------+-------------+---------------------------------------------+
 
 
