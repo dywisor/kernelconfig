@@ -296,22 +296,78 @@ class ModuleConfigOptionsScanner(loggable.AbstractLoggable):
 
 if __name__ == "__main__":
     def main():
+        import argparse
         import collections
-        import sys
-        import pprint
+
+        def print_module_options_map(module_options_map):
+            max_name_len = max(map(len, module_options_map)) + 1
+            for module_name in sorted(
+                module_options_map, key=lambda w: w.lower()
+            ):
+                print(
+                    "{module:<{nlen}}: {options}".format(
+                        module=module_name,
+                        nlen=max_name_len,
+                        options=", ".join(module_options_map[module_name])
+                    )
+                )
+            # --
+        # ---
+
+        def get_arg_parser():
+            arg_parser = argparse.ArgumentParser()
+            arg_parser.add_argument("srctree", nargs="?", default=os.getcwd())
+            arg_parser.add_argument("-a", "--arch", default="x86")
+
+            cmd_meta_grp = arg_parser.add_argument_group(title="command")
+            cmd_grp = cmd_meta_grp.add_mutually_exclusive_group()
+            word = "print-mapping"
+            cmd_grp.add_argument(
+                ("--%s" % word), dest="command", default=word,
+                action="store_const", const=word
+            )
+            for word in {"print-conflicts"}:
+                cmd_grp.add_argument(
+                    ("--%s" % word), dest="command", default=argparse.SUPPRESS,
+                    action="store_const", const=word
+                )
+            # --
+
+            return arg_parser
+        # ---
 
         MiniSourceInfo = collections.namedtuple(
             "MiniSourceInfo", "srctree karch"
         )
 
-        source_info = MiniSourceInfo(
-            (sys.argv[1] if len(sys.argv) > 1 else os.getcwd()),
-            "x86"
-        )
+        arg_parser = get_arg_parser()
+        arg_config = arg_parser.parse_args()
 
+        source_info = MiniSourceInfo(arg_config.srctree, arg_config.arch)
         scanner = ModuleConfigOptionsScanner(source_info)
-        module_options_map = scanner.get_module_options_map()
-        pprint.pprint(module_options_map)
+
+        if arg_config.command == "print-mapping":
+            module_options_map = scanner.get_module_options_map()
+            print_module_options_map(module_options_map)
+
+        elif arg_config.command == "print-conflicts":
+            accu_dict = scanner.get_module_options_origin_map()
+            conflicts = {
+                module: [
+                    "{option}({origin})".format(
+                        option=option,
+                        origin=", ".join(origin)
+                    ) for option, origin in accu_dict[module].items()
+                ]
+                for module, options
+                in scanner.scanpol.iter_pick_config_options(accu_dict)
+                if options is None
+            }
+
+            print_module_options_map(conflicts)
+
+        else:
+            raise NotImplementedError(arg_config.command)
     # ---
 
     try:
