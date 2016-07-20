@@ -5,6 +5,7 @@ import fnmatch
 
 from ....abc import loggable
 from ....util import accudict
+from ....util import pumpmatch
 
 __all__ = ["ModuleConfigOptionsScannerStrategy"]
 
@@ -136,6 +137,17 @@ class ModuleConfigOptionsScannerStrategy(loggable.AbstractLoggable):
                     ),
                     module_name
                 )
+
+                matcher = pumpmatch.PumpPattern(module_name, "_")
+                matches = matcher & optmap
+                self.logger.warning(
+                    (
+                        'unresolved config option conflict for %s '
+                        'has the following match list: %r'
+                    ),
+                    module_name, matches
+                )
+
                 return None
             # --
 
