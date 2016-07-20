@@ -60,25 +60,31 @@ class ModuleConfigOptionsScannerStrategy(loggable.AbstractLoggable):
     # ---
 
     def pick_config_options(self, modules_options_origin_map):
-        pick_config_options_for_module = self._pick_config_options_for_module
-
-        modules_map = dict(self._module_const_mapping)
-
-        for module, options_origin_map in modules_options_origin_map.items():
-            options = pick_config_options_for_module(
-                module, options_origin_map
-            )
-            if options:
-                modules_map[module] = options
-
-        return modules_map
+        return {
+            module: options
+            for module, options
+            in self.iter_pick_config_options(modules_options_origin_map)
+            if options
+        }
     # ---
 
-    def _pick_config_options_for_module(self, module_name, options_origin_map):
-        if module_name in self._module_const_mapping:
-            return None
+    def iter_pick_config_options(self, modules_options_origin_map):
+        module_const_mapping = self._module_const_mapping
+        pick_config_options_for_module = self._pick_config_options_for_module
 
-        elif module_name in self._modules_reject:
+        yield from module_const_mapping.items()
+
+        for module, options_origin_map in modules_options_origin_map.items():
+            if module not in module_const_mapping:
+                options = pick_config_options_for_module(
+                    module, options_origin_map
+                )
+                yield (module, options)
+            # --
+    # --- end of iter_pick_config_options (...) ---
+
+    def _pick_config_options_for_module(self, module_name, options_origin_map):
+        if module_name in self._modules_reject:
             return None
 
         else:
