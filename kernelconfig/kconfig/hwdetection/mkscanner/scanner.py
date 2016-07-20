@@ -42,14 +42,17 @@ class ModuleConfigOptionsScanner(loggable.AbstractLoggable):
         #   also returns the directory where the option<>object relation
         #   was found (as relative path).
         #
-        accu_dict = accudict.DictAccumulatorDict(
+        accu_dict = self.get_module_options_origin_map()
+        return self.scanpol.pick_config_options(accu_dict)
+    # --- end of get_module_options_map (...) ---
+
+    def get_module_options_origin_map(self):
+        return accudict.DictAccumulatorDict(
             (module_name, (option, dirpath_rel))
             for dirpath_rel, option, module_name
             in self._scan_module_config_options()
         )
-
-        return self.scanpol.pick_config_options(accu_dict)
-    # --- end of get_module_options_map (...) ---
+    # --- end of get_module_options_origin_map (...) ---
 
     def __init__(self, source_info, **kwargs):
         super().__init__(**kwargs)
