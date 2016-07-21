@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import collections
+import itertools
 import re
 
 __all__ = ["PumpPattern"]
@@ -165,11 +166,20 @@ class PumpPattern(object):
         # ---
 
         return sorted(
-            gen_search_all(strings), key=lambda xv: xv[0], reverse=True
+            gen_search_all(strings), key=self.weight_sort_key, reverse=True
         )
     # --- end of search_all (...) ---
 
     def __and__(self, other):
         return self.search_all(other)
+
+    def search_all_group(self, strings):
+        return [
+            (k, list(g))
+            for k, g in itertools.groupby(
+                self.search_all(strings), key=self.weight_sort_key
+            )
+        ]
+    # --- end of search_all_group (...) ---
 
 # --- end of PumpPattern ---
