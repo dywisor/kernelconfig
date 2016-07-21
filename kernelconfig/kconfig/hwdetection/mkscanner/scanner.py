@@ -365,6 +365,7 @@ if __name__ == "__main__":
             }
 
             print_module_options_map(conflicts)
+            print("\n{:d} conflicts detected.".format(len(conflicts)))
 
         else:
             raise NotImplementedError(arg_config.command)
