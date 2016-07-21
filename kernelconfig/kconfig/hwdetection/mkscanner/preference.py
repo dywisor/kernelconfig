@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import fnmatch
+import logging
 import re
 
 from ....abc import loggable
@@ -152,6 +153,8 @@ class ModuleConfigOptionsScannerStrategy(loggable.AbstractLoggable):
     # --- end of iter_pick_config_options (...) ---
 
     def _pick_config_options_for_module(self, module_name, options_origin_map):
+        debug_log_enabled = self.logger.isEnabledFor(logging.DEBUG)
+
         if module_name in self._modules_reject:
             return None
 
@@ -197,23 +200,38 @@ class ModuleConfigOptionsScannerStrategy(loggable.AbstractLoggable):
                 #    return all config options whose lowercase name
                 #    matches basename(dirpath)
                 #
-                self.logger.debug(
-                    (
-                        'unresolved config option conflict for %s, '
-                        'discarding module'
-                    ),
-                    module_name
-                )
 
                 matcher = ModuleNameConfigOptionsPumpPattern(module_name)
-                matches = matcher & optmap
-                self.logger.warning(
-                    (
-                        'unresolved config option conflict for %s '
-                        'has the following match list: %r'
-                    ),
-                    module_name, matches
-                )
+                match_groups = matcher.search_all_group(optmap)
+                # any match? with rating >= 0?
+                if match_groups and match_groups[0][0] >= 0:
+                    # exactly one option in this match group?
+                    if len(match_groups[0][1]) == 1:
+                        # FIXME: [a][b][c][d] isn't readable
+                        return [match_groups[0][1][0][1]]
+
+                    elif debug_log_enabled:
+                        self.logger.debug(
+                            (
+                                'Config option conflict for %s'
+                                ' remains unresolved'
+                                ' (too many matches, rating %d): %s'
+                            ),
+                            module_name,
+                            match_groups[0][0],
+                            ", ".join((m[1] for m in match_groups[0][1]))
+                        )
+                # --
+
+                if debug_log_enabled:
+                    self.logger.debug(
+                        (
+                            'unresolved config option conflict for %s, '
+                            'discarding module'
+                        ),
+                        module_name
+                    )
+                # --
 
                 return None
             # --
