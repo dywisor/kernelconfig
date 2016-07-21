@@ -21,6 +21,8 @@ def _fnmatch_any(name, patterns, *, _fnmatch=fnmatch.fnmatch):
 
 class ModuleNameConfigOptionsPumpPattern(pumpmatch.PumpPattern):
 
+    IGNORABLE_AFFIXES = frozenset(("FS", "HW"))
+
     def __init__(self, pattern, *, fillchars="_", flags=re.I):
         super().__init__(
             pattern=pattern, fillchars=fillchars, flags=flags
@@ -41,11 +43,19 @@ class ModuleNameConfigOptionsPumpPattern(pumpmatch.PumpPattern):
         # prefix cost:
         #
         #   12 points for no prefix
+        # <=12 points for having an "ignorable" prefix
         #    4 points for having a prefix that ends with a fillchar
         #    0 points, otherwise
         if not mparts.prefix_word:
             rating += 12
-        elif mparts.prefix_sep:
+
+        elif not mparts.prefix_sep:
+            pass
+
+        elif mparts.prefix in self.IGNORABLE_AFFIXES:
+            rating += 10
+
+        else:
             rating += 4
         # --
 
@@ -61,7 +71,7 @@ class ModuleNameConfigOptionsPumpPattern(pumpmatch.PumpPattern):
         elif not mparts.suffix_sep:
             pass
 
-        elif mparts.suffix in {"FS", "HW"}:
+        elif mparts.suffix in self.IGNORABLE_AFFIXES:
             # upper not necessary
             rating += 9
 
