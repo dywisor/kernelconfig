@@ -1,9 +1,16 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import collections
 import re
 
 __all__ = ["PumpPattern"]
+
+
+PumpPatternMatchParts = collections.namedtuple(
+    "PumpPatternMatchParts",
+    "word prefix_word prefix prefix_sep suffix_word suffix suffix_sep"
+)
 
 
 class PumpPattern(object):
@@ -54,56 +61,100 @@ class PumpPattern(object):
         self.pattern_length = len(pattern)
         self.expr = re.compile(self._get_pump_pattern(), flags=flags)
 
-    def _finditer(self, string):
+    def split_match_parts(self, match):
+        start, end = match.span()
+        if start < 0:  # then also end < 0,  discard empty matches
+            return None
+
+        prefix_word = match.string[:start]
+        if prefix_word and prefix_word[-1] in self.fillchars:
+            prefix_sep = prefix_word[-1]
+            prefix = prefix_word[:-1]
+        else:
+            prefix = prefix_word
+            prefix_sep = None
+
+        suffix_word = match.string[end:]
+        if suffix_word and suffix_word[0] in self.fillchars:
+            suffix_sep = suffix_word[0]
+            suffix = suffix_word[1:]
+        else:
+            suffix = suffix_word
+            suffix_sep = None
+
+        word = match.string[start:end]
+
+        return PumpPatternMatchParts(
+            word=word,
+            prefix_word=prefix_word, prefix=prefix, prefix_sep=prefix_sep,
+            suffix_word=suffix_word, suffix=suffix, suffix_sep=suffix_sep
+        )
+    # --- end of split_match_parts (...) ---
+
+    def weight_sort_key(self, weight):
+        return weight[0]
+    # --- end of weight_sort_key (...) ---
+
+    def weight_nomatch(self, string):
+        return (-1, None)
+
+    def match_cost(self, match, mparts):
+        # rate the match
+        #
+        # matched substring:
+        #  * 2*n points for having a match
+        # [* deviation? up to n+k*(n-1) | k>0 points for not _?]
+        #
+        # prefix:
+        #  * 3*n points for not having a prefix
+        #  * n   points for having a prefix that ends with a fillchar
+        #  * 0   points for any other prefix
+        #        (or -len(prefix)?)
+        #
+        # suffix:
+        #  * 2*n points for not having a suffix
+        #  * n   points for having a suffix that starts with a fillchar
+        #  * 0   points for any other suffix
+        #
         patlen = self.pattern_length
-        fillchar_set = self.fillchars
 
+        return (
+            2 * patlen
+            + (
+                3 * patlen if not mparts.prefix_word
+                else (patlen if mparts.prefix_sep else 0)
+            )
+            + (
+                2 * patlen if not mparts.suffix_word
+                else (patlen if mparts.suffix_sep else 0)
+            )
+        )
+    # --- end of match_cost (...) ---
+
+    def weight_match(self, match):
+        mparts = self.split_match_parts(match)
+        if not mparts:
+            return None
+
+        return (self.match_cost(match, mparts), mparts.word)
+    # --- end of weight_match (...) ---
+
+    def _finditer(self, string):
+        weight_match = self.weight_match
         for match in self.expr.finditer(string):
-            start, end = match.span()
-            if start >= 0:  # then also end >= 0,  discard empty matches
-                # rate the match
-                #   TODO: do this in a cost function
-                #
-                # matched substring:
-                #  * 2*n points for having a match
-                # [* deviation? up to n+k*(n-1) | k>0 points for not _?]
-                #
-                # prefix:
-                #  * 3*n points for not having a prefix
-                #  * n   points for having a prefix that ends with a fillchar
-                #  * 0   points for any other prefix
-                #        (or -len(prefix)?)
-                #
-                # suffix:
-                #  * 2*n points for not having a suffix
-                #  * n   points for having a suffix that starts with a fillchar
-                #  * 0   points for any other suffix
-                #
-
-                prefix = string[:start]
-                word = string[start:end]
-                suffix = string[end:]
-
-                weight = (
-                    2 * patlen
-                    + (
-                        3 * patlen if not prefix
-                        else (patlen if prefix[-1] in fillchar_set else 0)
-                    )
-                    + (
-                        2 * patlen if not suffix
-                        else (patlen if suffix[0] in fillchar_set else 0)
-                    )
-                )
-
-                yield (weight, word)
+            weight = weight_match(match)
+            if weight is not None:
+                yield weight
             # --
         # -- end for
     # --- end of _finditer (...) ---
 
     def search(self, string):
         matches = list(self._finditer(string))
-        return max(matches, key=lambda xv: xv[0]) if matches else (-1, None)
+        if matches:
+            return max(matches, key=self.weight_sort_key)
+        else:
+            return self.weight_nomatch(string)
     # --- end of search (...) ---
 
     def search_all(self, strings):
