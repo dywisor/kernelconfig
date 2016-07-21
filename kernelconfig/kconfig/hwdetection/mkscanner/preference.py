@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import fnmatch
+import re
 
 from ....abc import loggable
 from ....util import accudict
@@ -16,6 +17,62 @@ def _fnmatch_any(name, patterns, *, _fnmatch=fnmatch.fnmatch):
             return True
     return False
 # --- end of _fnmatch_any (...) ---
+
+
+class ModuleNameConfigOptionsPumpPattern(pumpmatch.PumpPattern):
+
+    def __init__(self, pattern, *, fillchars="_", flags=re.I):
+        super().__init__(
+            pattern=pattern, fillchars=fillchars, flags=flags
+        )
+
+    def match_cost(self, match, mparts):
+        # word match cost:
+        #
+        #    1 point for having a match
+        #   (k points for 'precise' match: omitted vowels, fillchars?)
+        #    2 extra points for being at a word boundary
+        #      (no suffix and/or no prefix)
+        rating = 1
+        if not mparts.prefix_word or not mparts.suffix_word:
+            rating += 2
+        # --
+
+        # prefix cost:
+        #
+        #   12 points for no prefix
+        #    4 points for having a prefix that ends with a fillchar
+        #    0 points, otherwise
+        if not mparts.prefix_word:
+            rating += 12
+        elif mparts.prefix_sep:
+            rating += 4
+        # --
+
+        # suffix cost:
+        #
+        #   10 points for no suffix
+        # <=10 points for having an "ignorable" suffix
+        #    4 points for having a suffix that starts with a fillchar
+        #    0 points, otherwise
+        if not mparts.suffix_word:
+            rating += 10
+
+        elif not mparts.suffix_sep:
+            pass
+
+        elif mparts.suffix in {"FS", "HW"}:
+            # upper not necessary
+            rating += 9
+
+        else:
+            rating += 4
+        # --
+
+        return rating
+    # --- end of match_cost (...) ---
+
+# --- end of ModuleNameConfigOptionsPumpPattern ---
 
 
 class ModuleConfigOptionsScannerStrategy(loggable.AbstractLoggable):
@@ -138,7 +195,7 @@ class ModuleConfigOptionsScannerStrategy(loggable.AbstractLoggable):
                     module_name
                 )
 
-                matcher = pumpmatch.PumpPattern(module_name, "_")
+                matcher = ModuleNameConfigOptionsPumpPattern(module_name)
                 matches = matcher & optmap
                 self.logger.warning(
                     (
