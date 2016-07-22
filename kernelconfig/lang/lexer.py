@@ -38,9 +38,6 @@ class KernelConfigLangLexer(object):
         "module":            "OP_MODULE",
         "m":                 "OP_MODULE",
 
-        "driver":            "KW_DRIVER",
-        "drv":               "KW_DRIVER",
-
         "builtin":           "OP_BUILTIN",
         "y":                 "OP_BUILTIN",
 
@@ -55,6 +52,9 @@ class KernelConfigLangLexer(object):
 
         "hardware-detect":   "OP_HWDETECT",
         "hwdetect":          "OP_HWDETECT",
+
+        "driver":            "KW_DRIVER",
+        "drv":               "KW_DRIVER",
 
         "if":                "KW_IF",
         "unless":            "KW_UNLESS",
