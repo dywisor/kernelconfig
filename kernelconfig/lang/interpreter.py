@@ -1079,16 +1079,60 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 return True
             # --
 
+            # FIXME: if no modules mapping: error
+
             # get driver names from "driver" symlinks in /sys
+            #
+            #  This information source has no special requirements except that
+            #  drivers need to be already loaded for (ideally) all devices.
+            #
             #  drivers_origin_map is a dict :: driver => {origin}
             self.logger.info("Detecting hardware: loaded drivers")
             drivers_origin_map = sysfs_scan.scan_drivers()
-            self.logger.debug("Found %d modules", len(drivers_origin_map))
+            self.logger.debug(
+                "Discovered %d modules via drivers",
+                len(drivers_origin_map)
+            )
 
-            # translate modules into options
+            # get driver names from "modalias" files in /sys
+            #
+            #  This information source is always available,
+            #  but needs a modules.alias file
+            #  (and other files from /lib/modules/*/).
+            #
+            # Since kernelconfig does not implement modules.alias file
+            # handling in any way yet (cmdline, cached creation, ...),
+            # this feature should be considered as highly experimental,
+            # the information comes from an uncontrolled source.
+            #
+            modalias_origin_map = None
+            if self.modalias_map is not None:
+                self.logger.info("Detecting hardware: modalias")
+                modalias_origin_map = self.modalias_map.lookup_v(
+                    sysfs_scan.scan_modalias()
+                )
+                self.logger.debug(
+                    "Discovered %d modules via modalias",
+                    len(modalias_origin_map)
+                )
+            # --
+
+            # create a combined set of modules to lookup
+            # * from driver symlinks
+            # * from modalias
+            modules_to_lookup = set()
+            for modules_input in filter(
+                None,
+                (drivers_origin_map, modalias_origin_map)
+            ):
+                modules_to_lookup.update(modules_input)
+
+            self.logger.debug("Found %d modules", len(modules_to_lookup))
+
+            # translate the modules set into options
             modules_missing, options = (
                 self.translate_module_names_to_config_options(
-                    drivers_origin_map
+                    modules_to_lookup
                 )
             )
 
@@ -1115,7 +1159,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 self.logger.debug(
                     "Setting options for these modules: %s",
                     join_sort_modules(
-                        set(drivers_origin_map) - set(modules_missing)
+                        modules_to_lookup - set(modules_missing)
                     )
                 )
 
