@@ -6,7 +6,7 @@ import stat
 
 from ...util import accudict
 
-__all__ = ["scan_drivers"]
+__all__ = ["scan_drivers", "scan_modalias"]
 
 
 class _SysfsFind(object):
@@ -43,6 +43,10 @@ class _SysfsFind(object):
         return cls.find(names, [stat.S_ISLNK], **kwargs)
 
     @classmethod
+    def find_regular_files(cls, *names, **kwargs):
+        return cls.find(names, [stat.S_ISREG], **kwargs)
+
+    @classmethod
     def find_driver_symlinks(cls, *, root=None):
         if root is None:
             root = cls.SYSFS_PATH
@@ -59,7 +63,7 @@ class _SysfsFind(object):
     @classmethod
     def scan_drivers(cls, **kwargs):
         """
-        Scans /sys for drivers symlinks and creates dict that maps
+        Scans /sys for "driver" symlinks and creates dict that maps
         driver names to a set of sysfs relpaths pointing to this driver.
 
         @keyword root:  alternative sysfs path. Defaults to None (-> /sys).
@@ -77,17 +81,70 @@ class _SysfsFind(object):
         ).to_dict()
     # --- end of scan_drivers (...) ---
 
+    @classmethod
+    def find_modalias_files(cls, *, root=None):
+        if root is None:
+            root = cls.SYSFS_PATH
+
+        root_prefix_len = len(root) + 1
+
+        for modalias_filepath, stat_info in (
+            cls.find_regular_files("modalias", root=root)
+        ):
+            yield (
+                modalias_filepath[root_prefix_len:],
+                modalias_filepath
+            )
+    # --- end of find_modalias_files (...) ---
+
+    @classmethod
+    def _iter_scan_modalias(cls, **kwargs):
+        for modalias_relpath, modalias_filepath in (
+            cls.find_modalias_files(**kwargs)
+        ):
+            # not using fileio here, these files are really simple
+            with open(modalias_filepath, "rt") as fh:
+                for line in filter(None, (l.strip() for l in fh)):
+                    yield (line, modalias_relpath)
+    # --- end of _iter_scan_modalias (...) ---
+
+    @classmethod
+    def scan_modalias(cls, **kwargs):
+        """
+        Scans /sys for "modalias" files and creates a dict that maps
+        module alias identifiers to a set of relative paths of sysfs files
+        listing this identifier.
+
+        @keyword root:  alternative sysfs path. Defaults to None (-> /sys).
+        @type    root:  C{None} or C{str}
+
+        @return: dict of modalias X relpaths
+        @rtype:  dict :: C{str} => C{set} of C{str}
+        """
+        return accudict.SetAccumulatorDict(
+            cls._iter_scan_modalias(**kwargs)
+        ).to_dict()
+    # --- end of scan_modalias (...) ---
+
 # ---
 
 
 # make select _SysfsFind methods available module-wide
 scan_drivers = _SysfsFind.scan_drivers
+scan_modalias = _SysfsFind.scan_modalias
 
 
 if __name__ == "__main__":
     def main():
         import pprint
+
+        print("== DRIVER ==")
         pprint.pprint(scan_drivers())
+        print("== END OF DRIVER ==")
+
+        print("\n== MODALIAS ==")
+        pprint.pprint(scan_modalias())
+        print("== END OF MODALIAS ==")
     # ---
 
     main()
