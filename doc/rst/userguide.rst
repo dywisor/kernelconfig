@@ -50,6 +50,9 @@ Required:
 
 Optional, but recommended:
 
+* kmod with Python bindings
+  hardware detection based on module aliases
+
 * Python modules: lxml and beautifulsoup (>= 4),
   for the Ubuntu configuration source
 
