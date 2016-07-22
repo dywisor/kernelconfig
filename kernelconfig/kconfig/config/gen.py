@@ -3,7 +3,9 @@
 
 from ...abc import loggable
 from ...lang import interpreter
+
 from ...kernel.hwdetection import modulesmap
+from ...kernel.modalias import lookup as modaliaslookup
 
 from .. import symbolgen
 
@@ -45,6 +47,15 @@ class ConfigGenerator(loggable.AbstractLoggable):
             modulesmap.ModulesMap, self.source_info
         )
 
+        # modalias map lazy-inits itself
+        #  TODO: mod_dir
+        #         (if None, /lib/modules/$(uname -r) is used, which does not
+        #         necessarily exist and neither is a complete mapping)
+        #
+        self._modalias_map = self.create_loggable(
+            modaliaslookup.ModaliasLookup, mod_dir=None
+        )
+
         self._kconfig_symbols = None
         self._config = None
         self._config_choices = None
@@ -74,7 +85,8 @@ class ConfigGenerator(loggable.AbstractLoggable):
             self.install_info,
             self.source_info,
             self.get_config_choices(),
-            self.get_modules_map()
+            self.get_modules_map(),
+            self.get_modalias_map()
         )
 
     get_kconfig_symbols = _lazy_constructor("_kconfig_symbols")
@@ -86,6 +98,10 @@ class ConfigGenerator(loggable.AbstractLoggable):
     def get_modules_map(self):
         return self._modules_map
     # --- end of get_modules_map (...) ---
+
+    def get_modalias_map(self):
+        return self._modalias_map
+    # --- end of get_modalias_map (...) ---
 
     def commit(self):
         if self._config_choices is None:
