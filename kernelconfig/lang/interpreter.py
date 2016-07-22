@@ -606,7 +606,8 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
     """
 
     def __init__(
-        self, install_info, source_info, config_choices, modules_map, *,
+        self, install_info, source_info, config_choices,
+        modules_map, modalias_map, *,
         object_cache_size=32, **kwargs
     ):
         super().__init__(**kwargs)
@@ -617,6 +618,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         self.source_info = None
         self.config_choices = None
         self.modules_map = None
+        self.modalias_map = None
         self._choice_op_dispatchers = None
         self._choice_str_op_dispatchers = None
         self._config_option_cond_context = None
@@ -626,6 +628,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         self.bind_config_choices(config_choices)
         self.bind_source_info(source_info)
         self.bind_modules_map(modules_map)
+        self.bind_modalias_map(modalias_map)
         self.bind_cmp_vars()
     # --- end of __init__ (...) ---
 
@@ -667,6 +670,10 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
 
     def bind_modules_map(self, modules_map):
         self.modules_map = modules_map
+    # ---
+
+    def bind_modalias_map(self, modalias_map):
+        self.modalias_map = modalias_map
     # ---
 
     def bind_cmp_vars(self):
@@ -825,6 +832,51 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         return (modules_not_translated, options_translated)
     # --- end of translate_module_names_to_config_options (...) ---
 
+    def translate_modalias_to_config_options(self, modaliases):
+        """
+        Translate a sequence of module aliases to config options.
+
+        This is done by translating module aliases into module names first,
+        and then module names to config options.
+
+        The result is a 2-tuple (unresolved modules, resolved modules).
+        Modalias identifiers for which no module could be found
+        are quietly ignored.
+
+        @param modaliases:  iterable containing kernel module names
+        @type  modaliases:  iterable of C{str}
+
+        @return: 2-tuple (
+                    list of modules that could not be translated,
+                    deduplicated list of config options
+                 )
+        @rtype:  2-tuple (C{list} of C{str}, C{list} of C{str})
+        """
+        if self.modules_map is None:
+            self.logger.warning(
+                (
+                    'Cannot translate modalias to config options,'
+                    ' no modules mapping has been provided.'
+                )
+            )
+            return None
+        # --
+
+        if self.modalias_map is None:
+            self.logger.warning(
+                (
+                    'Cannot translate modalias to modules,'
+                    ' no mapping has been provided.'
+                )
+            )
+            return None
+        # --
+
+        return self.translate_module_names_to_config_options(
+            self.modalias_map.lookup_v(modaliases)
+        )
+    # --- end of translate_modalias_to_config_options (...) ---
+
     def process_command(self, cmdv, conditional):
         _KernelConfigOp = parser.KernelConfigOp
 
@@ -864,10 +916,28 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
             if oper_type is _KernelConfigOp.oper_option:
                 options = args
 
-            elif oper_type is _KernelConfigOp.oper_driver:
-                modules_missing, options = (
-                    self.translate_module_names_to_config_options(args)
-                )
+            elif (
+                oper_type is _KernelConfigOp.oper_driver
+                or oper_type is _KernelConfigOp.oper_modalias
+            ):
+                if oper_type is _KernelConfigOp.oper_driver:
+                    modules_missing, options = (
+                        self.translate_module_names_to_config_options(args)
+                    )
+                else:
+                    modules_missing, options = (
+                        self.translate_modalias_to_config_options(args)
+                    )
+                    if not options:
+                        self.logger.warning(
+                            "Could not get module names for config aliases %r",
+                            args
+                        )
+                        if not modules_missing:
+                            # otherwise, continue with the next log message
+                            # and return "no can do" later
+                            return [(None, None)]
+                # --
 
                 if modules_missing:
                     for module_name in modules_missing:
