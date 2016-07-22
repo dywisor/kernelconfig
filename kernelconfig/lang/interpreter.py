@@ -12,7 +12,7 @@ from ..util import objcache
 from . import cond
 from . import parser
 
-from ..kconfig.hwdetection import sysfs_scan
+from ..kernel.hwdetection import sysfs_scan
 
 
 __all__ = ["KernelConfigLangInterpreter"]

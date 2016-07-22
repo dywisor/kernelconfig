@@ -3,8 +3,8 @@
 
 from ...abc import loggable
 from ...lang import interpreter
+from ...kernel.hwdetection import modulesmap
 
-from ..hwdetection import modulesmap
 from .. import symbolgen
 
 from . import data
