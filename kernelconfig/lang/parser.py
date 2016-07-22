@@ -268,15 +268,21 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
 
     def p_command_disable_modalias(self, p):
         '''command : OP_DISABLE KW_MODALIAS str_list'''
-        p[0] = self.create_dmb_modalias_command(KernelConfigOp.op_disable, p[3])
+        p[0] = self.create_dmb_modalias_command(
+            KernelConfigOp.op_disable, p[3]
+        )
 
     def p_command_module_modalias(self, p):
         '''command : OP_MODULE KW_MODALIAS str_list'''
-        p[0] = self.create_dmb_modalias_command(KernelConfigOp.op_module, p[3])
+        p[0] = self.create_dmb_modalias_command(
+            KernelConfigOp.op_module, p[3]
+        )
 
     def p_command_builtin_modalias(self, p):
         '''command : OP_BUILTIN KW_MODALIAS str_list'''
-        p[0] = self.create_dmb_modalias_command(KernelConfigOp.op_builtin, p[3])
+        p[0] = self.create_dmb_modalias_command(
+            KernelConfigOp.op_builtin, p[3]
+        )
 
     def p_command_builtin_or_module_modalias(self, p):
         '''command : OP_BUILTIN_OR_MODULE KW_MODALIAS str_list'''
