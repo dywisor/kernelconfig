@@ -201,8 +201,13 @@ class KernelConfigLangLexer(object):
         r'\)'
         return self.emit_reset_cmd_end(t)
 
-    def t_op(self, t):
-        r'[\<\>\=\!\|\+\:][\=]?'
+    def t_op_twochars_eq(self, t):
+        r'[\<\>\=\!\|\+\:][\=]'
+        t.type = self.reserved[t.value]
+        return self.emit_reset_cmd_end(t)
+
+    def t_op_onechar(self, t):
+        r'[\<\>\=\!]'
         t.type = self.reserved[t.value]
         return self.emit_reset_cmd_end(t)
 
