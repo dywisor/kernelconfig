@@ -44,7 +44,7 @@ def read_text_file_lines_from_fh(infile_fh, filename=None, rstrip=True):
     @keyword filename:   name of the file. Defaults to None.
     @type    filename:   C{str} or C{None}
     @keyword rstrip:     chars to strip from the end of each text line;
-                         May to False to disable rstrip altogether,
+                         May be False to disable rstrip altogether,
                          None for removing any whitespace,
                          or True for removing one '\n' newline char at the
                          end of each line. Defaults to True.
