@@ -243,6 +243,9 @@ Module aliases are expanded to module names and then to config options.
    Determine which config options correspond to the given module aliases
    and enable them as module.
 
+   Unmatched module aliases are ignored,
+   but at least one alias must resolve to a config option.
+
 
 
 The table below gives a quick overview of the instructions
