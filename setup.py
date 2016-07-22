@@ -77,6 +77,8 @@ class ProjectSetup(object):
                 "abc",
                 "installinfo",
                 "kernel",
+                "kernel.modalias",
+                "kernel.modalias.abc",
                 "kconfig",
                 "kconfig.abc",
                 "kconfig.config",
