@@ -56,6 +56,8 @@ class KernelConfigLangLexer(object):
         "driver":            "KW_DRIVER",
         "drv":               "KW_DRIVER",
 
+        "modalias":          "KW_MODALIAS",
+
         "if":                "KW_IF",
         "unless":            "KW_UNLESS",
 

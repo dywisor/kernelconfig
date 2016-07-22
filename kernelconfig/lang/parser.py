@@ -27,6 +27,7 @@ class KernelConfigOp(enum.IntEnum):
         op_add,
         oper_option,
         oper_driver,
+        oper_modalias,
         cond_if,
         cond_unless,
         # FIXME: simplify, introduce cond_type with bitmask
@@ -36,7 +37,7 @@ class KernelConfigOp(enum.IntEnum):
         condop_operator_cmp_func,
         condop_exists,
         condop_hwmatch,
-    ) = range(19)
+    ) = range(20)
 
     @classmethod
     def is_op(cls, value):
@@ -104,6 +105,9 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
 
     def create_dmb_driver_command(self, opcode, module_names):
         return [opcode, KernelConfigOp.oper_driver, module_names]
+
+    def create_dmb_modalias_command(self, opcode, modaliases):
+        return [opcode, KernelConfigOp.oper_modalias, modaliases]
 
     def create_seapad_command(self, opcode, option, value):
         return [opcode, KernelConfigOp.oper_option, [option], value]
@@ -254,6 +258,42 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
             p, 3,
             (
                 "expected one or more module names after %s %s directive"
+                % (p[1], p[2])
+            )
+        )
+
+    # ---
+    # disable|module|builtin|builtin-or-module modalias MODALIAS [MODALIAS...]
+    #
+
+    def p_command_disable_modalias(self, p):
+        '''command : OP_DISABLE KW_MODALIAS str_list'''
+        p[0] = self.create_dmb_modalias_command(KernelConfigOp.op_disable, p[3])
+
+    def p_command_module_modalias(self, p):
+        '''command : OP_MODULE KW_MODALIAS str_list'''
+        p[0] = self.create_dmb_modalias_command(KernelConfigOp.op_module, p[3])
+
+    def p_command_builtin_modalias(self, p):
+        '''command : OP_BUILTIN KW_MODALIAS str_list'''
+        p[0] = self.create_dmb_modalias_command(KernelConfigOp.op_builtin, p[3])
+
+    def p_command_builtin_or_module_modalias(self, p):
+        '''command : OP_BUILTIN_OR_MODULE KW_MODALIAS str_list'''
+        p[0] = self.create_dmb_modalias_command(
+            KernelConfigOp.op_builtin_or_module, p[3]
+        )
+
+    def p_command_dmb_modalias_bad_no_options(self, p):
+        '''command : OP_DISABLE KW_MODALIAS error
+                   | OP_MODULE  KW_MODALIAS error
+                   | OP_BUILTIN KW_MODALIAS error
+                   | OP_BUILTIN_OR_MODULE KW_MODALIAS error
+        '''
+        self.handle_parse_error(
+            p, 3,
+            (
+                "expected one or more module aliases after %s %s directive"
                 % (p[1], p[2])
             )
         )
