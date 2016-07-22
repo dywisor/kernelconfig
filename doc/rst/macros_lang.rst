@@ -47,6 +47,8 @@ put the ``driver`` keyword after the command and before the module names:
 
     # not supported for hardware-detect
 
+The ``modalias`` allows to specify module aliases,
+its usage is identical to ``driver``.
 
 There is an alternative syntax
 that is more in line with the original format of ``.config`` files,
@@ -211,23 +213,36 @@ to which the instruction is then applied.
 Alternative names for the ``driver`` keyword are ``drv`` and ``module``.
 
 ``module driver MODULE_NAME [MODULE_NAME...]``
-   Enable one or more kernel config options as module.
+   Determine which config options correspond to the given modules
+   and enable them as module.
 
    The modified options must be of *tristate* type.
 
 ``builtin driver MODULE_NAME [MODULE_NAME...]``
-   Enable one or more kernel config options as builtin.
+   Determine which config options correspond to the given modules
+   and enable them as builtin.
 
    The modified options must be of *tristate* or *boolean* type.
 
 ``builtin-or-module driver MODULE_NAME [MODULE_NAME...]``
-   Enable one or more kernel config options as builtin or module.
+   Determine which config options correspond to the given modules
+   and enable them as builtin or module.
 
    The modified options must be of *tristate* or *boolean* type.
    The effective value is ``y`` or ``m``, out of which ``m`` gets preferred.
 
 ``disable driver MODULE_NAME [MODULE_NAME...]``
-   Disable one or more kernel config options.
+   Determine which config options correspond to the given modules
+   and disable them.
+
+Module aliases are also accepted by these commands by means of the
+``modalias`` keyword.
+Module aliases are expanded to module names and then to config options.
+
+``module modalias MODULE_ALIAS [MODULE_ALIAS...]``
+   Determine which config options correspond to the given module aliases
+   and enable them as module.
+
 
 
 The table below gives a quick overview of the instructions
@@ -236,7 +251,9 @@ that modify the value of kernel config options:
 .. table:: kconfig instructions
 
    +------------+---------------+-------------+---------------------------------------------+
-   | keyword    | symbol type   | ``driver``? | description                                 |
+   | keyword    | symbol type   | ``driver``, | description                                 |
+   |            |               | ``mod``\    |                                             |
+   |            |               | ``alias``?  |                                             |
    +============+===============+=============+=============================================+
    | builtin    |               | yes         |                                             |
    |            | tristate      |             | set option to ``y``                         |
