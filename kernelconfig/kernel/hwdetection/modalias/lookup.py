@@ -29,12 +29,12 @@ __all__ = ["ModaliasLookup"]
 
 
 if __name__ == "__main__":
-    # $ python -m kernelconfig.kernel.modalias.lookup <modalias> ...
+    # $ python -m kernelconfig.kernel.hwdetection.modalias <modalias> ...
     #
     # or
     #
     # $ find /sys -name modalias | \
-    #       xargs python -m kernelconfig.kernel.modalias.lookup -F
+    #       xargs python -m kernelconfig.kernel.hwdetection.modalias -F
     #
     def main():
         import os
