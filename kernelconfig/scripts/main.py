@@ -375,7 +375,8 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             kernelconfig.kconfig.config.gen.ConfigGenerator,
             install_info=self.install_info,
             source_info=self.source_info,
-            modules_dir=arg_config.get("modules_dir", True)
+            # modules_dir=arg_config.get("modules_dir", True)  # TODO
+            modules_dir=arg_config.get("modules_dir", None)
         )
 
         config = config_gen.get_config()
