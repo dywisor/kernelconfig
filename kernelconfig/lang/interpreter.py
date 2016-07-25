@@ -606,8 +606,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
     """
 
     def __init__(
-        self, install_info, source_info, config_choices,
-        modules_map, modalias_map, *,
+        self, install_info, source_info, config_choices, hwdetector, *,
         object_cache_size=32, **kwargs
     ):
         super().__init__(**kwargs)
@@ -617,8 +616,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         self.install_info = install_info
         self.source_info = None
         self.config_choices = None
-        self.modules_map = None
-        self.modalias_map = None
+        self.hwdetector = None
         self._choice_op_dispatchers = None
         self._choice_str_op_dispatchers = None
         self._config_option_cond_context = None
@@ -627,8 +625,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
 
         self.bind_config_choices(config_choices)
         self.bind_source_info(source_info)
-        self.bind_modules_map(modules_map)
-        self.bind_modalias_map(modalias_map)
+        self.bind_hwdetector(hwdetector)
         self.bind_cmp_vars()
     # --- end of __init__ (...) ---
 
@@ -664,16 +661,12 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         # ---
     # ---
 
+    def bind_hwdetector(self, hwdetector):
+        self.hwdetector = hwdetector
+    # ---
+
     def bind_source_info(self, source_info):
         self.source_info = source_info
-    # ---
-
-    def bind_modules_map(self, modules_map):
-        self.modules_map = modules_map
-    # ---
-
-    def bind_modalias_map(self, modalias_map):
-        self.modalias_map = modalias_map
     # ---
 
     def bind_cmp_vars(self):
@@ -758,43 +751,10 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                  )
         @rtype:  2-tuple (C{list} of C{str}, C{list} of C{str})
         """
-
-        def iter_lookup_options(modules_map, module_names):
-            for module_name in module_names:
-                try:
-                    options = modules_map[module_name]
-                except KeyError:
-                    yield (module_name, None)
-                else:
-                    assert options is not None
-                    yield (module_name, options)
-            # --
-        # ---
-
-        if self.logger.isEnabledFor(logging.DEBUG):
-            def log_module_lookup_result(module_name, options):
-                self.logger.debug(
-                    "config options for module %s: %s",
-                    module_name,
-                    (
-                        "<not found>" if options is None
-                        else (
-                            "<none>" if not options
-                            else", ".join(sorted(options))
-                        )
-                    )
-                )
-            # ---
-        else:
-            def log_module_lookup_result(module_name, options):
-                pass
-            # ---
-        # --
-
-        modules_map = self.modules_map
         modlist = list(module_names)
 
-        if modules_map is None:
+        hwdetector = self.hwdetector
+        if hwdetector is None:
             self.logger.warning(
                 (
                     "Cannot translate module names to config options,"
@@ -803,33 +763,10 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 modlist
             )
 
-            modules_not_translated = modlist
-            options_translated = None
+            return (modlist, None)
 
         else:
-            modules_not_translated = []
-            options_translated = []
-            # dedup options
-            options_seen = set()
-
-            for module_name, options in (
-                iter_lookup_options(modules_map, modlist)
-            ):
-                log_module_lookup_result(module_name, options)
-
-                if options is None:
-                    modules_not_translated.append(module_name)
-
-                else:
-                    for option in options:
-                        if option not in options_seen:
-                            options_translated.append(option)
-                            options_seen.add(option)
-                # -- end if
-            # -- end for
-        # --
-
-        return (modules_not_translated, options_translated)
+            return hwdetector.translate_module_names_to_config_options(modlist)
     # --- end of translate_module_names_to_config_options (...) ---
 
     def translate_modalias_to_config_options(self, modaliases):
@@ -852,17 +789,8 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                  )
         @rtype:  2-tuple (C{list} of C{str}, C{list} of C{str})
         """
-        if self.modules_map is None:
-            self.logger.warning(
-                (
-                    'Cannot translate modalias to config options,'
-                    ' no modules mapping has been provided.'
-                )
-            )
-            return None
-        # --
-
-        if self.modalias_map is None:
+        hwdetector = self.hwdetector
+        if hwdetector is None:
             self.logger.warning(
                 (
                     'Cannot translate modalias to modules,'
@@ -870,11 +798,9 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 )
             )
             return None
-        # --
 
-        return self.translate_module_names_to_config_options(
-            self.modalias_map.lookup_v(modaliases)
-        )
+        else:
+            return hwdetector.translate_modalias_to_config_options(modaliases)
     # --- end of translate_modalias_to_config_options (...) ---
 
     def process_command(self, cmdv, conditional):
@@ -1106,9 +1032,9 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
             # the information comes from an uncontrolled source.
             #
             modalias_origin_map = None
-            if self.modalias_map is not None:
+            if self.hwdetector.modalias_map is not None:
                 self.logger.info("Detecting hardware: modalias")
-                modalias_origin_map = self.modalias_map.lookup_v(
+                modalias_origin_map = self.hwdetector.modalias_map.lookup_v(
                     sysfs_scan.scan_modalias()
                 )
                 self.logger.debug(

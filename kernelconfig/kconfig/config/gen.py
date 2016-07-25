@@ -79,8 +79,7 @@ class ConfigGenerator(loggable.AbstractLoggable):
             self.install_info,
             self.source_info,
             self.get_config_choices(),
-            self.get_modules_map(),
-            self.get_modalias_map()
+            self.get_hwdetector()
         )
 
     get_kconfig_symbols = _lazy_constructor("_kconfig_symbols")
@@ -90,12 +89,18 @@ class ConfigGenerator(loggable.AbstractLoggable):
         _lazy_constructor("_config_choices_interpreter")
 
     def get_modules_map(self):
+        # FIXME: remove
         return self._hwdetector.get_modules_map()
     # --- end of get_modules_map (...) ---
 
     def get_modalias_map(self):
+        # FIXME: remove
         return self._hwdetector.get_modalias_map()
     # --- end of get_modalias_map (...) ---
+
+    def get_hwdetector(self):
+        return self._hwdetector
+    # --- end of get_hwdetector (...) ---
 
     def commit(self):
         if self._config_choices is None:
