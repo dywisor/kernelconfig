@@ -9,7 +9,6 @@ import tempfile
 import weakref
 
 from . import fs
-from . import fspath
 
 
 __all__ = ["Tmpdir"]
@@ -30,22 +29,8 @@ class _FileWrapper(object):
 # ---
 
 
-class _FsDir(object):
-    __slots__ = ["__weakref__", "path"]
-
-    def __init__(self, path):
-        super().__init__()
-        self.path = path
-
-    def get_path(self):
-        return self.path
-
-    def __str__(self):
-        return str(self.path)
-
-    def get_filepath(self, relpath=None):
-        return fspath.join_relpath(self.path, relpath)
-    # ---
+class _FsDir(fs.FsView):
+    __slots__ = []
 
     def copyfile(self, relpath, dst):
         src = self.get_filepath(relpath)
