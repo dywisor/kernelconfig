@@ -3,9 +3,9 @@
 
 import abc
 
-from ....abc import loggable
-from ....util import fileio
-from ....util import misc
+from .....abc import loggable
+from .....util import fileio
+from .....util import misc
 
 
 __all__ = ["AbstractModaliasLookup"]
