@@ -4,8 +4,7 @@
 from ...abc import loggable
 from ...lang import interpreter
 
-from ...kernel.hwdetection import modulesmap
-from ...kernel.hwdetection import modalias as modaliaslookup
+from ...kernel.hwdetection import detector
 
 from .. import symbolgen
 
@@ -42,18 +41,13 @@ class ConfigGenerator(loggable.AbstractLoggable):
         self.source_info = source_info
         self.source_info.set_logger(parent_logger=self.logger)
 
-        # modules map lazy-inits itself
-        self._modules_map = self.create_loggable(
-            modulesmap.ModulesMap, self.source_info
-        )
-
-        # modalias map lazy-inits itself
-        #  TODO: mod_dir
+        # hwdetector lazy-inits itself
+        #  TODO: modules_dir
         #         (if None, /lib/modules/$(uname -r) is used, which does not
         #         necessarily exist and neither is a complete mapping)
         #
-        self._modalias_map = self.create_loggable(
-            modaliaslookup.ModaliasLookup, mod_dir=None
+        self._hwdetector = self.create_loggable(
+            detector.HWDetect, self.source_info, modules_dir=None
         )
 
         self._kconfig_symbols = None
@@ -96,11 +90,11 @@ class ConfigGenerator(loggable.AbstractLoggable):
         _lazy_constructor("_config_choices_interpreter")
 
     def get_modules_map(self):
-        return self._modules_map
+        return self._hwdetector.get_modules_map()
     # --- end of get_modules_map (...) ---
 
     def get_modalias_map(self):
-        return self._modalias_map
+        return self._hwdetector.get_modalias_map()
     # --- end of get_modalias_map (...) ---
 
     def commit(self):
