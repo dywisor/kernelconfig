@@ -1,10 +1,14 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import abc
 import errno
 import os
 import stat
 import shutil
+
+from . import fspath
+
 
 __all__ = [
     "check_stat_mode_readable_file", "is_readable_file",
@@ -14,6 +18,40 @@ __all__ = [
     "prepare_output_file",
     "walk_relpath"
 ]
+
+
+class AbstractFsView(object, metaclass=abc.ABCMeta):
+    __slots__ = []
+
+    @abc.abstractmethod
+    def get_path(self):
+        raise NotImplementedError()
+
+    def __str__(self):
+        return str(self.get_path())
+
+    def __repr__(self):
+        return "{cls.__name__!s}({path!r})".format(
+            path=self.get_path(), cls=self.__class__
+        )
+
+    def get_filepath(self, relpath=None):
+        return fspath.join_relpath(self.get_path(), relpath)
+
+# --- end of AbstractFsView ---
+
+
+class FsView(AbstractFsView):
+    __slots__ = ["__weakref__", "path"]
+
+    def __init__(self, path):
+        super().__init__()
+        self.path = path
+
+    def get_path(self):
+        return self.path
+
+# --- end of FsView ---
 
 
 def check_stat_mode_readable_file(mode):
