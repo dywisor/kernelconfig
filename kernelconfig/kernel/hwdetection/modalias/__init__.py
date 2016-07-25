@@ -1,4 +1,7 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
-__all__ = []
+from .lookup import ModaliasLookup
+
+
+__all__ = ["ModaliasLookup"]
