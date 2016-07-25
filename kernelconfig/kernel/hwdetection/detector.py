@@ -5,7 +5,7 @@ import logging
 
 from ...abc import loggable
 
-# from . import sysfs_scan
+from . import sysfs_scan
 from . import modulesmap
 from . import modalias
 
@@ -117,5 +117,83 @@ class HWDetect(loggable.AbstractLoggable):
             self.modalias_map.lookup_v(modaliases)
         )
     # --- end of translate_modalias_to_config_options (...) ---
+
+    def detect_modules_via_driver_symlink(self):
+        # get driver names from "driver" symlinks in /sys
+        #
+        #  This information source has no special requirements except that
+        #  drivers need to be already loaded for (ideally) all devices.
+        #
+        #  drivers_origin_map is a dict :: driver => {origin}
+        self.logger.info("Detecting hardware: loaded drivers")
+        drivers_origin_map = sysfs_scan.scan_drivers()
+        self.logger.debug(
+            "Discovered %d modules via drivers",
+            len(drivers_origin_map)
+        )
+        return drivers_origin_map
+    # --- end of detect_modules_via_driver_symlink (...) ---
+
+    def detect_modules_via_modalias(self):
+        # get driver names from "modalias" files in /sys
+        #
+        #  This information source is always available,
+        #  but needs a modules.alias file
+        #  (and other files from /lib/modules/*/).
+        #
+        # Since kernelconfig does not implement modules.alias file
+        # handling in any way yet (cmdline, cached creation, ...),
+        # this feature should be considered as highly experimental,
+        # the information comes from an uncontrolled source.
+        #
+        self.logger.info("Detecting hardware: modalias")
+        modalias_origin_map = self.modalias_map.lookup_v(
+            sysfs_scan.scan_modalias()
+        )
+        self.logger.debug(
+            "Discovered %d modules via modalias",
+            len(modalias_origin_map)
+        )
+        return modalias_origin_map
+    # --- end of detect_modules_via_modalias (...) ---
+
+    def detect_modules(self):
+        """
+        @return: 3-tuple (
+                   all detected modules,
+                   modules for which no config options could be found,
+                   config options
+                 )
+        @rtype:  3-tuple (C{set}, C{list}, C{list}) (item type C{str})
+        """
+        drivers_origin_map = self.detect_modules_via_driver_symlink()
+        modalias_origin_map = self.detect_modules_via_modalias()
+
+        # create a combined set of modules to lookup
+        # * from driver symlinks
+        # * from modalias
+        modules_to_lookup = set()
+        for modules_input in filter(
+            None,
+            (drivers_origin_map, modalias_origin_map)
+        ):
+            modules_to_lookup.update(modules_input)
+
+        self.logger.debug("Found %d modules", len(modules_to_lookup))
+
+        # translate the modules set into options
+        modules_missing, options = (
+            self.translate_module_names_to_config_options(modules_to_lookup)
+        )
+
+        if modules_missing and not options:
+            self.logger.warning(
+                "Could not successfully detect at least one kernel module"
+            )
+        else:
+            self.logger.info("Found %d config options", len(options))
+
+        return (modules_to_lookup, modules_missing, options)
+    # --- end of detect_modules (...) ---
 
 # --- end of HWDetect ---
