@@ -33,7 +33,7 @@ def _lazy_constructor(attr_name, attr_constructor_name=None):
 
 class ConfigGenerator(loggable.AbstractLoggable):
 
-    def __init__(self, install_info, source_info, **kwargs):
+    def __init__(self, install_info, source_info, modules_dir=True, **kwargs):
         super().__init__(**kwargs)
 
         self.install_info = install_info
@@ -42,12 +42,8 @@ class ConfigGenerator(loggable.AbstractLoggable):
         self.source_info.set_logger(parent_logger=self.logger)
 
         # hwdetector lazy-inits itself
-        #  TODO: modules_dir
-        #         (if None, /lib/modules/$(uname -r) is used, which does not
-        #         necessarily exist and neither is a complete mapping)
-        #
         self._hwdetector = self.create_loggable(
-            detector.HWDetect, self.source_info, modules_dir=None
+            detector.HWDetect, self.source_info, modules_dir=modules_dir
         )
 
         self._kconfig_symbols = None
