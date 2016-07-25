@@ -41,6 +41,11 @@ class KernelConfigArgTypes(kernelconfig.util.argutil.ArgTypes):
 
             if argslow in self.NONE_WORDS:
                 return False
+            elif argslow in {"auto", }:
+                raise self.exc_type(
+                    "modules dir from cache is not supported yet."
+                )
+                return True
             else:
                 return self.arg_existing_dir(arg)
     # ---
