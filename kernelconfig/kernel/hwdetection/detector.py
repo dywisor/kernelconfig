@@ -125,9 +125,16 @@ class HWDetect(loggable.AbstractLoggable):
                  )
         @rtype:  2-tuple (C{list} of C{str}, C{list} of C{str})
         """
-        return self.translate_module_names_to_config_options(
-            self.modalias_map.lookup_v(modaliases)
-        )
+        modalias_map = self.get_modalias_map()
+        if modalias_map.lazy_init():
+            return self.translate_module_names_to_config_options(
+                self.get_modalias_map().lookup_v(modaliases)
+            )
+        else:
+            self.logger.info(
+                "Mapping module aliases to modules is not available"
+            )
+            return (modaliases, None)
     # --- end of translate_modalias_to_config_options (...) ---
 
     def detect_modules_via_driver_symlink(self):
@@ -158,15 +165,22 @@ class HWDetect(loggable.AbstractLoggable):
         # this feature should be considered as highly experimental,
         # the information comes from an uncontrolled source.
         #
-        self.logger.info("Detecting hardware: modalias")
-        modalias_origin_map = self.modalias_map.lookup_v(
-            sysfs_scan.scan_modalias()
-        )
-        self.logger.debug(
-            "Discovered %d modules via modalias",
-            len(modalias_origin_map)
-        )
-        return modalias_origin_map
+        modalias_map = self.get_modalias_map()
+        if modalias_map.lazy_init():
+            self.logger.info("Detecting hardware: modalias")
+            modalias_origin_map = self.get_modalias_map().lookup_v(
+                sysfs_scan.scan_modalias()
+            )
+            self.logger.debug(
+                "Discovered %d modules via modalias",
+                len(modalias_origin_map)
+            )
+            return modalias_origin_map
+        else:
+            self.logger.info(
+                "Skipping modalias-based hardware detection: no modules dir"
+            )
+            return None
     # --- end of detect_modules_via_modalias (...) ---
 
     def detect_modules(self):
