@@ -60,11 +60,16 @@ if HAVE_KMOD:
             if not self._init_mod_dir():
                 raise RuntimeError("could not initialize modules dir")
 
-            mod_dir = self._convert_to_bytes(self.get_mod_dir_path())
+            mod_dir_path = self.get_mod_dir_path()
+            self.logger.debug(
+                "Initializing kmod-based modalias lookup, using files from %s",
+                (repr(mod_dir_path) if mod_dir_path else "<default>")
+            )
+
             # TODO: find out how config from /etc can interfere with
             #       modalias lookup, and turn it off where appropriate
             #       (flags get already set to 0)
-            return kmod.Kmod(mod_dir=mod_dir)
+            return kmod.Kmod(mod_dir=self._convert_to_bytes(mod_dir_path))
         # --- end of _init_kmod (...) ---
 
         def lazy_init(self):
