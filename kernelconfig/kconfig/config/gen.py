@@ -5,7 +5,7 @@ from ...abc import loggable
 from ...lang import interpreter
 
 from ...kernel.hwdetection import modulesmap
-from ...kernel.hwdetection.modalias import lookup as modaliaslookup
+from ...kernel.hwdetection import modalias as modaliaslookup
 
 from .. import symbolgen
 
