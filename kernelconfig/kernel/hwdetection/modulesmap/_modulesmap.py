@@ -3,10 +3,10 @@
 
 import collections.abc
 
-from ...abc import loggable
+from ....abc import loggable
 
 from . import mkscanner
-from . import util
+from .. import util
 
 
 __all__ = ["ModulesMap"]

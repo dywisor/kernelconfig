@@ -5,12 +5,12 @@ import os
 import re
 import shlex
 
-from ....abc import loggable
-from ....util import fileio
-from ....util import fs
-from ....util import accudict
+from .....abc import loggable
+from .....util import fileio
+from .....util import fs
+from .....util import accudict
 
-from .. import util
+from ... import util
 from . import preference
 
 
