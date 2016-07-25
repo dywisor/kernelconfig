@@ -5,9 +5,9 @@ import fnmatch
 import logging
 import re
 
-from ....abc import loggable
-from ....util import accudict
-from ....util import pumpmatch
+from .....abc import loggable
+from .....util import accudict
+from .....util import pumpmatch
 
 __all__ = ["ModuleConfigOptionsScannerStrategy"]
 
