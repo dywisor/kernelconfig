@@ -14,8 +14,20 @@ __all__ = ["HWDetect"]
 
 
 class HWDetect(loggable.AbstractLoggable):
+    """
+    This class provides methods that suggest config options
+    based on information from /sys.
+    """
 
     def __init__(self, source_info, modules_dir=None, **kwargs):
+        """Constructor.
+
+        @param   source_info:
+        @keyword modules_dir:  directory containing files necessary for
+                               modalias => module name translation.
+                               Defaults to None.
+        @type    modules_dir:  subclass of L{AbstractModulesDir} or C{None}
+        """
         super().__init__(**kwargs)
         self.source_info = source_info
 
