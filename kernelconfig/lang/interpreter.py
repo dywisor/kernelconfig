@@ -1005,7 +1005,11 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 return True
             # --
 
-            # FIXME: if no modules mapping: error
+            hwdetector = self.hwdetector
+            if hwdetector is None:
+                self.logger.warning("Hardware detection is not available")
+                return False
+            # --
 
             # get driver names from "driver" symlinks in /sys
             #
