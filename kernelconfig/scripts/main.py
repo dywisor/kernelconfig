@@ -29,6 +29,24 @@ else:
     PRJ_VERSION = kernelconfig._version.version
 
 
+class KernelConfigArgTypes(kernelconfig.util.argutil.ArgTypes):
+
+    NONE_WORDS = frozenset({"none", "_"})
+
+    def arg_modules_dir(self, arg):
+        if not arg:
+            return False
+        else:
+            argslow = arg.strip().lower()
+
+            if argslow in self.NONE_WORDS:
+                return False
+            else:
+                return self.arg_existing_dir(arg)
+    # ---
+# ---
+
+
 class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
     def __init__(self, prog):
@@ -157,6 +175,19 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                 "path to the unpacked kernel sources directory", "\".\""
             )
         )
+
+        common_arg_group.add_argument(
+            "-m", "--modules-dir", metavar="<mod_dir>",
+            default=argparse.SUPPRESS,
+            type=arg_types.arg_modules_dir,
+            help=with_default(
+                (
+                    'path to the modules directory,\n'
+                    'used for looking up module aliases'
+                ),
+                "<autodetect>"
+            )
+        )
         # -- end common_arg_group
 
         genconfig_arg_group = parser.add_argument_group(
@@ -212,7 +243,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
     def init_arg_parser(self):
         arg_types = self.arg_types
         if arg_types is None:
-            arg_types = kernelconfig.util.argutil.ArgTypes()
+            arg_types = KernelConfigArgTypes()
             self.arg_types = arg_types
         # --
 
@@ -342,7 +373,9 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         # * init
         config_gen = self.create_loggable(
             kernelconfig.kconfig.config.gen.ConfigGenerator,
-            self.install_info, self.source_info
+            install_info=self.install_info,
+            source_info=self.source_info,
+            modules_dir=arg_config.get("modules_dir", True)
         )
 
         config = config_gen.get_config()
