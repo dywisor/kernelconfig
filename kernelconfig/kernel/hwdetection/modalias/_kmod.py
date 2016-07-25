@@ -57,17 +57,58 @@ if HAVE_KMOD:
         # --- end of __init__ (...) ---
 
         def _init_kmod(self):
-            mod_dir = self._init_mod_dir()
+            if not self._init_mod_dir():
+                raise RuntimeError("could not initialize modules dir")
+
+            mod_dir = self._convert_to_bytes(self.get_mod_dir_path())
             # TODO: find out how config from /etc can interfere with
             #       modalias lookup, and turn it off where appropriate
             #       (flags get already set to 0)
             return kmod.Kmod(mod_dir=mod_dir)
         # --- end of _init_kmod (...) ---
 
-        def _init_mod_dir(self):
-            # TODO: stub: locate/create modules.alias, modules.order
+        def lazy_init(self):
+            return self._init_mod_dir()
+        # --- end of lazy_init (...) ---
+
+        def get_mod_dir_path(self):
             mod_dir = self._mod_dir
-            return self._convert_to_bytes(mod_dir)
+
+            if not mod_dir:
+                return mod_dir
+
+            elif isinstance(mod_dir, (str, bytes)):
+                return mod_dir
+
+            else:
+                return mod_dir.get_path()
+        # --- end of get_mod_dir_path (...) ---
+
+        def _init_mod_dir(self):
+            mod_dir = self._mod_dir
+            if mod_dir is None:
+                # None  -->  usable, but discouraged,
+                #            since /lib/modules/$(uname -r) is an unreliable
+                #            source
+                return True
+
+            elif not mod_dir:
+                # False, ""  -->  not usable
+                return False
+
+            elif isinstance(mod_dir, (str, bytes)):
+                # non-empty str/bytes  -->  usable
+                return True
+
+            else:
+                # modules dir obj  -->  return from prepare()
+                if mod_dir is True:
+                    raise NotImplementedError("lazy-init dynamic mod dir")
+                    mod_dir = None  # ...
+                    self._mod_dir = mod_dir
+                # --
+
+                return mod_dir.prepare()
         # --- end of _init_mod_dir (...) ---
 
         @classmethod
