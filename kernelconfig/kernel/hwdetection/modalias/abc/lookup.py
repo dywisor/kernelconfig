@@ -33,6 +33,20 @@ class AbstractModaliasLookup(loggable.AbstractLoggable):
         return False
     # --- end of class property AVAILABLE (...) ---
 
+    @abc.abstractproperty
+    def lazy_init(self):
+        """
+        This method should initialize the lookup object, either fully
+        or at least up to the point where its usability can be decided,
+        and return whether the object is usable.
+
+        @return:  whether this modalias lookup object can be used for looking
+                  up module aliases
+        @rtype:   C{bool}
+        """
+        raise NotImplementedError()
+    # --- end of lazy_init (...) ---
+
     @abc.abstractmethod
     def iter_lookup_v(self, modaliases):
         """Generator that looks up a sequence of module aliases
@@ -136,6 +150,9 @@ class UnavailableModaliasLookup(AbstractModaliasLookup):
     """
 
     AVAILABLE = False
+
+    def lazy_init(self):
+        return False
 
     def iter_lookup_v(self, modaliases):
         self.logger.warning("modalias lookup is not available")
