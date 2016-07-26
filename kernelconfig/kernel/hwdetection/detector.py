@@ -8,6 +8,7 @@ from ...abc import loggable
 from . import sysfs_scan
 from . import modulesmap
 from . import modalias
+from .modalias import modulesdir
 
 
 __all__ = ["HWDetect"]
@@ -18,6 +19,40 @@ class HWDetect(loggable.AbstractLoggable):
     This class provides methods that suggest config options
     based on information from /sys.
     """
+
+    def create_modules_dir(self, modules_dir_arg):
+        """
+        Creates a modules dir object or takes ownership of an existing object.
+
+        @param modules_dir_arg:  modules dir arg;
+                                  False, None, str or modules dir object
+
+        @return:  modules dir object
+        @rtype:   subclass of L{AbstractModulesDir}
+        """
+        if isinstance(modules_dir_arg, modulesdir.AbstractModulesDir):
+            # could copy object
+            modules_dir_arg.set_logger(parent_logger=self.logger)
+            return modules_dir_arg
+
+        elif modules_dir_arg is False:
+            return self.create_loggable(modulesdir.NullModulesDir())
+
+        elif modules_dir_arg is None:
+            # highly kmod-specific
+            return None
+
+        elif modules_dir_arg is True:
+            raise NotImplementedError("auto-set modules dir")
+
+        elif isinstance(modules_dir_arg, str):
+            return self.create_loggable(
+                modulesdir.ModulesDir, modules_dir_arg
+            )
+
+        else:
+            raise ValueError(modules_dir_arg)
+    # --- end of create_modules_dir (...) ---
 
     def __init__(self, source_info, modules_dir=None, **kwargs):
         """Constructor.
@@ -36,7 +71,8 @@ class HWDetect(loggable.AbstractLoggable):
         )
 
         self.modalias_map = self.create_loggable(
-            modalias.ModaliasLookup, mod_dir=modules_dir
+            modalias.ModaliasLookup,
+            mod_dir=self.create_modules_dir(modules_dir)
         )
     # --- end of __init__ (...) ---
 
