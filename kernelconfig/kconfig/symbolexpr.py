@@ -738,13 +738,23 @@ class _Expr_SymbolValueComparison(Expr):
     # --- end of move_negation_inwards (...) ---
 
     def _solve_symbol_x_symbol(self, expr_value, sol_cache, lsym, rsym):
-        raise NotImplementedError("symbol X symbol")
+        # COULDFIX: not implemented
+        #  the rules are a bit vague here,
+        #  the concrete case that hit this method was
+        #    lsym = Expr_Symbol<StringKconfigSymbol<ARCH>>
+        #    rsym = Expr_Symbol<BooleanKconfigSymbol<X86>>
+        #  so probably an ARCH="x86" check that got "symbolized"
+        #
+        # For now, return True (no config requests, assume solvable)
+        return True
 
     def _solve_symbol_x_constant(self, expr_value, sol_cache, lsym, rsym):
-        raise NotImplementedError("symbol X constant")
+        # COULDFIX: not implemented, see _solve_symbol_x_symbol()
+        raise NotImplementedError("symbol X constant", lsym, rsym)
 
     def _solve_constant_x_symbol(self, expr_value, sol_cache, lsym, rsym):
-        raise NotImplementedError("constant X symbol")
+        # COULDFIX: not implemented, see _solve_symbol_x_symbol()
+        raise NotImplementedError("constant X symbol", lsym, rsym)
 
     def _solve_constant_x_constant(self, expr_value, sol_cache, lsym, rsym):
         return bool(self.evaluate(None)) == bool(expr_value)
