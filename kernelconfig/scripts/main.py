@@ -46,8 +46,20 @@ class KernelConfigArgTypes(kernelconfig.util.argutil.ArgTypes):
                     "modules dir from cache is not supported yet."
                 )
                 return True
+
             else:
-                return self.arg_existing_dir(arg)
+                fpath = self.arg_fspath(arg)
+
+                if os.path.isdir(fpath):
+                    return fpath
+
+                elif os.path.isfile(fpath):
+                    return fpath
+
+                else:
+                    raise self.exc_type(
+                        "modules dir is neither a dir nor a file"
+                    )
     # ---
 # ---
 
@@ -188,7 +200,8 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             help=with_default(
                 (
                     'path to the modules directory,\n'
-                    'used for looking up module aliases'
+                    'used for looking up module aliases,\n'
+                    'can also point to a tarball'
                 ),
                 "<autodetect>"
             )
