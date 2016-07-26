@@ -259,17 +259,23 @@ $(KERNELCONFIG_STAMPD)/.stamp_modules_install: %/.stamp_modules_install: \
 
 # pick modalias files-related files and move them to .../modalias
 	$(MKDIRP) -- '$(KERNELCONFIG_KINST_MODALIAS)'
+
+#   KERNELCONFIG_MODALIAS_FILES first
+	{ \
+		set -e; \
+		src_dir="$(KERNELCONFIG_KINST_MOD)/lib/modules/$(MY_$@_KVER)"; \
+		for f in $(KERNELCONFIG_MODALIAS_FILES); do \
+			$(MVV) \
+				"$${src_dir}/$${f}" \
+				"$(KERNELCONFIG_KINST_MODALIAS)/$${f}"; \
+		done; \
+	}
+
+#   then all other files w/ name "modules.*"
 	find '$(KERNELCONFIG_KINST_MOD)/lib/modules/$(MY_$@_KVER)' \
 		-type f -name 'modules.*' \
 		-exec $(MVV) -t '$(KERNELCONFIG_KINST_MODALIAS)/' '{}' +
 
-# verify that essential files exist
-	{ \
-		set -e; \
-		for f in $(KERNELCONFIG_MODALIAS_FILES); do \
-			test -f "$(KERNELCONFIG_KINST_MODALIAS)/$${f}" || exit 1; \
-		done; \
-	}
 
 # done
 	$(call stamp_rule_fini)
