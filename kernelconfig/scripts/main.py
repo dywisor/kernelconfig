@@ -222,6 +222,13 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             )
         )
 
+        genconfig_arg_group.add_argument(
+            "-H", "--hwdetect", metavar="<file>", dest="hwdetect_file",
+            type=arg_types.arg_existing_file,
+            default=argparse.SUPPRESS,
+            help="enable hardware detection from hwcollect file"
+        )
+
         # "--config" is an option and not a positional arg
         #
         # In future, with "curated sources" and a settings file,
@@ -376,6 +383,28 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
     # ---
 
     def do_main_script_genconfig(self, arg_config):
+        def get_interpreter():
+            nonlocal arg_config
+            nonlocal config_gen
+
+            interpreter = config_gen.get_config_choices_interpreter()
+
+            # start with a clean opcode mask
+            interpreter.clear_opcode_mask()
+
+            # if "hardware detection from file" is enabled,
+            # disable "hwdetect" instructions
+            if arg_config.get("hwdetect_file"):
+                self.logger.debug(
+                    'Disabling hwdetect interpreter instructions:'
+                    ' hwdetect-from-file has been requested'
+                )
+                interpreter.disable_op("hwdetect")
+            # --
+
+            return interpreter
+        # ---
+
         self.do_main_setup_logging(arg_config)
         self.do_main_load_settings(arg_config)
         if self.settings is None:
@@ -412,16 +441,22 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         self.do_main_load_input_config(arg_config, config)
 
         # * modify
+        #   1. featureset files
         if arg_config["featureset_files"]:
-            interpreter = config_gen.get_config_choices_interpreter()
+            interpreter = get_interpreter()
             if not interpreter.process_files(arg_config["featureset_files"]):
                 self.print_err("Error occurred while loading \"macros\" files")
                 return False
         # --
 
+        #   2. hwdetect from file
+        if arg_config.get("hwdetect_file"):
+            raise NotImplementedError("hwdetect-from-file")
+
+        #   3. settings->[options]
         settings_conf_mod_requests = self.settings.get_section("options")
         if settings_conf_mod_requests:
-            interpreter = config_gen.get_config_choices_interpreter()
+            interpreter = get_interpreter()
             if not interpreter.process_str(
                 "\n".join(settings_conf_mod_requests)
             ):
