@@ -437,6 +437,19 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         #
         kernelconfig.util.fs.prepare_output_file(arg_config["outconfig"])
 
+        # load hwdetect-from-file data early on
+        #  downloading a conf basis and then erroring out due to a wrong
+        #  hwdetect file format would be a waste of user time
+        hwdetect_data = None
+        if arg_config.get("hwdetect_file"):
+            hwdetector = config_gen.get_hwdetector()
+            assert hwdetector is not None
+            hwdetect_data = hwdetector.detect_modules_from_hwdetect_file(
+                arg_config["hwdetect_file"]
+            )
+            assert hwdetect_data is not None
+        # --
+
         # * load input config
         self.do_main_load_input_config(arg_config, config)
 
@@ -450,8 +463,18 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         # --
 
         #   2. hwdetect from file
-        if arg_config.get("hwdetect_file"):
-            raise NotImplementedError("hwdetect-from-file")
+        if hwdetect_data is not None:
+            # TODO/FIXME: better logging, maybe add this to config choices
+            #             (and dedup/reuse related interpreter code)
+            #             in particular,
+            #             error handling differs from ipret - currently
+            self.logger.debug("Adding hwdetect-from-file config options")
+            conf_choices = config_gen.get_config_choices()
+
+            for option in hwdetect_data[-1]:
+                if not conf_choices.option_builtin_or_module(option):
+                    return False
+        # --
 
         #   3. settings->[options]
         settings_conf_mod_requests = self.settings.get_section("options")
