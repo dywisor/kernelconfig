@@ -1,6 +1,7 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import json
 import logging
 
 from ...abc import loggable
@@ -12,6 +13,10 @@ from .modalias import modulesdir
 
 
 __all__ = ["HWDetect"]
+
+
+class HWDetectFileFormatError(ValueError):
+    pass
 
 
 class HWDetect(loggable.AbstractLoggable):
@@ -191,6 +196,23 @@ class HWDetect(loggable.AbstractLoggable):
         return drivers_origin_map
     # --- end of detect_modules_via_driver_symlink (...) ---
 
+    def _detect_modules_via_modalias_from_list(self, arg):
+        modalias_map = self.get_modalias_map()
+        if modalias_map.lazy_init():
+            self.logger.info("Detecting hardware: modalias")
+            modalias_origin_map = self.get_modalias_map().lookup_v(arg)
+            self.logger.debug(
+                "Discovered %d modules via modalias",
+                len(modalias_origin_map)
+            )
+            return modalias_origin_map
+        else:
+            self.logger.info(
+                "Skipping modalias-based hardware detection: no modules dir"
+            )
+            return None
+    # --- end of _detect_modules_via_modalias_from_list (...) ---
+
     def detect_modules_via_modalias(self):
         # get driver names from "modalias" files in /sys
         #
@@ -203,17 +225,16 @@ class HWDetect(loggable.AbstractLoggable):
         # this feature should be considered as highly experimental,
         # the information comes from an uncontrolled source.
         #
+
+        # scan /sys only if a modalias_map is available,
+        # _detect_modules_via_modalias_from_list() will call lazy-init again
+        # (which will be a no-op/no-act then)
         modalias_map = self.get_modalias_map()
         if modalias_map.lazy_init():
-            self.logger.info("Detecting hardware: modalias")
-            modalias_origin_map = self.get_modalias_map().lookup_v(
+            return self._detect_modules_via_modalias_from_list(
                 sysfs_scan.scan_modalias()
             )
-            self.logger.debug(
-                "Discovered %d modules via modalias",
-                len(modalias_origin_map)
-            )
-            return modalias_origin_map
+
         else:
             self.logger.info(
                 "Skipping modalias-based hardware detection: no modules dir"
@@ -221,7 +242,7 @@ class HWDetect(loggable.AbstractLoggable):
             return None
     # --- end of detect_modules_via_modalias (...) ---
 
-    def detect_modules(self):
+    def _detect_modules_merge_info_sources(self, driver_list, modalias_list):
         """
         @return: 3-tuple (
                    all detected modules,
@@ -230,16 +251,13 @@ class HWDetect(loggable.AbstractLoggable):
                  )
         @rtype:  3-tuple (C{set}, C{list}, C{list}) (item type C{str})
         """
-        drivers_origin_map = self.detect_modules_via_driver_symlink()
-        modalias_origin_map = self.detect_modules_via_modalias()
-
         # create a combined set of modules to lookup
         # * from driver symlinks
         # * from modalias
         modules_to_lookup = set()
         for modules_input in filter(
             None,
-            (drivers_origin_map, modalias_origin_map)
+            (driver_list, modalias_list)
         ):
             modules_to_lookup.update(modules_input)
 
@@ -258,6 +276,82 @@ class HWDetect(loggable.AbstractLoggable):
             self.logger.info("Found %d config options", len(options))
 
         return (modules_to_lookup, modules_missing, options)
+    # --- end of _detect_modules_merge_info_sources (...) ---
+
+    def detect_modules(self):
+        """
+        @return: 3-tuple (
+                   all detected modules,
+                   modules for which no config options could be found,
+                   config options
+                 )
+        @rtype:  3-tuple (C{set}, C{list}, C{list}) (item type C{str})
+        """
+        drivers_origin_map = self.detect_modules_via_driver_symlink()
+        modalias_origin_map = self.detect_modules_via_modalias()
+
+        return self._detect_modules_merge_info_sources(
+            drivers_origin_map, modalias_origin_map
+        )
     # --- end of detect_modules (...) ---
+
+    def detect_modules_from_hwdetect_file(self, hwdetect_file):
+        """
+        @return: 3-tuple (
+                   all detected modules,
+                   modules for which no config options could be found,
+                   config options
+                 )
+        @rtype:  3-tuple (C{set}, C{list}, C{list}) (item type C{str})
+        """
+        hwinfo = self.read_hwdetect_file(hwdetect_file)
+
+        self.logger.info("Detecting hardware: drivers")
+        driver_list = hwinfo["driver"]
+        self.logger.debug(
+            "Discovered %d modules via drivers",
+            len(driver_list)
+        )
+
+        modalias_list = self._detect_modules_via_modalias_from_list(
+            hwinfo["modalias"]
+        )
+
+        return self._detect_modules_merge_info_sources(
+            driver_list, modalias_list
+        )
+    # --- end of detect_modules_from_hwdetect_file (...) ---
+
+    def read_hwdetect_file(self, hwdetect_file):
+        self.logger.info("Loading hwcollect file %r", hwdetect_file)
+
+        # handling compressed files would be possible, too, see util.fileio
+        with open(hwdetect_file, "rt", encoding="ascii") as fh:
+            json_data = json.load(fh)
+
+        if "version" not in json_data:
+            raise HWDetectFileFormatError("missing file format version")
+
+        data = {}
+        file_format_version = json_data["version"]
+        self.logger.debug(
+            "hwcollect file format version is %s", file_format_version
+        )
+
+        if file_format_version == 1:
+            # json_data->driver is a list of str, filter out empty values
+            data["driver"] = [w for w in json_data["driver"] if w]
+
+            # json_data->modalias is a list of str, filter out empty values
+            data["modalias"] = [w for w in json_data["modalias"] if w]
+
+        else:
+            raise HWDetectFileFormatError(
+                "unknown file format version: {}".format(file_format_version)
+            )
+        # --
+
+        return data
+    # --- end of read_hwdetect_file (...) ---
 
 # --- end of HWDetect ---
