@@ -7,6 +7,8 @@
 #
 # Usage:
 #   make ... all && make ... install
+# or
+#   make ... compress-modalias && make ... install-tar
 #
 # Consider adding "-j" to the make command.
 # Most variables are passed as-is to the kernel make commands,
@@ -40,14 +42,16 @@
 #                             For testing, "defconfig" should suffice.
 #
 # Targets:
-# * all:        build modules, run depmod
-# * install:    install modules.alias and related files to D
+# * all:          build modules, run depmod
+# * install:      install modules.alias and related files to D
+# * install-tar:  install the tarfile variant to D (D/data.txz, D/kernelrelease)
 #
 # Phase targets (later targets include previous ones):
 #
 # * config:             create the kernel configuration
 # * modules:            build the kernel modules
 # * modules_install:    run depmod
+# * compress-modalias:  create a tar archive of the created modalias files
 #
 
 # by default, export all variables (e.g. ARCH) to sub-makes
@@ -115,6 +119,7 @@ RM = rm
 RMF = $(RM) -f
 SED = sed
 TOUCH = touch
+TAR = tar
 
 unexport MKDIR
 unexport MKDIRP
@@ -126,12 +131,15 @@ unexport RM
 unexport RMF
 unexport SED
 unexport TOUCH
+unexport TAR
 
 unexport PHONY
 
 PHONY += all
 all: modules_install
 
+PHONY += compress-modalias
+compress-modalias: $(KERNELCONFIG_KINST)/modalias.txz
 
 PHONY += install
 install:
@@ -141,7 +149,18 @@ install:
 
 # copy the files
 	$(MKDIRP) -- '$(D)'
-	$(CP) -dR -- '$(KERNELCONFIG_KINST_MODALIAS)/.' '$(D)/.'
+	$(CPV) -dR -- '$(KERNELCONFIG_KINST_MODALIAS)/.' '$(D)/.'
+
+
+PHONY += install-tar
+install-tar:
+# modules_install must be run before this target
+# (and "install" should not trigger compilation)
+	test -e '$(KERNELCONFIG_STAMPD)/.stamp_modules_install'
+
+	$(MKDIRP) -- '$(D)'
+	$(CPV) -- '$(KERNELCONFIG_KINST_MODALIAS)/kernelrelease' '$(D)/kernelrelease'
+	$(CPV) -- '$(KERNELCONFIG_KINST)/modalias.txz' '$(D)/data.txz'
 
 
 # declare phony config, modules targets, which rely on a stamp file
@@ -276,9 +295,17 @@ $(KERNELCONFIG_STAMPD)/.stamp_modules_install: %/.stamp_modules_install: \
 		-type f -name 'modules.*' \
 		-exec $(MVV) -t '$(KERNELCONFIG_KINST_MODALIAS)/' '{}' +
 
+#   then create a kernelrelease file
+	printf '%s\n' '$(MY_$@_KVER)' \
+		> '$(KERNELCONFIG_KINST_MODALIAS)/kernelrelease'
 
 # done
 	$(call stamp_rule_fini)
+
+$(KERNELCONFIG_KINST)/modalias.txz: \
+	$(KERNELCONFIG_STAMPD)/.stamp_modules_install | $(KERNELCONFIG_KINST)
+
+	$(TAR) c -C '$(KERNELCONFIG_KINST_MODALIAS)/' ./ -J -f '$(@)'
 
 
 
