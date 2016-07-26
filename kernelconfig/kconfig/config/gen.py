@@ -43,7 +43,8 @@ class ConfigGenerator(loggable.AbstractLoggable):
 
         # hwdetector lazy-inits itself
         self._hwdetector = self.create_loggable(
-            detector.HWDetect, self.source_info, modules_dir=modules_dir
+            detector.HWDetect,
+            self.install_info, self.source_info, modules_dir=modules_dir
         )
 
         self._kconfig_symbols = None

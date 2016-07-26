@@ -54,16 +54,18 @@ class HWDetect(loggable.AbstractLoggable):
             raise ValueError(modules_dir_arg)
     # --- end of create_modules_dir (...) ---
 
-    def __init__(self, source_info, modules_dir=None, **kwargs):
+    def __init__(self, install_info, source_info, modules_dir=None, **kwargs):
         """Constructor.
 
+        @param   install_info:
         @param   source_info:
-        @keyword modules_dir:  directory containing files necessary for
-                               modalias => module name translation.
-                               Defaults to None.
-        @type    modules_dir:  subclass of L{AbstractModulesDir} or C{None}
+        @keyword modules_dir:   directory containing files necessary for
+                                modalias => module name translation.
+                                Defaults to None.
+        @type    modules_dir:   subclass of L{AbstractModulesDir} or C{None}
         """
         super().__init__(**kwargs)
+        self.install_info = install_info
         self.source_info = source_info
 
         self.modules_map = self.create_loggable(
