@@ -29,6 +29,9 @@ class KernelConfigLangInterpreterCondOpNotSupported(
 class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
     """Base class for kernelconfig's interpreter.
 
+    @ivar _opcode_mask:       set of ignored instructions (as opcode)
+    @type _opcode_mask:       C{set} of L{KernelConfigOp}
+
     @ivar _file_input_queue:  file input queue
     @type _file_input_queue:  C{collections.deque}
 
@@ -52,6 +55,7 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
             maxlen=cond_result_buffer_size
         )
 
+        self._opcode_mask = set()
     # --- end of __init__ (...) ---
 
     def peek_cond_result(self):
@@ -105,7 +109,102 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
     def reset(self):
         self.soft_reset()
         self._clear_file_input_queue()
+        # no-clear opcode mask
     # ---
+
+    def get_opcode(self, opcode_arg):
+        """
+        Returns the KernelConfigOp opcode value for the given opcode arg,
+        which can be an int, str or KernelConfigOp.
+
+        @param opcode_arg:  input opcode "reference"
+        @type  opcode_arg:  C{str} | C{int} | L{KernelConfigOp}
+
+        @return: KernelConfigOp opcode
+        @rtype:  L{KernelConfigOp}
+        """
+        if isinstance(opcode_arg, str):
+            if opcode_arg.startswith("op_"):
+                opcode_value = getattr(parser.KernelConfigOp, opcode_arg)
+            else:
+                opcode_value = getattr(
+                    parser.KernelConfigOp, "op_{}".format(opcode_arg)
+                )
+        else:
+            opcode_value = parser.KernelConfigOp(opcode_arg)
+
+        if not opcode_value.name.startswith("op_"):
+            raise ValueError("not an opcode: {!r}".format(opcode_value))
+
+        return opcode_value
+    # --- end of get_opcode (...) ---
+
+    def clear_opcode_mask(self):
+        """
+        Resets the opcode mask to its initial value,
+        which allows all instructions.
+        """
+        self._opcode_mask.clear()
+    # --- end of clear_opcode_mask (...) ---
+
+    def _disable_opcode(self, opcode_value):
+        self._opcode_mask.add(opcode_value)
+
+    def _enable_opcode(self, opcode_value):
+        self._opcode_mask.discard(opcode_value)
+
+    def disable_op(self, opcode_arg):
+        """
+        Disables an instruction,
+        which can be given as int, str or KernelConfigOp opcode.
+
+        Future instructions of this kind will be ignored by the interpreter.
+        """
+        self._disable_opcode(self.get_opcode(opcode_arg))
+    # --- end of disable_opcode (...) ---
+
+    def enable_op(self, opcode_arg):
+        """
+        (Re-)Enables an instruction,
+        which can be given as int, str or KernelConfigOp opcode.
+
+        Future instructions of this kind will be processed as usual.
+        """
+        self._enable_opcode(self.get_opcode(opcode_arg))
+    # --- end of enable_opcode (...) ---
+
+    def check_command_masked_opcode(self, cmdv):
+        """
+        @param cmdv:  a non-structured command,
+                      must be non-empty and the first item should be an opcode
+                      (otherwise, undefined return value)
+        @type  cmdv:  C{list}
+
+        @return:  True if the instruction is currently masked, else False
+        @rtype:   C{bool}
+        """
+        return cmdv[0] in self._opcode_mask
+    # --- end of check_command_masked_opcode (...) ---
+
+    def log_command_masked_opcode(self, cmdv, conditional=None):
+        """
+        Logs that a command's instruction opcode is currently masked
+        and returns True.
+
+        @param cmdv:           a non-structured command,
+                               must be non-empty
+                               and the first item must be an opcode
+        @type  cmdv:           C{list}
+        @keyword conditional:  the command's conditional (if any), ignored
+
+        @return: always True
+        @rtype:  C{bool}
+        """
+        self.logger.debug(
+            "Ignoring command (masked opcode): %s", cmdv[0].name
+        )
+        return True
+    # --- end of log_command_masked_opcode (...) ---
 
     def assert_empty_file_input_queue(self):
         """
@@ -200,6 +299,12 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
     def process_command(self, cmdv, conditional):
         """Interprets a single command.
 
+        Derived classes must implement this method.
+        They should also check whether the command is currently masked,
+        which can be done with check_command_masked_opcode(cmdv),
+        and handle that case appropriately,
+        e.g. by returning from log_command_masked_opcode(cmdv, conditional).
+
         @param cmdv:         the command, a [opcode, ...] list
         @type  cmdv:         C{list}
 
@@ -209,6 +314,10 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
         @return:  True or None if successful, False if not
         @rtype:   C{bool} or C{None}
         """
+        # this just an example
+        if self.check_command_masked_opcode(cmdv):
+            return self.log_command_masked_opcode(cmdv, conditional)
+
         raise NotImplementedError()
     # --- end of process_command (...) ---
 
@@ -436,6 +545,12 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
         else:
             conditional = None
             cmdv = structured_command
+
+        if __debug__:
+            # this should be guaranteed by the parser
+            assert cmdv
+            assert isinstance(cmdv[0], parser.KernelConfigOp)
+        # --
 
         return self.process_command(cmdv, conditional)
     # --- end of process_structured_command (...) ---
@@ -897,7 +1012,10 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
 
         cmd_arg = cmdv[0]
 
-        if cmd_arg is _KernelConfigOp.op_include:
+        if self.check_command_masked_opcode(cmdv):
+            return self.log_command_masked_opcode(cmdv, conditional)
+
+        elif cmd_arg is _KernelConfigOp.op_include:
             include_files_in = self.lookup_include_file(cmdv[1])
 
             if not include_files_in:
@@ -1114,6 +1232,8 @@ if __name__ == "__main__":
             def process_command(self, cmdv, conditional):
                 print("COMMAND      ", cmdv)
                 print("  CONDITIONAL", conditional)
+                if self.check_command_masked_opcode(cmdv):
+                    print("  IS MASKED.")
         # ---
 
         ipret = MiniInterpreter()
