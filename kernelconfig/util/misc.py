@@ -17,7 +17,7 @@ def identity(item):
 
 def iter_dedup(iterable, *, key=None):
     """
-    Iterates over objects and filters out duplicates
+    Generator that iterates over objects and filters out duplicates
     as determined by the 'key' function, which must return a hashable object.
 
     @param   iterable:  iterable of objects
@@ -31,6 +31,23 @@ def iter_dedup(iterable, *, key=None):
             seen.add(item_key)
             yield item
 # --- end of iter_dedup (...) ---
+
+
+def list_dedup(iterable, *, key=None):
+    """
+    Iterates over objects and filters out duplicates
+    as determined by the 'key' function, which must return a hashable object.
+
+    The result is a list of deduplicated items.
+
+    @param   iterable:  iterable of objects
+    @keyword key:       key func or None for identity, defaults to None
+
+    @return:  deduplicated objects
+    @rtype:   C{list} of C{object}
+    """
+    return list(iter_dedup(iterable, key=key))
+# --- end of list_dedup (...) ---
 
 
 def get_rev_map(d):
