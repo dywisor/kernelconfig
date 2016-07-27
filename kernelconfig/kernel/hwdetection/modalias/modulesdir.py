@@ -106,6 +106,7 @@ class ModulesDir(AbstractModulesDir):
         return path and os.path.isdir(path)
 
     def _create_from_tarfile(self, tarfile):
+        # TODO: use tarfile
         assert self._tmpdir is None
         self._tmpdir = tmpdir.Tmpdir(suffix=".kernelconfig")
         tmp_path = self._tmpdir.get_path()
