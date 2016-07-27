@@ -118,7 +118,8 @@ class ModulesDir(AbstractModulesDir):
             ["tar", "xa", "-C", tmp_path, "-f", os.path.abspath(tarfile)],
             tmpdir=tmp_path, logger=self.logger
         ) as proc:
-            proc.join()
+            if not proc.join(return_success=True):
+                raise ModulesDirCreationError("failed to unpack tar archive")
 
         self.path = tmp_path
     # ---
