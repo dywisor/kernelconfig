@@ -162,9 +162,12 @@ def backup_file(
 def prepare_output_file(filepath, move=False):
     """Creates the directory for filepath,
     and a backup of the file if it exists.
+
+    @return:  True if a backup has been created, else False
+    @rtype:   C{bool}
     """
     dodir_for_file(filepath)
-    backup_file(filepath, move=move, ignore_missing=True)
+    return backup_file(filepath, move=move, ignore_missing=True)
 # --- end of prepare_output_file (...) ---
 
 
