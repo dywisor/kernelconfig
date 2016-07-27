@@ -107,7 +107,7 @@ class ModulesDir(AbstractModulesDir):
 
     def _create_from_tarfile(self, tarfile):
         assert self._tmpdir is None
-        self._tmpdir = tmpdir.Tmpdir()
+        self._tmpdir = tmpdir.Tmpdir(suffix=".kernelconfig")
         tmp_path = self._tmpdir.get_path()
 
         self.logger.debug(
