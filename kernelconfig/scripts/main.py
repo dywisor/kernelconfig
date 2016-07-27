@@ -13,10 +13,14 @@ import kernelconfig.scripts._base
 import kernelconfig.util.argutil
 import kernelconfig.installinfo
 import kernelconfig.kernel.info
+import kernelconfig.kernel.hwdetection.modalias.cachedir
 import kernelconfig.kconfig.config.gen
 import kernelconfig.util.fs
+import kernelconfig.util.misc
 import kernelconfig.util.multidir
 import kernelconfig.util.settings
+import kernelconfig.util.osmisc
+
 
 import kernelconfig.sources._sources
 
@@ -107,6 +111,13 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                 (
                     "generate-config", None,
                     "generate a .config file (default mode)"
+                ),
+                (
+                    "generate-modalias", None,
+                    (
+                        "create files for modalias-based hardware-detection\n"
+                        "WARNING: this takes a lot of time!"
+                    )
                 ),
                 (
                     "list-source-names", None,
@@ -261,6 +272,33 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             )
         )
         # -- end genconfig_arg_group
+
+        genmodalias_arg_group = parser.add_argument_group(
+            title="optional arguments for generate-modalias"
+        )
+
+        genmodalias_arg_group.add_argument(
+            "-j", "--jobs", metavar="<numjobs>", dest="numjobs", type=int,
+            default=max(1, kernelconfig.util.osmisc.get_cpu_count()),
+            help=with_default(
+                "allow <numjobs> at once when building modules", None
+            )
+        )
+
+        genmodalias_arg_group.add_argument(
+            "--modalias-build-dir", metavar="<dir>",
+            type=arg_types.arg_couldbe_dir,
+            default=argparse.SUPPRESS,
+            help=with_default(
+                (
+                    "root directory for build files\n"
+                    "where a temporary build directory will be created.\n"
+                    "Approximately 2G of space is required.\n"
+                ),
+                "$TMPDIR or /var/tmp"
+            )
+        )
+        # -- end genmodalias_arg_group
 
         add_script_mode_args()
     # --- end of _setup_arg_parser_args (...) ---
@@ -599,6 +637,24 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         # --
     # --- end of do_main_script_help_source (...) ---
 
+    def do_main_script_genmodalias(self, arg_config):
+        self.do_main_setup_logging(arg_config)
+        self.do_main_setup_source_info(arg_config)
+
+        modalias_cache = self.create_loggable(
+            (
+                kernelconfig.kernel.hwdetection.modalias.cachedir.
+                ModaliasCacheBuilder
+            ),
+            install_info=self.install_info,
+            source_info=self.source_info,
+            build_root_dir=arg_config.get("modalias_build_dir"),
+            numjobs=arg_config["numjobs"]
+        )
+
+        return modalias_cache.run_create()
+    # --- end of do_main_script_genmodalias (...) ---
+
     def do_main(self, arg_config):
         script_mode = arg_config["script_mode"]
 
@@ -616,6 +672,9 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         elif script_mode[0] == "help-source":
             return self.do_main_script_help_source(arg_config, script_mode[1])
+
+        elif script_mode[0] == "generate-modalias":
+            return self.do_main_script_genmodalias(arg_config)
 
         else:
             raise NotImplementedError("script mode", script_mode)
