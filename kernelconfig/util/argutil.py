@@ -3,6 +3,7 @@
 
 import argparse
 import os
+import stat
 import re
 
 from . import fs
@@ -96,6 +97,19 @@ class ArgTypes(object):
             return filepath
         raise self.exc_type("not a dir: %s" % arg)
     # --- end of arg_existing_dir (...) ---
+
+    def arg_couldbe_dir(self, arg):
+        filepath = self.arg_fspath(arg)
+        try:
+            stat_info = os.stat(filepath)
+        except OSError:
+            return filepath
+
+        if stat.S_ISDIR(stat_info.st_mode):
+            return self.arg_realpath(filepath)
+        else:
+            raise self.exc_type("not a dir: %s" % arg)
+    # --- end of arg_couldbe_dir (...) ---
 
     def arg_output_file(self, arg):
         return self.arg_realpath(arg)
