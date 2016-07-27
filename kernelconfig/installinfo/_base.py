@@ -92,6 +92,24 @@ class InstallInfoBase(object, metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def get_script_file(self, filename):
+        """Searches for a script file and returns its absolute path.
+        Returns anything false, e.g. None, if no file could be found.
+
+        There is no guarantee that the returned file path is executable,
+        only that it is a regular file or a symlink to a regular file.
+
+        @param filename:  name of the script,
+                          can also be a relative path,
+                          wildcard characters do not get expanded
+        @type  filename:  C{str}
+
+        @return:  absolute path to the script file or empty str or None
+        @rtype:   C{str} or C{None}
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def get_cache_dirs(self, name=None):
         raise NotImplementedError()
 
@@ -133,8 +151,6 @@ class DefaultInstallInfo(InstallInfoBase):
 
         A typical directory list would be ["/usr/share/kernelconfig"].
 
-        ** NOT IMPLEMENTED: There are no data files so far**
-
     Derived classes must override the new_instance() class method
     and call super() with appropriate system config and system data
     directory paths.
@@ -154,6 +170,8 @@ class DefaultInstallInfo(InstallInfoBase):
     @ivar sys_data_dirs:      "system data directory" paths
     @type sys_data_dirs:      C{list} of C{str}
 
+    @ivar data_dirs:          data files multi directory
+    @type data_dirs:          L{MultiDirEntry}
     @ivar settings_dirs:      settings file multi directory
     @type settings_dirs:      L{MultiDirEntry}
     @ivar include_file_dirs:  feature set file multi directory
@@ -209,12 +227,12 @@ class DefaultInstallInfo(InstallInfoBase):
         # ---
 
         sys_config_dirs = to_dirlist(sys_config_dir)
-        sys_data_dirs = to_dirlist(sys_data_dir)  # unused
+        sys_data_dirs = to_dirlist(sys_data_dir)
         user_config_dir = cls.get_user_config_dir(cls.CONFDIR_NAME)
         user_cache_dir = cls.get_user_cache_dir(cls.CONFDIR_NAME)
 
         settings_dirs = multidir.MultiDirEntry()
-        # data_dirs = multidir.MultiDirEntry()
+        data_dirs = multidir.MultiDirEntry()
         cache_dirs = multidir.MultiDirEntry()
 
         if user_config_dir:
@@ -229,6 +247,10 @@ class DefaultInstallInfo(InstallInfoBase):
             settings_dirs.add_pathv(sys_config_dirs)
         # --
 
+        if sys_data_dirs:
+            data_dirs.add_pathv(sys_data_dirs)
+        # --
+
         # initially, include_file_dirs is a copy of all paths
         # from settings_dirs suffixed with "/include"
         include_file_dirs = settings_dirs.get_child("include")
@@ -240,14 +262,15 @@ class DefaultInstallInfo(InstallInfoBase):
             sys_data_dirs=sys_data_dirs,
             settings_dirs=settings_dirs,
             include_file_dirs=include_file_dirs,
-            cache_dirs=cache_dirs
+            cache_dirs=cache_dirs,
+            data_dirs=data_dirs
         )
     # --- end of new_instance (...) ---
 
     def __init__(
         self, *,
         sys_config_dirs, user_config_dir, user_cache_dir, sys_data_dirs,
-        settings_dirs, include_file_dirs, cache_dirs
+        settings_dirs, include_file_dirs, cache_dirs, data_dirs
     ):
         super().__init__()
         self.sys_config_dirs = sys_config_dirs
@@ -258,6 +281,7 @@ class DefaultInstallInfo(InstallInfoBase):
         self.settings_dirs = settings_dirs
         self.include_file_dirs = include_file_dirs
         self.cache_dirs = cache_dirs
+        self.data_dirs = data_dirs
     # --- end of __init__ (...) ---
 
     def copy(self):
@@ -268,7 +292,8 @@ class DefaultInstallInfo(InstallInfoBase):
             sys_data_dirs=self.sys_data_dirs.copy(),
             settings_dirs=self.settings_dirs.copy(),
             include_file_dirs=self.include_file_dirs.copy(),
-            cache_dirs=self.cache_dirs.copy()
+            cache_dirs=self.cache_dirs.copy(),
+            data_dirs=self.data_dirs.copy()
         )
     # --- end of copy (...) ---
 
@@ -284,6 +309,11 @@ class DefaultInstallInfo(InstallInfoBase):
 
     def get_config_source_dirs(self):
         return self.settings_dirs.get_child("sources")
+
+    def get_script_file(self, filename):
+        return self.data_dirs.get_file_path(
+            fspath.join_relpath("scripts", filename)
+        )
 
     def get_cache_dirs(self, name=None):
         if name:
