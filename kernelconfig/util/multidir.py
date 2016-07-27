@@ -209,7 +209,7 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
     # --- end of _add_path (...) ---
 
     def add_path(self, path, stat_info=None, check_new=False, to_end=True):
-        """Similar to add_path(), but normalizes the path before adding it."""
+        """Similar to _add_path(), but normalizes the path before adding it."""
         path_abs = os.path.abspath(path)
         self._add_path(
             path_abs, stat_info=stat_info, check_new=check_new, to_end=to_end
@@ -226,6 +226,80 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         """add_path() variant that accepts a var-args list of paths."""
         self.add_pathv(pathv, **kwargs)
     # --- end of add_paths (...) ---
+
+    def _append(self, arg, *, allow_recur, check_new=True):
+        def append_inner(arg, allow_recur, check_new):
+            if not arg:
+                pass
+
+            elif isinstance(arg, MultiDirEntryBase):
+                self.add_pathv(arg.paths, check_new=check_new)
+
+            elif isinstance(arg, str):
+                self.add_path(str(arg), check_new=check_new)
+
+            elif (
+                allow_recur
+                and (hasattr(arg, "__iter__") or hasattr(arg, "__next__"))
+            ):
+                for item in arg:
+                    append_inner(item, False, check_new)
+
+            else:
+                raise ValueError(arg)
+        # ---
+
+        append_inner(arg, allow_recur, check_new)
+    # --- end of _append (...) ---
+
+    def append(self, arg, *, check_new=True):
+        """
+        A more relaxed add_path() variant that accepts
+        str, multidir objects, and lists/genexpr of these types.
+
+        Empty values are ignored.
+
+        @param arg:  filesystem path or paths
+        @type  arg:  C{str} | L{MultiDirEntryBase},
+                     or iterable of (C{str} | L{MultiDirEntryBase})
+
+        @return:  None (implicit)
+        """
+        self._append(arg, allow_recur=True, check_new=check_new)
+    # --- end of append (...) ---
+
+    def extendv(self, argv, *, check_new=True):
+        """append() variant that accepts a list of fspath args.
+
+        Empty values are ignored.
+
+        @param arg:  list/iterable of filesystem path or paths
+        @type  arg:  iterable of C{str} | L{MultiDirEntryBase},
+                     or iterable of iterable of (C{str} | L{MultiDirEntryBase})
+
+        @return:  None (implicit)
+        """
+        if argv:
+            for arg in argv:
+                self.append(arg, check_new=check_new)
+    # --- end of extendv (...) ---
+
+    def extend(self, *argv, **kwargs):
+        """append() variant that accepts a var-args list of fspath args."""
+        self.extendv(argv, **kwargs)
+    # --- end of extend (...) ---
+
+    def __ior__(self, other):
+        """multidir |= a  ->  multidir.append(a)"""
+        self.append(other)
+        return self
+
+    def __or__(self, other):
+        """multidir | a  ->  ({m = multidir.copy(); m.append(a); m;})"""
+        obj = self.copy()
+        obj.append(other)
+        return obj
+    # ---
 
     def iter_paths(self):
         """
