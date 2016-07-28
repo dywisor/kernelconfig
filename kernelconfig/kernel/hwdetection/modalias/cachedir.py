@@ -180,6 +180,13 @@ class ModaliasCacheBuilder(_ModaliasCacheBase):
                                For testing, set this True, and False otherwise.
     @type COPY_BUILD_SCRIPTS:  C{bool}
 
+    Another class-wide var, CONF_TARGET, is only relevant for testing.
+    It sets the base config for modalias info creation.
+    Normally this should be None (modalias.mk then uses allmodconfig),
+    for testing purposes it may be set to "defconfig".
+
+    @cvar CONF_TARGET:         config target override
+    @type CONF_TARGET:         C{None} or C{str}
 
     The usual install_info / source_info variables are used by instances
     of this class for accessing files and getting the kernel version / arch.
@@ -225,6 +232,8 @@ class ModaliasCacheBuilder(_ModaliasCacheBase):
     """
 
     COPY_BUILD_SCRIPTS = True   # FIXME: testing=>True, others=>False
+
+    CONF_TARGET = "defconfig"   # FIXME: testing
 
     BUILD_ROOT_DIR_MIN_SIZE = 2000
     BUILD_ROOT_DIR_LOOKAHEAD_SIZE = BUILD_ROOT_DIR_MIN_SIZE + 200
@@ -378,8 +387,8 @@ class ModaliasCacheBuilder(_ModaliasCacheBase):
         # * DEPMOD: FIXME!
         mkscript_argv.add("DEPMOD", "/sbin/depmod")
 
-        # * KERNELCONFIG_CONFTARGET: FIXME!
-        mkscript_argv.add("KERNELCONFIG_CONFTARGET", "defconfig")
+        if self.CONF_TARGET:
+            mkscript_argv.add("KERNELCONFIG_CONFTARGET", self.CONF_TARGET)
 
         self._mkscript_argv = mkscript_argv
         log_debug("modalias mk args: %r", mkscript_argv)
