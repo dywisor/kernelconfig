@@ -641,7 +641,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         self.do_main_setup_logging(arg_config)
         self.do_main_setup_source_info(arg_config)
 
-        modalias_cache = self.create_loggable(
+        modalias_cache_builder = self.create_loggable(
             (
                 kernelconfig.kernel.hwdetection.modalias.cachedir.
                 ModaliasCacheBuilder
@@ -652,7 +652,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             numjobs=arg_config["numjobs"]
         )
 
-        return modalias_cache.run_create()
+        return modalias_cache_builder.run_create()
     # --- end of do_main_script_genmodalias (...) ---
 
     def do_main(self, arg_config):
