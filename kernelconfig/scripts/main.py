@@ -56,6 +56,9 @@ class KernelConfigArgTypes(kernelconfig.util.argutil.ArgTypes):
             elif argslow in {"auto", }:
                 return ModulesDirArgConfig(True, False)
 
+            elif argslow in {"optional", }:
+                return ModulesDirArgConfig(True, True)
+
             else:
                 fpath = self.arg_fspath(arg)
 
@@ -217,9 +220,13 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                 (
                     'path to the modules directory,\n'
                     'used for looking up module aliases,\n'
-                    'can also point to a tarball'
+                    'can also point to a tarball\n'
+                    'or be one of\n'
+                    '* "none": disable\n'
+                    '* "auto": autodetect and required\n'
+                    '* "optional": autodetect and optional\n'
                 ),
-                "<autodetect>"
+                'optional'
             )
         )
         # -- end common_arg_group
