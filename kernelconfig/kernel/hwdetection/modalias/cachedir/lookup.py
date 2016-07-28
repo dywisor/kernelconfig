@@ -1,9 +1,30 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import collections
+
+
 from . import _base
 
+
 __all__ = ["ModaliasCache"]
+
+
+_ModaliasCacheEntrySimilaritySortKey = collections.namedtuple(
+    "ModaliasCacheEntrySimilaritySortKey",
+    "archiness arch kv_numcommon kv_dist_neg kver"
+)
+
+
+class ModaliasCacheEntrySimilaritySortKey(
+    _ModaliasCacheEntrySimilaritySortKey
+):
+
+    @property
+    def kv_dist(self):
+        return -(self.kv_dist_neg)
+
+# --- end of ModaliasCacheEntrySimilaritySortKey ---
 
 
 class ModaliasCache(_base.ModaliasCacheBase):
@@ -151,7 +172,7 @@ class ModaliasCache(_base.ModaliasCacheBase):
                 #  * to avoid randomness when picking entries with
                 #    no archiness, sort by arch (after archiness)
 
-                sort_key = _base.ModaliasCacheEntrySimilaritySortKey(
+                sort_key = ModaliasCacheEntrySimilaritySortKey(
                     archiness, cache_arch, kv_numcommon, -kv_dist, cache_kver
                 )
 
