@@ -480,7 +480,7 @@ class ModaliasCache(_ModaliasCacheBase):
             and sort_key.kv_dist >= self.KVER_DIST_WARN_THRESHOLD
         )
 
-        if True or kv_diff_want_warn:
+        if kv_diff_want_warn:
             self.logger.warning(
                 (
                     "kernel version of the cached modalias info "
