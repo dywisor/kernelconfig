@@ -254,8 +254,27 @@ class ModaliasCacheBuilder(_ModaliasCacheBase):
         return True
     # ---
 
-    def run_update(self, *args, **kwargs):
-        raise NotImplementedError("update mode is not implemented yet.")
+    def run_update(self):
+        cache_file = self.get_cache_file_path()
+
+        try:
+            stat_info = os.stat(cache_file)
+        except OSError:
+            stat_info = None
+
+        if stat_info is None:
+            self.logger.info("Creating new modalias info source")
+            return self.run_create()
+
+        elif stat.S_ISREG(stat_info.st_mode):
+            self.logger.info("modalias cache file exists, nothing to do.")
+            return True
+
+        else:
+            self.logger.error(
+                "Cache file %r exists but is not a file!", cache_file
+            )
+            return False
     # ---
 
     def install_outfile_to_cache(self):
