@@ -283,6 +283,30 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                 'optional'
             )
         )
+
+        genconfig_arg_group.add_argument(
+            "--unsafe-modalias", dest="unsafe_modalias",
+            default=False, action="store_true",
+            help=with_default(
+                (
+                    'allow to autodetect modules directories\n'
+                    'that are not strictly compatible with <srctree>\n'
+                    '(--modules-dir "auto", "optional" only)\n'
+                ),
+                "--safe"
+            )
+        )
+
+        genconfig_arg_group.add_argument(
+            "--safe-modalias", dest="unsafe_modalias",
+            default=argparse.SUPPRESS, action="store_false",
+            help=(
+                (
+                    'restrict --modules-dir autodetection\n'
+                    'to strictly compatible directories'
+                )
+            )
+        )
         # -- end genconfig_arg_group
 
         genmodalias_arg_group = parser.add_argument_group(
@@ -454,7 +478,9 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                 source_info=self.source_info
             )
 
-            modules_dir = modalias_cache.get_modules_dir(unsafe=False)
+            modules_dir = modalias_cache.get_modules_dir(
+                unsafe=arg_config["unsafe_modalias"]
+            )
             modules_dir.set_logger(parent_logger=self.logger)
 
         else:
