@@ -97,7 +97,7 @@ class ModaliasCacheKey(_ModaliasCacheKey):
 
 class ModaliasCacheBase(loggable.AbstractLoggable):
 
-    CACHE_DIR_RELPATH = "modalias/tmp"
+    CACHE_DIR_RELPATH = "modalias"
 
     def iter_cache_dir_entries(self, *, cache_search_dirs=None):
         def iter_candidates():

@@ -124,7 +124,7 @@ class ModaliasCacheBuilder(_base.ModaliasCacheBase):
 
     COPY_BUILD_SCRIPTS = True   # FIXME: testing=>True, others=>False
 
-    CONF_TARGET = "defconfig"   # FIXME: testing
+    CONF_TARGET = None
 
     BUILD_ROOT_DIR_MIN_SIZE = 2000
     BUILD_ROOT_DIR_LOOKAHEAD_SIZE = BUILD_ROOT_DIR_MIN_SIZE + 200
