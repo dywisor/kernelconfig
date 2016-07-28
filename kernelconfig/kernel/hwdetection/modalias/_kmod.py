@@ -95,6 +95,12 @@ if HAVE_KMOD:
                 # None  -->  usable, but discouraged,
                 #            since /lib/modules/$(uname -r) is an unreliable
                 #            source
+                self.logger.warning(
+                    (
+                        "Using /lib/modules for modalias lookup,"
+                        " this is an unreliable info source."
+                    )
+                )
                 return True
 
             elif not mod_dir:
