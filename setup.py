@@ -80,6 +80,7 @@ class ProjectSetup(object):
                 "kernel.hwdetection",
                 "kernel.hwdetection.modalias",
                 "kernel.hwdetection.modalias.abc",
+                "kernel.hwdetection.modalias.cachedir",
                 "kernel.hwdetection.modulesmap",
                 "kernel.hwdetection.modulesmap.mkscanner",
                 "kconfig",
