@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import argparse
+import collections
 import logging
 import os.path
 import sys
@@ -14,6 +15,7 @@ import kernelconfig.util.argutil
 import kernelconfig.installinfo
 import kernelconfig.kernel.info
 import kernelconfig.kernel.hwdetection.modalias.cachedir
+import kernelconfig.kernel.hwdetection.modalias.modulesdir
 import kernelconfig.kconfig.config.gen
 import kernelconfig.util.fs
 import kernelconfig.util.misc
@@ -33,6 +35,11 @@ else:
     PRJ_VERSION = kernelconfig._version.version
 
 
+ModulesDirArgConfig = collections.namedtuple(
+    "ModulesDirArgConfig", "path is_optional"
+)
+
+
 class KernelConfigArgTypes(kernelconfig.util.argutil.ArgTypes):
 
     NONE_WORDS = frozenset({"none", "_"})
@@ -44,18 +51,19 @@ class KernelConfigArgTypes(kernelconfig.util.argutil.ArgTypes):
             argslow = arg.strip().lower()
 
             if argslow in self.NONE_WORDS:
-                return False
+                return ModulesDirArgConfig(None, True)
+
             elif argslow in {"auto", }:
-                return True
+                return ModulesDirArgConfig(True, False)
 
             else:
                 fpath = self.arg_fspath(arg)
 
                 if os.path.isdir(fpath):
-                    return fpath
+                    return ModulesDirArgConfig(fpath, False)
 
                 elif os.path.isfile(fpath):
-                    return fpath
+                    return ModulesDirArgConfig(fpath, False)
 
                 else:
                     raise self.exc_type(
@@ -417,6 +425,46 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             config.read_config_files(*input_config_files)
     # ---
 
+    def do_main_get_modules_dir(self, arg_config):
+        modulesdir_pym = kernelconfig.kernel.hwdetection.modalias.modulesdir
+        cachedir_pym = kernelconfig.kernel.hwdetection.modalias.cachedir
+
+        mod_dir_config = arg_config.get("modules_dir", None)
+
+        if mod_dir_config is None:
+            # the default behavior is: autodetect, but ignore if unavailable
+            mod_dir_config = ModulesDirArgConfig(True, True)
+        # --
+
+        if not mod_dir_config.path:
+            modules_dir = self.create_loggable(modulesdir_pym.NullModulesDir)
+
+        elif mod_dir_config.path is True:
+            # lookup
+            modalias_cache = self.create_loggable(
+                cachedir_pym.ModaliasCache,
+                install_info=self.install_info,
+                source_info=self.source_info
+            )
+
+            modules_dir = modalias_cache.get_modules_dir(unsafe=False)
+            modules_dir.set_logger(parent_logger=self.logger)
+
+        else:
+            modules_dir = self.create_loggable(
+                modulesdir_pym.ModulesDir, mod_dir_config.path
+            )
+        # --
+
+        if not mod_dir_config.is_optional:
+            if not modules_dir.prepare():
+                self.logger.error("Failed to get modalias info source")
+                return None
+        # --
+
+        return modules_dir
+    # --- end of do_main_get_modules_dir (...) ---
+
     def do_main_script_genconfig(self, arg_config):
         def get_interpreter():
             nonlocal arg_config
@@ -453,12 +501,18 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         # config creation
         # * init
+        #
+        #   ** modalias lookup info source
+        modules_dir = self.do_main_get_modules_dir(arg_config)
+        if modules_dir is None:
+            # already logged
+            return False
+
         config_gen = self.create_loggable(
             kernelconfig.kconfig.config.gen.ConfigGenerator,
             install_info=self.install_info,
             source_info=self.source_info,
-            # modules_dir=arg_config.get("modules_dir", True)  # TODO
-            modules_dir=arg_config.get("modules_dir", None)
+            modules_dir=modules_dir
         )
 
         config = config_gen.get_config()
