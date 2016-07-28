@@ -1,13 +1,16 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import os
+import shutil
+
+
 __all__ = [
     "get_cpu_count",
     "get_free_space",
     "get_free_space_m",
 ]
 
-import os
 
 if hasattr(os, "cpu_count"):
     # Python >= 3.4
@@ -29,8 +32,10 @@ else:
 
 
 def get_free_space(filepath):
-    vfs_info = os.statvfs(filepath)
-    return (vfs_info.f_frsize * vfs_info.f_bavail)
+    # Python >= 3.3: shutil.disk_usage()
+    return shutil.disk_usage(filepath).free
+    # vfs_info = os.statvfs(filepath)
+    # return (vfs_info.f_frsize * vfs_info.f_bavail)
 # --- end of get_free_space (...) ---
 
 
