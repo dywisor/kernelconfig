@@ -2,6 +2,6 @@
 # -*- coding: utf-8 -*-
 
 from .lookup import ModaliasCache
-from ._all import ModaliasCacheBuilder
+from .builder import ModaliasCacheBuilder
 
 __all__ = ["ModaliasCache", "ModaliasCacheBuilder"]

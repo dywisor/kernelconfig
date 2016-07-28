@@ -10,11 +10,9 @@ import tempfile
 
 from .....util import fs
 from .....util import misc
-
 from .....util import osmisc
 from .....util import subproc
 from .....util import tmpdir
-
 
 from . import exc
 from . import util
