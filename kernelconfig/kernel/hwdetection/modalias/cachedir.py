@@ -395,6 +395,9 @@ class ModaliasCacheBuilder(_ModaliasCacheBase):
 
         if self.CONF_TARGET:
             mkscript_argv.add("KERNELCONFIG_CONFTARGET", self.CONF_TARGET)
+            log_debug("config target: %s", self.CONF_TARGET)
+        else:
+            log_debug("config target: <default>")
 
         self._mkscript_argv = mkscript_argv
         log_debug("modalias mk args: %r", mkscript_argv)
