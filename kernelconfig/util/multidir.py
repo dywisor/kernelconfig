@@ -469,6 +469,46 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         # -- end for
     # --- end of iglob (...) ---
 
+    def _iglob_stat(self, filename, **glob_kw):
+        norm_filename = self.normalize_filename(filename)
+
+        relpaths_seen = set()
+
+        cached_entries = self._glob_from_scandir_cache(norm_filename, glob_kw)
+        if cached_entries is not None:
+            for fname, entry in cached_entries.items():
+                for filepath, stat_info in entry.iter_paths():
+                    yield (relpaths_seen, fname, filepath, stat_info)
+                    if fname in relpaths_seen:
+                        break
+                # --
+            # --
+            return
+        # -- end if cached
+
+        for fname, filepath in self._iglob_all_paths(norm_filename, glob_kw):
+            if fname not in relpaths_seen:
+                stat_info = self.do_stat(filepath)
+                yield (relpaths_seen, fname, filepath, stat_info)
+            # -- end if duplicate
+        # -- end for
+    # --- end of _iglob_stat (...) ---
+
+    def iglob_stat(self, filename, **glob_kw):
+        """
+        @return:  3-tuple (
+                     filepath relative to this entry, abs. filepath, stat info
+                  )
+        @rtype:   3-tuple (C{str}, C{str}, <<posix.stat_result>>)
+        """
+        for relpaths_seen, fname, filepath, stat_info in (
+            self._iglob_stat(filename, **glob_kw)
+        ):
+            if stat_info is not None:
+                yield (fname, filepath, stat_info)
+                relpaths_seen.add(fname)
+    # --- end of iglob_stat (...) ---
+
     def iglob_check_type(
         self, filename, check_file_type=stat.S_ISREG, **glob_kw
     ):
@@ -484,34 +524,13 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         @return:  2-tuple (filepath relative to this entry, abs. filepath)
         @rtype:   2-tuple (C{str}, C{str})
         """
-        norm_filename = self.normalize_filename(filename)
-
-        cached_entries = self._glob_from_scandir_cache(norm_filename, glob_kw)
-        if cached_entries is not None:
-            for fname, entry in cached_entries.items():
-                for filepath, _ in (
-                    entry.iter_paths_filter_stat_mode(check_file_type)
-                ):
-                    yield (fname, filepath)
-                    break
-                # --
-            # --
-            return
-        # -- end if cached
-
-        relpaths_seen = set()
-        for fname, filepath in self._iglob_all_paths(norm_filename, glob_kw):
-            if fname not in relpaths_seen:
-                stat_info = self.do_stat(filepath)
-                if (
-                    stat_info is not None
-                    and check_file_type(stat_info.st_mode)
-                ):
-                    yield (fname, filepath)
-                    relpaths_seen.add(fname)
-                # -- end if check_file_type
-            # -- end if duplicate
-        # -- end for
+        for relpaths_seen, fname, filepath, stat_info in (
+            self._iglob_stat(filename, **glob_kw)
+        ):
+            if stat_info is not None and check_file_type(stat_info.st_mode):
+                yield (fname, filepath)
+                relpaths_seen.add(fname)
+        # --
     # --- end of iglob_check_type (...) ---
 
     def _iget_all_paths(self, norm_filename):
