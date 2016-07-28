@@ -74,6 +74,12 @@ class AbstractModulesDir(loggable.AbstractLoggable, fs.AbstractFsView):
 class NullModulesDir(AbstractModulesDir):
     __slots__ = []
 
+    def __repr__(self):
+        return "{cls.__name__s}()".format(cls=self.__class__)
+
+    def __str__(self):
+        return str(None)
+
     def get_path(self):
         raise TypeError()
 
@@ -97,6 +103,14 @@ class ModulesDir(AbstractModulesDir):
         self.source = source
         self.path = None
         self._tmpdir = None
+
+    def __repr__(self):
+        return "{cls.__name__!s}({arg!r})".format(
+            arg=(self.path or self.source), cls=self.__class__
+        )
+
+    def __str__(self):
+        return str(self.source or self.path or "")
 
     def get_path(self):
         return self.path
