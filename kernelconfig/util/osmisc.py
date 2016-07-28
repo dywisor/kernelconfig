@@ -4,11 +4,15 @@
 import os
 import shutil
 
+from . import fspath
+
 
 __all__ = [
     "get_cpu_count",
     "get_free_space",
     "get_free_space_m",
+    "which",
+    "which_sbin",
 ]
 
 
@@ -42,3 +46,24 @@ def get_free_space(filepath):
 def get_free_space_m(filepath):
     return get_free_space(filepath) // (1024 * 1024)
 # --- end of get_free_disk_space_m (...) ---
+
+
+which = shutil.which
+
+
+def which_sbin(prog, *, path=None, **kwargs):
+    def concat_lookup_path(parts):
+        # dedup: iter_dedup(*<<p.split(":") for p in parts>>)
+        return ":".join(filter(None, parts))
+    # --
+
+    path_parts = [
+        (path if path is not None else os.environ.get("PATH", os.defpath))
+    ]
+
+    path_parts.extend(
+        fspath.dirsuffix(["/usr/local", "/usr", "/"], "sbin")
+    )
+
+    return which(prog, path=concat_lookup_path(path_parts), **kwargs)
+# --- end of which_sbin (...) ---
