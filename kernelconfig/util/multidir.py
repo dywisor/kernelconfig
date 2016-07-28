@@ -514,7 +514,7 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         return entries
     # --- end of glob (...) ---
 
-    def iglob(self, filename, check_file_type=None, **glob_kw):
+    def iglob(self, filename, **glob_kw):
         """Generator glob() variant that returns the 'most-relevant'
         matching path only.
 
