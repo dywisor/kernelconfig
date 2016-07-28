@@ -4,6 +4,8 @@
 import collections
 
 
+from .. import modulesdir
+
 from . import _base
 
 
@@ -46,6 +48,35 @@ class ModaliasCache(_base.ModaliasCacheBase):
 
     KVER_DIST_WARN_THRESHOLD = 0x100      # patchlevel +- 1
     KVER_DIST_UNSAFE_THRESHOLD = 0x800    # patchlevel +- 8
+
+    def get_modules_dir(self, **kwargs):
+        """
+        @keyword unsafe:  whether to allow modalias info sources that
+                          could be usable, but do not pass the strict(er)
+                          compatibility checks
+                          Defaults to False.
+        @type    unsafe:  C{bool}
+
+        @return:  a modules dir
+        @rtype:   L{ModulesDir} or L{NullModulesDir}
+        """
+        self.logger.debug("Looking for a modalias info source")
+        modalias_info_source = self.locate_cache_entry(**kwargs)
+
+        if modalias_info_source:
+            self.logger.info("Found a suitable modalias info source")
+            return self.create_loggable(
+                modulesdir.ModulesDir, modalias_info_source
+            )
+        else:
+            self.logger.info(
+                (
+                    "Could not find a suitable modalias info source, "
+                    "modalias-based hardware detection will not be available."
+                )
+            )
+            return self.create_loggable(modulesdir.NullModulesDir)
+    # --- end of get_modules_dir (...) ---
 
     def _locate_cache_entry_iter_candidates(self):
         """
@@ -188,6 +219,10 @@ class ModaliasCache(_base.ModaliasCacheBase):
         )
 
     def locate_cache_entry(self, unsafe=False):
+        """
+        @return:  path to cached modalias info source or None
+        @rtype:   C{str} or C{None}
+        """
         log_unsafe = self.logger.warning if unsafe else self.logger.debug
 
         self.logger.debug("Locating suitable cached modalias files")
