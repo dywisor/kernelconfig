@@ -19,23 +19,7 @@ __all__ = [
     "ModaliasCacheBase",
     "ModaliasCacheKey",
     "ModaliasCacheEntryInfo",
-    "ModaliasCacheEntrySimilaritySortKey",
 ]
-
-
-_ModaliasCacheEntrySimilaritySortKey = collections.namedtuple(
-    "ModaliasCacheEntrySimilaritySortKey",
-    "archiness arch kv_numcommon kv_dist_neg kver"
-)
-
-
-class ModaliasCacheEntrySimilaritySortKey(
-    _ModaliasCacheEntrySimilaritySortKey
-):
-
-    @property
-    def kv_dist(self):
-        return -(self.kv_dist_neg)
 
 
 _ModaliasCacheKey = collections.namedtuple(
