@@ -545,6 +545,28 @@ class KernelVersion(_kversion_base.KernelVersionBaseObject):
 
     kv = property(get_kv_str)
 
+    def iter_version_parts(self):
+        for vpart in (
+            self.version,
+            self.patchlevel,
+            self.sublevel
+        ):
+            if vpart is None:
+                return
+
+            yield vpart
+        # --
+
+        subsublevel = self.subsublevel
+        if subsublevel:
+            for vpart in subsublevel:
+                yield vpart
+    # --- end of iter_version_parts (...) ---
+
+    def get_version_parts(self):
+        return list(self.iter_version_parts())
+    # --- end of get_version_parts (...) ---
+
 # --- end of KernelVersion ---
 
 
