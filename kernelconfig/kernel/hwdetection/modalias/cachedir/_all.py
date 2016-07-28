@@ -1,267 +1,30 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
-import collections
 import logging
 import os
-import re
 import shutil
 import stat
 import tempfile
 
-from .....abc import loggable
+
 from .....util import fs
-from .....util import fspath
 from .....util import misc
-from .....util import objcache
+
 from .....util import osmisc
 from .....util import subproc
 from .....util import tmpdir
 
-from .... import kversion
 
 from . import exc
+from . import util
+from . import _base
 
 
 __all__ = ["ModaliasCacheBuilder"]
 
 
-def _create_kernelversion_noerr(
-    version_string, *,
-    constructor=kversion.KernelVersion.new_from_version_str
-):
-    try:
-        return constructor(version_string)
-    except ValueError:
-        return None
-# ---
-
-
-class MakeArgs(list):
-    # TODO: config sources mk.py would be a potential consumer of this class
-
-    def fmt_var(self, name, value):
-        return "{0!s}={1!s}".format(name, value)
-
-    def add(self, name, value):
-        self.append(self.fmt_var(name, value))
-
-    def addv(self, iterable):
-        for name, value in iterable:
-            self.add(name, value)
-# ---
-
-
-_ModaliasCacheEntrySimilaritySortKey = collections.namedtuple(
-    "ModaliasCacheEntrySimilaritySortKey",
-    "archiness arch kv_numcommon kv_dist_neg kver"
-)
-
-
-class ModaliasCacheEntrySimilaritySortKey(
-    _ModaliasCacheEntrySimilaritySortKey
-):
-
-    @property
-    def kv_dist(self):
-        return -(self.kv_dist_neg)
-
-
-_ModaliasCacheKey = collections.namedtuple(
-    "ModaliasCacheKey", "kernelversion arch"
-)
-
-
-_ModaliasCacheEntryInfo = collections.namedtuple(
-    "ModaliasCacheEntryInfo", "filepath is_file cache_key"
-)
-
-
-class ModaliasCacheEntryInfo(_ModaliasCacheEntryInfo):
-
-    @property
-    def arch(self):
-        return self.cache_key.arch
-
-    @property
-    def kernelversion(self):
-        return self.cache_key.kernelversion
-
-# ---
-
-
-class ModaliasCacheKey(_ModaliasCacheKey):
-
-    KVER_OBJ_CACHE = objcache.ObjectCache()
-
-    @classmethod
-    def decode(cls, key_str):
-        key_components = key_str.split("__")
-
-        if key_components:
-            arch_key = None
-            if len(key_components) > 1:
-                arch_key = key_components.pop()
-
-            kernelversion = cls.KVER_OBJ_CACHE.get(
-                _create_kernelversion_noerr, key_components.pop()
-            )
-
-            # other key components are ignored
-
-            if kernelversion:
-                return cls(arch=arch_key, kernelversion=kernelversion)
-        # --
-
-        return None
-    # --- end of decode (...) ---
-
-    def encode(self):
-        forbidden_seq = re.compile(r'(?:__)|(?:/)')
-
-        def strconvert(arg):
-            str_val = str(arg)
-            if forbidden_seq.search(str_val):
-                raise exc.ModaliasCacheError(
-                    "invalid cache key element", str_val
-                )
-            return str_val
-        # ---
-
-        return "__".join((
-            strconvert(self.kernelversion),
-            strconvert(self.arch)
-        ))
-    # ---
-
-    def __str__(self):
-        return self.encode()
-
-# ---
-
-
-class _ModaliasCacheBase(loggable.AbstractLoggable):
-
-    CACHE_DIR_RELPATH = "modalias/tmp"
-
-    def iter_cache_dir_entries(self, *, cache_search_dirs=None):
-        def iter_candidates():
-            nonlocal cache_search_dirs
-
-            for fname, filepath, stat_info in (
-                cache_search_dirs.iglob_stat("*__*")
-            ):
-                # files end with ".txz"
-                #  -- this can be adjusted to allow other tarballs,
-                #     e.g. tarfile.is_tarfile() (which would open the file)
-
-                if stat.S_ISREG(stat_info.st_mode) and fname.endswith(".txz"):
-                    fbasename = fname.rpartition(".")[0]
-                    yield (True, fbasename, filepath)
-
-                elif stat.S_ISDIR(stat_info.st_mode):
-                    yield (False, fname, filepath)
-            # --
-        # --- end of iter_candidates (...) ---
-
-        if cache_search_dirs is None:
-            cache_search_dirs = self.get_cache_search_dirs()
-
-        for is_file, fbasename, filepath in iter_candidates():
-            cache_key = ModaliasCacheKey.decode(fbasename)
-            if cache_key is not None:
-                yield ModaliasCacheEntryInfo(
-                    filepath=filepath, is_file=is_file, cache_key=cache_key
-                )
-    # --- end of iter_cache_dir_entries (...) ---
-
-    def __init__(self, install_info, source_info, **logger_kwargs):
-        super().__init__(**logger_kwargs)
-        self.install_info = install_info
-        self.source_info = source_info
-        self._cache_key_str = None
-    # --- end of __init__ (...) ---
-
-    def zap(self):
-        self._cache_key_str = None
-
-    def get_cache_file_path(self):
-        return self.get_cache_dir_path("%s.txz" % self.get_cache_key_str())
-
-    def get_cache_dirs(self, relpath=None):
-        return self.install_info.get_cache_dirs(
-            fspath.join_relpath(self.CACHE_DIR_RELPATH, relpath)
-        )
-
-    def get_cache_dir_path(self, relpath=None):
-        return self.get_cache_dirs(relpath).get_path()
-
-    def get_cache_search_dirs(self, relpath=None, check_exist=False):
-        return self.install_info.get_cache_search_dirs(
-            fspath.join_relpath(self.CACHE_DIR_RELPATH, relpath),
-            check_exist=check_exist
-        )
-
-    def get_arch_keys(self):
-        return misc.iter_dedup(
-            filter(
-                # skip unset arch attrs,
-                # and also "usermode" archs
-                lambda w: (w and w != "um"),
-                (
-                    self.source_info.arch,
-                    self.source_info.subarch,
-                    self.source_info.karch
-                )
-            )
-        )
-    # ---
-
-    def get_cache_key_components(self):
-        """
-        Returns the 'ideal' cache key for the modalias info source as list.
-
-        @return:  cache key components
-        @rtype:   C{list} of C{object}
-        """
-        def get_arch_key():
-            for arch_key in self.get_arch_keys():
-                return arch_key
-            raise exc.ModaliasCacheError("no arch cache key")
-        # ---
-
-        # the cache key consists of
-        # * the kernel version
-        # * the target arch, see get_arch_key() above
-        return ModaliasCacheKey(
-            kernelversion=self.source_info.kernelversion,
-            arch=get_arch_key()
-        )
-    # --- end of get_cache_key_components (...) ---
-
-    def _get_cache_key_str(self):
-        """Returns the 'ideal' cache key for the modalias info source.
-        This is mostly useful for storing new info sources.
-
-        @return:  cache key (can be interpreted as relative fs path)
-        @rtype:   C{str}
-        """
-        return self.get_cache_key_components().encode()
-    # --- end of _get_cache_key_str (...) ---
-
-    def get_cache_key_str(self):
-        """See _get_cache_key_str(). This method adds result caching."""
-        cache_key_str = self._cache_key_str
-        if cache_key_str is None:
-            cache_key_str = self._get_cache_key_str()
-            self._cache_key_str = cache_key_str
-        return cache_key_str
-    # --- end of get_cache_key_str (...) ---
-
-# --- end of _ModaliasCacheBase ---
-
-
-class ModaliasCache(_ModaliasCacheBase):
+class ModaliasCache(_base.ModaliasCacheBase):
     """
     @cvar KVER_DIST_WARN_THRESHOLD:    when picking a cache entry,
                                        warn if its kv distance is equal
@@ -406,7 +169,7 @@ class ModaliasCache(_ModaliasCacheBase):
                 #  * to avoid randomness when picking entries with
                 #    no archiness, sort by arch (after archiness)
 
-                sort_key = ModaliasCacheEntrySimilaritySortKey(
+                sort_key = _base.ModaliasCacheEntrySimilaritySortKey(
                     archiness, cache_arch, kv_numcommon, -kv_dist, cache_kver
                 )
 
@@ -501,7 +264,7 @@ class ModaliasCache(_ModaliasCacheBase):
 # --- end of ModaliasCache ---
 
 
-class ModaliasCacheBuilder(_ModaliasCacheBase):
+class ModaliasCacheBuilder(_base.ModaliasCacheBase):
     """
     This is the "Python side" of modalias info source creation.
     Basically, it wraps the modalias.mk Makefile,
@@ -754,7 +517,7 @@ class ModaliasCacheBuilder(_ModaliasCacheBase):
         # --
 
         # build the argument list that is passed to the modalias makefile cmd
-        mkscript_argv = MakeArgs()
+        mkscript_argv = util.MakeArgs()
 
         #  source-info related vars (ARCH=...)
         #   not using iter_out_of_tree_build_make_vars() here,
