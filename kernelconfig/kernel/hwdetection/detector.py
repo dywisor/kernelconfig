@@ -10,6 +10,7 @@ from . import sysfs_scan
 from . import modulesmap
 from . import modalias
 from .modalias import modulesdir
+from .modalias import cachedir
 
 
 __all__ = ["HWDetect"]
@@ -48,7 +49,23 @@ class HWDetect(loggable.AbstractLoggable):
             return None
 
         elif modules_dir_arg is True:
-            raise NotImplementedError("auto-set modules dir")
+            self.logger.warning(
+                (
+                    "auto-detecting a cached modalias info source should be"
+                    " done before initializing HWDetect,"
+                    " using default lookup parameters"
+                )
+            )
+
+            modalias_cache = self.create_loggable(
+                cachedir.ModaliasCache,
+                source_info=self.source_info,
+                install_info=self.install_info
+            )
+
+            modules_dir = modalias_cache.get_modules_dir()
+            modules_dir.set_logger(parent_logger=self.logger)
+            return modules_dir
 
         elif isinstance(modules_dir_arg, str):
             return self.create_loggable(
