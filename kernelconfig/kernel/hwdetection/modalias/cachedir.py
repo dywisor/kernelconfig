@@ -53,7 +53,7 @@ class MakeArgs(list):
 
 class _ModaliasCacheBase(loggable.AbstractLoggable):
 
-    CACHE_DIR_RELPATH = "modalias"
+    CACHE_DIR_RELPATH = "modalias/tmp"
 
     def __init__(self, install_info, source_info, **logger_kwargs):
         super().__init__(**logger_kwargs)
