@@ -384,8 +384,14 @@ class ModaliasCacheBuilder(_ModaliasCacheBase):
         # * KSRC: kernel srctree
         mkscript_argv.add("KSRC", self.source_info.srctree)
 
-        # * DEPMOD: FIXME!
-        mkscript_argv.add("DEPMOD", "/sbin/depmod")
+        # * DEPMOD: adhere to environment var, but locate it otherwise
+        depmod_prog = os.environ.get("DEPMOD") or osmisc.which_sbin("depmod")
+        if not depmod_prog:
+            raise ModaliasCacheBuildPrepareError("Could not locate depmod")
+        # --
+
+        mkscript_argv.add("DEPMOD", depmod_prog)
+        log_debug("depmod: %s", depmod_prog)
 
         if self.CONF_TARGET:
             mkscript_argv.add("KERNELCONFIG_CONFTARGET", self.CONF_TARGET)
