@@ -211,24 +211,6 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                 "path to the unpacked kernel sources directory", "\".\""
             )
         )
-
-        common_arg_group.add_argument(
-            "-m", "--modules-dir", metavar="<mod_dir>",
-            default=argparse.SUPPRESS,
-            type=arg_types.arg_modules_dir,
-            help=with_default(
-                (
-                    'path to the modules directory,\n'
-                    'used for looking up module aliases,\n'
-                    'can also point to a tarball\n'
-                    'or be one of\n'
-                    '* "none": disable\n'
-                    '* "auto": autodetect and required\n'
-                    '* "optional": autodetect and optional\n'
-                ),
-                'optional'
-            )
-        )
         # -- end common_arg_group
 
         genconfig_arg_group = parser.add_argument_group(
@@ -281,6 +263,24 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             default=argparse.SUPPRESS,
             help=with_default(
                 "output kernel configuration file", "\"<srctree>/.config\""
+            )
+        )
+
+        genconfig_arg_group.add_argument(
+            "-m", "--modules-dir", metavar="<mod_dir>",
+            default=argparse.SUPPRESS,
+            type=arg_types.arg_modules_dir,
+            help=with_default(
+                (
+                    'path to the modules directory,\n'
+                    'used for looking up module aliases,\n'
+                    'can also point to a tarball\n'
+                    'or be one of\n'
+                    '* "none": disable\n'
+                    '* "auto": autodetect and required\n'
+                    '* "optional": autodetect and optional\n'
+                ),
+                'optional'
             )
         )
         # -- end genconfig_arg_group
