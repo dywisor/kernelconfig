@@ -114,6 +114,14 @@ class InstallInfoBase(object, metaclass=abc.ABCMeta):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def get_cache_search_dirs(self, name=None, data_name=None):
+        """
+        @return:  new multi dir object
+        @rtype:   L{MultiDirEntry}
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def copy(self):
         """Creates and returns a copy of this installation info object.
 
@@ -323,5 +331,40 @@ class DefaultInstallInfo(InstallInfoBase):
 
     def get_cache_dir_path(self, name=None):
         return self.get_cache_dirs(name=name).get_path()
+
+    def get_cache_search_dirs(
+        self, name=None, data_name=None, *, check_exist=True
+    ):
+        """
+        @return: new multidir object
+        """
+        search_dirs = multidir.MultiDirEntry()
+
+        # cache_dirs: multidir entry
+        if not self.cache_dirs:
+            pass
+        elif name:
+            search_dirs.append(
+                self.cache_dirs.get_child(name, check_exist=check_exist)
+            )
+        else:
+            search_dirs.append(self.cache_dirs)
+
+        # data_dirs: multidir entry
+        #   data_name=None defaults to name
+        if data_name is None:
+            data_name = name
+
+        if not self.data_dirs:
+            pass
+        elif data_name:
+            search_dirs.append(
+                self.data_dirs.get_child(data_name, check_exist=check_exist)
+            )
+        else:
+            search_dirs.append(self.data_dirs)
+
+        return search_dirs
+    # --- end of get_cache_search_dirs (...) ---
 
 # --- end of DefaultInstallInfo ---
