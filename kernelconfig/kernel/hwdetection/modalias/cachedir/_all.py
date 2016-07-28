@@ -9,17 +9,17 @@ import shutil
 import stat
 import tempfile
 
-from ....abc import loggable
-from ....util import fs
-from ....util import fspath
-from ....util import misc
-from ....util import objcache
-from ....util import osmisc
-from ....util import subproc
-from ....util import tmpdir
+from .....abc import loggable
+from .....util import fs
+from .....util import fspath
+from .....util import misc
+from .....util import objcache
+from .....util import osmisc
+from .....util import subproc
+from .....util import tmpdir
 
 
-from ... import kversion
+from .... import kversion
 
 
 __all__ = ["ModaliasCacheBuilder"]
