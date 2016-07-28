@@ -114,9 +114,9 @@ if HAVE_KMOD:
             else:
                 # modules dir obj  -->  return from prepare()
                 if mod_dir is True:
-                    raise NotImplementedError("lazy-init dynamic mod dir")
-                    mod_dir = None  # ...
-                    self._mod_dir = mod_dir
+                    raise AssertionError(
+                        "auto-set modules dir must be done at an upper level"
+                    )
                 # --
 
                 return mod_dir.prepare()
