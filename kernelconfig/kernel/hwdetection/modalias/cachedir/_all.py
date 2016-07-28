@@ -18,8 +18,9 @@ from .....util import osmisc
 from .....util import subproc
 from .....util import tmpdir
 
-
 from .... import kversion
+
+from . import exc
 
 
 __all__ = ["ModaliasCacheBuilder"]
@@ -34,22 +35,6 @@ def _create_kernelversion_noerr(
     except ValueError:
         return None
 # ---
-
-
-class ModaliasCacheError(RuntimeError):
-    pass
-
-
-class ModaliasCacheBuildError(ModaliasCacheError):
-    pass
-
-
-class ModaliasCacheBuildPrepareError(ModaliasCacheBuildError):
-    pass
-
-
-class ModaliasCacheBuildInstallError(ModaliasCacheBuildError):
-    pass
 
 
 class MakeArgs(list):
@@ -137,7 +122,9 @@ class ModaliasCacheKey(_ModaliasCacheKey):
         def strconvert(arg):
             str_val = str(arg)
             if forbidden_seq.search(str_val):
-                raise ModaliasCacheError("invalid cache key element", str_val)
+                raise exc.ModaliasCacheError(
+                    "invalid cache key element", str_val
+                )
             return str_val
         # ---
 
@@ -240,7 +227,7 @@ class _ModaliasCacheBase(loggable.AbstractLoggable):
         def get_arch_key():
             for arch_key in self.get_arch_keys():
                 return arch_key
-            raise ModaliasCacheError("no arch cache key")
+            raise exc.ModaliasCacheError("no arch cache key")
         # ---
 
         # the cache key consists of
@@ -679,13 +666,13 @@ class ModaliasCacheBuilder(_ModaliasCacheBase):
     def _get_outfile(self):
         outfile = self.outfile
         if not outfile:
-            raise ModaliasCacheBuildInstallError(
+            raise exc.ModaliasCacheBuildInstallError(
                 "outfile is not set - has prepare() been called?"
             )
 
         outfile_stat_info = os.lstat(outfile)  # raises OSError
         if not stat.S_ISREG(outfile_stat_info.st_mode):
-            raise ModaliasCacheBuildInstallError(
+            raise exc.ModaliasCacheBuildInstallError(
                 "outfile is not a regular file", outfile
             )
         # --
@@ -704,7 +691,7 @@ class ModaliasCacheBuilder(_ModaliasCacheBase):
             log_debug("Trying to locate modalias make script")
             mkscript = self.install_info.get_script_file("modalias.mk")
             if not mkscript:
-                raise ModaliasCacheBuildPrepareError(
+                raise exc.ModaliasCacheBuildPrepareError(
                     "could not locate modalias.mk script"
                 )
 
@@ -718,7 +705,7 @@ class ModaliasCacheBuilder(_ModaliasCacheBase):
         if not build_root_dir:
             build_root_dir = self.get_default_build_root_dir()
             if not build_root_dir:
-                raise ModaliasCacheBuildPrepareError(
+                raise exc.ModaliasCacheBuildPrepareError(
                     "could not find a suitable build root directory"
                 )
 
@@ -789,7 +776,7 @@ class ModaliasCacheBuilder(_ModaliasCacheBase):
         # * DEPMOD: adhere to environment var, but locate it otherwise
         depmod_prog = os.environ.get("DEPMOD") or osmisc.which_sbin("depmod")
         if not depmod_prog:
-            raise ModaliasCacheBuildPrepareError("Could not locate depmod")
+            raise exc.ModaliasCacheBuildPrepareError("Could not locate depmod")
         # --
 
         mkscript_argv.add("DEPMOD", depmod_prog)
