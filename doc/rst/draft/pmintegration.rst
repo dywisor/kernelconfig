@@ -68,6 +68,11 @@ CONFIG_CHECK
 
 Defined in ``linux-info.eclass``::
 
+    # Copyright 1999-2016 Gentoo Foundation
+    # Distributed under the terms of the GNU General Public License v2
+
+    ...
+
     # @ECLASS-VARIABLE: CONFIG_CHECK
     # @DESCRIPTION:
     # A string containing a list of .config options to check for before
@@ -148,9 +153,15 @@ The recommendations can be wrong in cross-compilation scenarios.
 
 ----
 
-A simple example is ``sys-fs/fuse``, which wants ``FUSE_FS``:
+A simple example is ``sys-fs/fuse``, which wants ``FUSE_FS``,
+from ``fuse-2.9.7.ebuild``:
 
 .. code:: bash
+
+    # Copyright 1999-2016 Gentoo Foundation
+    # Distributed under the terms of the GNU General Public License v2
+
+    ...
 
     pkg_setup() {
         if use kernel_linux ; then
@@ -165,9 +176,15 @@ A simple example is ``sys-fs/fuse``, which wants ``FUSE_FS``:
 
 kernelconfig should enable ``FUSE_FS`` here.
 
-A more "extreme" example is ``app-emulation/docker``:
+A more "extreme" example is ``app-emulation/docker``,
+from ``docker-9999.ebuild``:
 
 .. code:: bash
+
+    # Copyright 1999-2016 Gentoo Foundation
+    # Distributed under the terms of the GNU General Public License v2
+
+    ...
 
     CONFIG_CHECK="
         ~NAMESPACES ~NET_NS ~PID_NS ~IPC_NS ~UTS_NS
