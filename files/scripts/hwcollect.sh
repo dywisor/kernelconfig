@@ -95,6 +95,24 @@ hwcollect_modules_driver_symlink() {
 }
 
 
+# hwcollect_modules_lsmod()
+#
+#  Reads /proc/modules and writes a list of module names to stdout
+#  (one item per line).
+#
+hwcollect_modules_lsmod() {
+    local mod_name
+    local dont_care
+
+    # /proc/modules does not exist when non-modular kernel is booted
+    [ -r /proc/modules ] || return 0
+
+    while read -r mod_name dont_care; do
+        [ -z "${mod_name-}" ] || printf '%s\n' "${mod_name}"
+    done < /proc/modules | sort
+}
+
+
 # hwcollect_modules_modalias()
 #
 #  Scans /sys for "modalias" files and writes a deduplicated list
@@ -145,6 +163,9 @@ hwcollect_main() {
 
     # kernel modules currently used by devices
     json_strlist_attr "driver"    hwcollect_modules_driver_symlink
+
+    # loaded modules
+    json_strlist_attr "lsmod"     hwcollect_modules_lsmod
 
     # module alias identifiers
     json_strlist_attr "modalias"  hwcollect_modules_modalias
