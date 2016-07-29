@@ -127,6 +127,25 @@ hwcollect_modules_modalias() {
 }
 
 
+# hwcollect_filesystem_types_mounted()
+#
+#  Reads the types of mounted filesystems from /proc/self/mounts
+#  and writes them to stdout. (one item per line, deduplicated)
+#
+#  Note that this source is unreliable when running hwcollect
+#  on a live system (e.g. "/" mounted as aufs/overlayfs union).
+#
+hwcollect_filesystem_types_mounted() {
+    local fs mp fstype dont_care
+
+    [ -r /proc/self/mounts ] || return 1
+
+    while read -r fs mp fstype dont_care; do
+        [ -z "${fstype-}" ] || printf '%s\n' "${fstype}"
+    done < /proc/self/mounts | sort -u
+}
+
+
 # hwcollect_json_init ( version )
 #
 #  Starts the json output file (a json object).
@@ -169,6 +188,9 @@ hwcollect_main() {
 
     # module alias identifiers
     json_strlist_attr "modalias"  hwcollect_modules_modalias
+
+    # types of mounted filesystems
+    json_strlist_attr "fsmount"   hwcollect_filesystem_types_mounted
 
     hwcollect_json_fini
 }
