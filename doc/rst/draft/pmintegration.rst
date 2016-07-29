@@ -253,7 +253,7 @@ How should kernelconfig handle these cases?
 * ``MEMCG_KMEM``: recommendation is based on the kernel srctree present
   at package/ebuild build time, not kernelconfig's ``--srctree``
 
-* ``AUFS_FS``: "optional", but "if and only if"?
+* ``AUFS_FS``: "required", but "if and only if"?
 
 
 
@@ -332,7 +332,7 @@ Retrieval of Recommended Options
         !CONFIG_A   =>  nop    # or disable A
 
         # "reworkmodules", ignored
-        @*         => nop
+        @*          =>  nop
 
     The created file needs to be installed somehow.
 
@@ -346,7 +346,7 @@ Retrieval of Recommended Options
 *feature set* files
 -------------------
 
-As outline before, the idea here is to distribute files
+As outlined before, the idea here is to distribute files
 written in the `macros file format`_.
 This can range from ``.config`` file snippets to conditional instructions.
 
