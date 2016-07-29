@@ -431,6 +431,11 @@ Code-wise, it would be necessary to add a way to configure
 adding individual directories to the include file search path is already
 implemented.
 
+A useful addition to that would be more fine-grained selection
+of include files (e.g. ``include pkg/* if installed``,
+or a ``autodetect`` script in the repo which creates a list of
+include files).
+
 
 eclass
 ^^^^^^
