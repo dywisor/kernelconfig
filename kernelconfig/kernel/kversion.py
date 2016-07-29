@@ -63,6 +63,10 @@ class KernelVersionRegexp(object):
     def match_extraversion_str(cls, s):
         return cls.RE_EXTRAVERSION_STR.match(s)
 
+    @classmethod
+    def get_version_regexp_str(cls):
+        return cls._REGEXP_VERSION_STR
+
 # ---
 
 
