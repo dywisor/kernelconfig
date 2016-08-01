@@ -227,13 +227,6 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             )
         )
 
-        genconfig_arg_group.add_argument(
-            "-H", "--hwdetect", metavar="<file>", dest="hwdetect_file",
-            type=arg_types.arg_existing_file,
-            default=argparse.SUPPRESS,
-            help="enable hardware detection from hwcollect file"
-        )
-
         # "--config" is an option and not a positional arg
         #
         # In future, with "curated sources" and a settings file,
@@ -264,6 +257,13 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             help=with_default(
                 "output kernel configuration file", "\"<srctree>/.config\""
             )
+        )
+
+        genconfig_arg_group.add_argument(
+            "-H", "--hwdetect", metavar="<file>", dest="hwdetect_file",
+            type=arg_types.arg_existing_file,
+            default=argparse.SUPPRESS,
+            help="enable hardware detection from hwcollect file"
         )
 
         genconfig_arg_group.add_argument(
