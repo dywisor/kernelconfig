@@ -259,6 +259,8 @@ kernelconfig accepts a number of options:
 --generate-config
     Generate a kernel configuration. This is the default mode.
 
+.. _\-\-generate\-modalias:
+
 --generate-modalias
 
     Create a *modalias information source* and store it in the cache directory.
@@ -931,14 +933,47 @@ but requires a *modalias information source*.
 Modalias Information Source
 +++++++++++++++++++++++++++
 
-A *modalias information sources* is, basically, a very reduced variant
+A *modalias information source* is, basically, a very reduced variant
 of a modules directory that would normally be installed to ``/lib/modules``.
 The most important file provided by this source is ``modules.alias``,
-a mapping from module alias identifiers to *ideally* all modules.
+a *ideally complete* mapping from module alias identifiers to modules.
 
-~~ under construction ~~
+*modalias information sources* as used by kernelconfig can be directories,
+but are usually xz-compressed tarballs that are kept in the
+*modalias cache directory*, ``$HOME/.cache/kernelconfig/modalias``.
 
-$$$ can also be a tarball instead of a directory, also preferred over dir
+When kernelconfig is requested to locate a cached source,
+it will by default only look for sources that have been built for the
+same target architecture or at least for the same ``SUBARCH``.
+Furthermore, the kernel version of the cached source must have the same
+major version and the version difference must not exceed 8 patchlevels.
+This is the so-called *safe* mode (``--safe-modalias``).
+
+In *unsafe* mode,
+the kernel's major version must be equal but is otherwise unrestricted,
+and cached sources for different target architectures are considered,
+though not preferred.
+This mode has to be explicitly enabled with ``--unsafe-modalias``.
+
+A new *modalias information source* can be created with::
+
+    kernelconfig --generate-modalias -k /usr/src/linux
+
+
+This will build all kernel modules using an ``allmodconfig`` configuration
+install them to a temporary directory, run depmod
+and create a tarball with the relevant files,
+which is stored in the cache directory as
+``$HOME/.cache/kernelconfig/modalias/{kernelversion}__{arch}.txz``,
+for example ``$HOME/.cache/kernelconfig/modalias/4.6.5__x86_64.txz``.
+
+The tarballs can be shared with others.
+Since there is no convenient way to import shared tarballs [yet],
+they have to specified with the ``--modules-dir`` option
+or copied to the cache directory manually.
+
+Be aware of the time and disk space requirements,
+which are covered in `--generate-modalias`_.
 
 
 .. _hwcollector:
