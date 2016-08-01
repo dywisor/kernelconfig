@@ -21,6 +21,8 @@
 #  * find   with -name, -print0
 #  * xargs  with -n
 #
+# Additionally, /sys and /proc need to be mounted.
+#
 set -u
 
 export LC_ALL=C
