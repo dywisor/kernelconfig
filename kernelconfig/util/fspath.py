@@ -59,7 +59,7 @@ def join_relpath(dirpath, relpath, *, _osp_join=os.path.join):
     norm_relpath = normalize_relpath_if_nonempty(relpath)
 
     if norm_relpath and norm_relpath != ".":
-        return _osp_join(dirpath, relpath)
+        return _osp_join(dirpath, norm_relpath)
     else:
         return dirpath
 # --- end of join_relpath (...) ---
