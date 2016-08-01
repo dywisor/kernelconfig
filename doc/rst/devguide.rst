@@ -63,7 +63,12 @@ and write it to the output ``.config``:
    read from text files using the "macros" interpreter,
    or made by using the ``ConfigChoices`` Python-Level interface.
 
-   The are stored in an intermediate *decision* object,
+   **Hardware detection** reads hardware identifiers from ``/sys``,
+   determines associated kernel modules,
+   translates them into config options,
+   which are then transformed into modification requests.
+
+   Modification requests are stored in an intermediate *decision* object,
    accumulate with other requests, and form a *decision dict*
    where each Kconfig symbol is mapped to a specific value or a range
    of acceptable values.
