@@ -120,6 +120,13 @@ RMF = $(RM) -f
 SED = sed
 TOUCH = touch
 TAR = tar
+# the compression is controlled by the modalias.txz rule
+TAR_CREATE_OPTS =
+# try to reduce the information leak
+TAR_CREATE_OPTS += --numeric-owner --owner=root --group=root
+TAR_CREATE_OPTS += --no-acls
+TAR_CREATE_OPTS += --no-xattrs
+
 
 unexport MKDIR
 unexport MKDIRP
@@ -132,6 +139,7 @@ unexport RMF
 unexport SED
 unexport TOUCH
 unexport TAR
+unexport TAR_CREATE_OPTS
 
 unexport PHONY
 
@@ -305,7 +313,8 @@ $(KERNELCONFIG_STAMPD)/.stamp_modules_install: %/.stamp_modules_install: \
 $(KERNELCONFIG_KINST)/modalias.txz: \
 	$(KERNELCONFIG_STAMPD)/.stamp_modules_install | $(KERNELCONFIG_KINST)
 
-	$(TAR) c -C '$(KERNELCONFIG_KINST_MODALIAS)/' ./ -J -f '$(@)'
+	$(TAR) c -C '$(KERNELCONFIG_KINST_MODALIAS)/' \
+		./ -J -f '$(@)' $(TAR_CREATE_OPTS)
 
 
 
