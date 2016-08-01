@@ -195,6 +195,14 @@ kernelconfig accepts a number of options:
 
     Not set by default.
 
+-I <file>
+
+    File with additional kernel configuration modifications.
+    The file format is identical to the that of the `\[options\]`_ section
+    of the settings file, which also allows ``.config`` snippets.
+
+    Can be specified more than once. Not set by default.
+
 -O <file>, --outconfig <file>
 
     The output .config file.
