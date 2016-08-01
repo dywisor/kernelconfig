@@ -209,9 +209,90 @@ kernelconfig accepts a number of options:
 
     Defaults to ``<srctree>/.config``.
 
+-H <file>, --hwdetect <file>
+
+    Enable hardware detection and read detected hardware from a file
+    created by `hwcollector`_.
+
+    Disables any other hardware detection,
+    in particular ``hwdetect`` instructions in the `\[options\]`_ section
+    of the settings file.
+
+    Not set by default.
+
+-m <mod_dir>, --modules-dir <mod_dir>
+
+    The `modalias information source`_
+    which is used for modaliased-based hardware detection.
+    It can be
+
+    * a path to a directory, e.g. ``/lib/$(uname -r)/modules``
+
+    * a path to a tarball file
+
+    * ``none``,
+      which disables modalias-based hardware detection completely
+
+    * ``auto``,
+      which requires a cached *modalias information source*
+      that has previously been created with ``--generate-modalias``.
+
+    * ``optional``,
+      which uses a cached *modalias information source* if there is one
+      available, and otherwise disables modalias-based hardware detection
+
+    Defaults to ``optional``.
+
+--unsafe-modalias
+
+    Controls how strict cache searching is
+    for ``--modules-dir auto`` and ``optional``.
+    If this option is given, less compatible *modalias information sources*
+    are allowed if no better candidates exist.
+
+    The default behavior is ``--safe``.
+
+--safe-modalias
+
+    Forbid use of unsafe *modalias information sources*.
 
 --generate-config
     Generate a kernel configuration. This is the default mode.
+
+--generate-modalias
+
+    Create a *modalias information source* and store it in the cache directory.
+    It can then be used for modalias-based hardware detection
+    in subsequent runs, or shared with others.
+
+    .. Warning::
+
+        *modalias information source* involves building all kernel modules
+        with an ``allmodconfig`` configuration, which takes a lot of time
+        and about 2GiB of temporary disk space.
+        kernelconfig will try to use ``/var/tmp`` if ``/tmp`` does not have
+        enough free space, and ``--modalias-build-dir`` can be used
+        to specify an alternate build root directory.
+
+        By default, up to ``number of CPU cores`` build jobs are used
+        for compiling, this can be adjusted with ``--jobs``.
+
+-j <numjobs>, --jobs <numjobs>
+
+    Allow up to ``<numjobs>`` build jobs when building modules.
+
+    Defaults to the number of processor cores.
+
+--modalias-build-dir <dir>
+
+    Alternative build root directory for *modalias information source*
+    building.
+    kernelconfig creates a temporary subdirectory within this directory,
+    and cleans it up on exit.
+
+    By default, building takes place in ``/tmp`` or ``$TMPDIR``, if set.
+    ``/var/tmp`` is used as fallback
+    if ``/tmp`` does not have enough free space.
 
 --list-source-names
     List the names of all known configuration sources.
@@ -247,6 +328,7 @@ kernelconfig accepts a number of options:
 
     ``<mode>`` must be either
     ``generate-config``,
+    ``generate-modalias``,
     ``list-source-names``, ``list-sources``, or ``help-sources``.
 
     ``help-source`` can not be specified with this option.
@@ -788,6 +870,18 @@ Globbing is supported and expands to a combined list of glob matches
 from all directories, but with the usual order of preference.
 
 See `macros file format`_ for a more detailed explanation of the format.
+
+
+
+Hardware Detection
+------------------
+
+.. _hwcollector:
+
+.. _modalias information source:
+
+~~Under Construction~~
+
 
 
 Curated Sources
