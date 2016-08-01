@@ -3,6 +3,9 @@
 
 import abc
 import os.path
+import re
+import tarfile
+
 
 from ....abc import loggable
 from ....util import fs
@@ -119,25 +122,134 @@ class ModulesDir(AbstractModulesDir):
         path = self.get_path()
         return path and os.path.isdir(path)
 
+    def _check_tarfile(self, filepath, tarfile_fh):
+        """
+        @return:  list of members that may be unpacked, possibly empty
+        @rtype:   C{list}
+        """
+        # bad path: use w/ re.search()
+        #  tar members whose name is accepted by this regexp
+        #  should not be unpacked.
+        #
+        #  This includes absolute paths and paths containing os.path.pardir.
+        #
+        re_bad_path = re.compile(
+            r'(?:^/|(?:^|/){pardir}(?:$|/))'.format(
+                pardir=re.escape(os.path.pardir)
+            )
+        )
+
+        def check_member_allowed(member):
+            # (1) must be a regular file, dir or hard-/symlink
+            # (2) must have a relative path without parent dir refs ("..")
+            # (3) if it is a link, the link dst must also follow rule (2)
+
+            if re_bad_path.search(member.name):
+                self.logger.warning(
+                    "Ignoring tar member due to bad name: %s", member.name
+                )
+                return False
+            # --
+
+            if member.issym() or member.islnk():
+                if not member.linkname or re_bad_path.search(member.linkname):
+                    self.logger.warning(
+                        "Ignoring link tar member to bad dst: %s (-> %s)",
+                        member.name, member.linkname
+                    )
+                    return False
+                # --
+
+            elif member.isfile():
+                pass
+
+            elif member.isdir():
+                pass
+
+            else:
+                self.logger.warning(
+                    "Ignoring tar member due to bad type: %s", member.name
+                )
+                return False
+            # --
+
+            self.logger.debug("tar member ok: %s", member.name)
+            return True
+        # ---
+
+        return [m for m in tarfile_fh.getmembers() if check_member_allowed(m)]
+    # ---
+
     def _create_from_tarball(self, filepath):
-        # TODO: use tarfile
+        def open_tarfile(filepath):
+            tarfile_fh = None
+            try:
+                tarfile_fh = tarfile.open(filepath, "r")
+                yield tarfile_fh
+            except tarfile.TarError:
+                yield None
+            finally:
+                if tarfile_fh is not None:
+                    tarfile_fh.close()
+        # ---
+
         assert self._tmpdir is None
-        self._tmpdir = tmpdir.Tmpdir(suffix=".kernelconfig")
-        tmp_path = self._tmpdir.get_path()
+        unpack_tmpdir = tmpdir.Tmpdir(suffix=".kernelconfig")
+        tmp_path = unpack_tmpdir.get_path()
 
         self.logger.debug(
             "Unpacking modules/modalias tar file %s to temporary directory",
             filepath
         )
-        with subproc.SubProc(
-            ["tar", "xa", "-C", tmp_path, "-f", os.path.abspath(filepath)],
-            tmpdir=tmp_path, logger=self.logger
-        ) as proc:
-            if not proc.join(return_success=True):
-                raise ModulesDirCreationError("failed to unpack tar archive")
 
-        self.path = tmp_path
-    # ---
+        tarfile_fh = None
+        try:
+            # same as tarfile.is_tarfile(), but also keep opened file open
+            try:
+                tarfile_fh = tarfile.open(filepath, "r")
+            except tarfile.TarError:
+                tarfile_fh = None  # nop
+            # --
+
+            if tarfile_fh is not None:
+                self.logger.debug("Using 'tarfile' module for unpacking")
+                #
+                tar_members = self._check_tarfile(filepath, tarfile_fh)
+                if not tar_members:
+                    # then no members, or only 'malicious' members
+                    raise ModulesDirCreationError("tarfile has no members")
+                # --
+
+                # COULDFIX: reduce tar_members to what the modalias lookup
+                #           class needs (i.e. kmod)
+                tarfile_fh.extractall(tmp_path, members=tar_members)
+
+            else:
+                self.logger.debug("Trying 'tar' prog for unpacking")
+                with subproc.SubProc(
+                    [
+                        "tar", "xa",
+                        "-C", tmp_path,
+                        "-f", os.path.abspath(filepath)
+                    ],
+                    tmpdir=tmp_path, logger=self.logger
+                ) as proc:
+                    if not proc.join(return_success=True):
+                        raise ModulesDirCreationError(
+                            "failed to unpack tar archive w/ tar"
+                        )
+            # -- end if tarfile_fh
+
+            # unlikely, but reassure that self._tmpdir has not been set
+            assert self._tmpdir is None
+            self._tmpdir = unpack_tmpdir
+            self.path = tmp_path
+
+        finally:
+            if tarfile_fh is not None:
+                tarfile_fh.close()
+        # -- end with autoclose tarfile
+    # --- end of _create_from_tarball (...) ---
 
     def create(self):
         source = self.source
