@@ -119,7 +119,7 @@ class ModulesDir(AbstractModulesDir):
         path = self.get_path()
         return path and os.path.isdir(path)
 
-    def _create_from_tarfile(self, tarfile):
+    def _create_from_tarball(self, filepath):
         # TODO: use tarfile
         assert self._tmpdir is None
         self._tmpdir = tmpdir.Tmpdir(suffix=".kernelconfig")
@@ -127,10 +127,10 @@ class ModulesDir(AbstractModulesDir):
 
         self.logger.debug(
             "Unpacking modules/modalias tar file %s to temporary directory",
-            tarfile
+            filepath
         )
         with subproc.SubProc(
-            ["tar", "xa", "-C", tmp_path, "-f", os.path.abspath(tarfile)],
+            ["tar", "xa", "-C", tmp_path, "-f", os.path.abspath(filepath)],
             tmpdir=tmp_path, logger=self.logger
         ) as proc:
             if not proc.join(return_success=True):
@@ -145,7 +145,7 @@ class ModulesDir(AbstractModulesDir):
         if os.path.isfile(source):
             # then assume tar file
             self.logger.debug("%s is -probably- a tar file source", source)
-            self._create_from_tarfile(source)
+            self._create_from_tarball(source)
 
         elif os.path.isdir(source):
             # then probe,
@@ -161,7 +161,7 @@ class ModulesDir(AbstractModulesDir):
                 if fpath:
                     # tarfile found
                     self.logger.debug("%s is a tar file source", source)
-                    self._create_from_tarfile(fpath)
+                    self._create_from_tarball(fpath)
 
                 else:
                     raise ModulesDirCreationError(
