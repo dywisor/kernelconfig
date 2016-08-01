@@ -211,8 +211,8 @@ kernelconfig accepts a number of options:
 
 -H <file>, --hwdetect <file>
 
-    Enable hardware detection and read detected hardware from a file
-    created by `hwcollector`_.
+    Enable hardware detection and read the information from a *hwinfo* file
+    as created by `hwcollector`_.
 
     Disables any other hardware detection,
     in particular ``hwdetect`` instructions in the `\[options\]`_ section
@@ -854,6 +854,17 @@ and the ``CONFIG_`` prefix can be omitted.
 The first group of commands accepts an arbitrary non-zero
 number of config options.
 
+.. N.B: kernel sources only::
+
+Config options can also be referenced by their module name, for example::
+
+    builtin-or-module module ddbridge   # enables DVB_DDBRIDGE
+
+`Hardware detection`_ can be requested with ``hwdetect``, however
+it has no effect if the ``--hwdetect`` option is passed to kernelconfig::
+
+    hwdetect
+
 It also possible to load so-called *feature set* files::
 
     include  feature
@@ -876,11 +887,148 @@ See `macros file format`_ for a more detailed explanation of the format.
 Hardware Detection
 ------------------
 
+kernelconfig is able to determine which hardware is present on the system
+and enable config options accordingly.
+
+This feature can be requested with ``hwdetect`` in the `\[options\]`_ section
+of the settings file, or with the ``--hwdetect <file>`` command line option.
+The latter is meant for
+`collecting hardware information on a different machine`_.
+
+In either case, it relies on at least one *hardware information source*
+and a mapping from hardware identifiers to config options,
+which is created at runtime from the kernel sources being processed.
+
+Two different *hardware information source* are available:
+
+* **driver**
+  \- detect which kernel modules are currently used by any device
+
+* **modalias**
+  \- detect kernel modules for all device via module alias identifiers
+
+kernelconfig uses whatever source is available
+and potentially both *driver*- and *modalias*-based detection.
+The hardware identifiers are translated into config options,
+which are enabled as *builtin* or *module*, and *module* is preferred.
+
+If hardware detection has been requested and at least one hardware identifier
+has been found but no config options could be determined,
+then hardware detection is considered to have failed.
+
+
+**driver**-based hardware detection has no special requirements except
+that modules for ideally all devices must be present and loaded (or builtin).
+This can work sufficiently well when a "big" kernel has been booted
+and a kernel configuration is being created for the same machine.
+
+Otherwise, **modalias**-based hardware detection provides a more accurate
+selection of config options that also includes options for unknown devices,
+but requires a *modalias information source*.
+
+
+
+Modalias Information Source
++++++++++++++++++++++++++++
+
+A *modalias information sources* is, basically, a very reduced variant
+of a modules directory that would normally be installed to ``/lib/modules``.
+The most important file provided by this source is ``modules.alias``,
+a mapping from module alias identifiers to *ideally* all modules.
+
+~~ under construction ~~
+
+$$$ can also be a tarball instead of a directory, also preferred over dir
+
+
 .. _hwcollector:
 
-.. _modalias information source:
+Collecting Hardware Information on a Different Machine
+++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-~~Under Construction~~
+Hardware detection is not limited to the machine running kernelconfig,
+it is also possible to scan for hardware identifiers on another machine.
+
+.. Note::
+
+   modalias-based hardware detection is recommended for this use case.
+
+Example scenarios include booting a live system on the *target* machine,
+for example SystemRescueCd, detecting its hardware and sending the information
+to the *build* machine, which then feeds kernelconfig with the data.
+Another example would be a minimal busybox-based initramfs booted via PXE
+that serves the hardware information via netcat.
+
+For this purpose, kernelconfig offers a ``hwcollect`` shell script,
+which can be found under ``files/scripts/hwcollect.sh``
+in the project's sources.
+It scans ``/sys`` and creates a JSON file containing the information,
+which is written to stdout,
+and can be fed to kernelconfig with the ``--hwdetect`` option.
+
+Under normal circumstances, the script can be run by regular users.
+An exception to that is grsec ``/sys`` protections.
+
+If the *build* machine is able to access the *target* machine via ssh
+as user ``hwcol`` and the script is installed on the *target*,
+the commands for generating a configuration for *target*
+with hardware detection would be::
+
+    [build] $ ssh -l hwcol target kernelconfig-hwcollect > ./hwinfo.json
+    [build] $ kernelconfig -H ./hwinfo.json ...
+
+
+It is also possible to send the script to the target machine via ssh::
+
+    [build] $ cd <prjroot>
+    [build] $ < ./files/scripts/hwcollect.sh ssh -l hwcol target sh > ./hwinfo.json
+    [build] $ kernelconfig -H ./hwinfo.json ...
+
+
+The script's dependencies are a few basic programs including a shell,
+``/sys`` and ``/proc`` mounted, and a way to transfer files from the
+target machine to the build machine.
+
+
+hwinfo file
+^^^^^^^^^^^
+
+The hardware information file is a JSON object with dummy null-terminates
+that lists which kernel modules and module alias identifiers have been
+detected on the *target* machine:
+
+.. code:: json
+
+    {
+        "version": 1,
+        "driver": [
+            ...,
+            ""
+        ],
+        "modalias": [
+            ...,
+            ""
+        ],
+        "__null__": null
+    }
+
+
+The ``version`` tells kernelconfig the overall structure of the JSON object,
+it has to be ``1``.
+
+``driver`` is a list of kernel modules
+that kernelconfig should enable after translating them to config options,
+similar to driver-based hardware detection.
+
+``modalias`` is a list of module alias identifiers
+that kernelconfig should enable after translating them to config options.
+
+``__null__`` is completely ignored, as are empty strings in lists.
+JSON list/object items need to be separated with a comma,
+but a comma after the last item is not allowed.
+By using dummy null values,
+this detail can be mostly ignored in the collector script,
+with a small file size overhead of one dummy item per list/object.
 
 
 
