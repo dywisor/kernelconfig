@@ -1,6 +1,7 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
+import os.path
 import portage
 
 
@@ -27,6 +28,10 @@ class PackageInfo(object):
     __slots__ = ["cpv", "category", "name", "repo_name", "ebuild_file"]
 
     __hash__ = None
+
+    @property
+    def ebuild_name(self):
+        return os.path.basename(self.ebuild_file)
 
     def __init__(self, cpv, repo_name, ebuild_file):
         super().__init__()
