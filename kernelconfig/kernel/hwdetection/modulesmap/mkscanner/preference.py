@@ -171,7 +171,7 @@ class ModuleConfigOptionsScannerStrategy(loggable.AbstractLoggable):
             # --
 
             if len(optmap) > 1:
-                # TODO
+                #
                 # There is more than one config option that could possibly
                 # lead to enabling <module_name>.
                 # In many cases, but not all, this is a conflict!
@@ -201,6 +201,7 @@ class ModuleConfigOptionsScannerStrategy(loggable.AbstractLoggable):
                 #    matches basename(dirpath)
                 #
 
+                # module_name <> option match
                 matcher = ModuleNameConfigOptionsPumpPattern(module_name)
                 match_groups = matcher.search_all_group(optmap)
                 # any match? with rating >= 0?
@@ -234,9 +235,9 @@ class ModuleConfigOptionsScannerStrategy(loggable.AbstractLoggable):
                 # --
 
                 return None
-            # --
 
-            return list(optmap)
+            else:
+                return list(optmap)
     # ---
 
 # --- end of ModuleConfigOptionsScannerStrategy ---
