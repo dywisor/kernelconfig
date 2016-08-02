@@ -5,12 +5,29 @@
 #
 
 from . import base
+from . import overlay
 
 
 def main():
+    import logging
     import argparse
     import os.path
     import sys
+
+    def setup_logging():
+        console_log_fmt = "%(levelname)-8s [%(name)s] %(message)s"
+        log_level = logging.DEBUG
+
+        logger = logging.getLogger()
+
+        streamhandler = logging.StreamHandler(sys.stderr)
+        streamhandler.setLevel(log_level)
+
+        streamhandler.setFormatter(logging.Formatter(fmt=console_log_fmt))
+
+        logger.addHandler(streamhandler)
+        logger.setLevel(log_level)
+    # ---
 
     def get_arg_parser():
         prog = os.path.basename(sys.argv[0])
@@ -38,12 +55,19 @@ def main():
             help="include packages with empty CONFIG_CHECK in output"
         )
 
+        mkoverlays_arg_parser = sub_parsers.add_parser("mkoverlays")
+        mkoverlays_arg_parser.add_argument(
+            "overlays_rootdir",
+            help="root directory of the to-be-created overlays"
+        )
+
         return arg_parser
     # ---
 
     arg_parser = get_arg_parser()
     arg_config = arg_parser.parse_args()
 
+    setup_logging()
     port_iface = base.PortageInterface()
 
     if not arg_config.command or arg_config.command == "print-config-check":
@@ -68,6 +92,17 @@ def main():
                 )
                 print(cpv, "::", cfg_opts)
         # --
+
+    elif arg_config.command == "mkoverlays":
+        ov_root = overlay.TemporaryOverlayUnion(arg_config.overlays_rootdir)
+
+        for cpv in port_iface.find_all_cpv_inheriting_linux_info():
+            pkg_info = port_iface.get_package_info(cpv)
+            ov_root.add_package(pkg_info)
+        # --
+
+        ov_root.fs_init()
+        ov_root.populate()
     else:
         raise NotImplementedError(arg_config.command)
 # --- end of main (...) ---
