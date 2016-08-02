@@ -86,7 +86,10 @@ def main():
         for cpv, config_check in port_iface.zipmap_get_var(
             port_iface.find_all_cpv_inheriting_linux_info(), "CONFIG_CHECK"
         ):
-            if config_check or arg_config.print_config_check_show_all:
+            if (
+                config_check
+                or getattr(arg_config, "print_config_check_show_all", False)
+            ):
                 cfg_opts = sorted(
                     port_iface.parse_config_check(config_check)
                 )
