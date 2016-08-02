@@ -122,7 +122,7 @@ class ModaliasCacheBuilder(_base.ModaliasCacheBase):
     @type _mkscript_argv:       C{list} of C{str} (initially C{None})
     """
 
-    COPY_BUILD_SCRIPTS = True   # FIXME: testing=>True, others=>False
+    COPY_BUILD_SCRIPTS = False
 
     CONF_TARGET = None
 
