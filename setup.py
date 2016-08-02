@@ -86,6 +86,8 @@ class ProjectSetup(object):
                 "kconfig",
                 "kconfig.abc",
                 "kconfig.config",
+                "pm",
+                "pm.portagevdb",
                 "scripts",
                 "sources",
                 "sources.abc",
