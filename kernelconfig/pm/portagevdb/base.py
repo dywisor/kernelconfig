@@ -88,6 +88,19 @@ class PortageInterface(loggable.AbstractLoggable):
         )
     # --- end of get_package_info (...) ---
 
+    def get_repo_config(self, repo_name):
+        """
+        @raises KeyError:  if repo not found
+
+        @param repo_name:  name of the repository, e.g. "gentoo"
+        @type  repo_name:  C{str}
+
+        @return:  repo config object
+        @rtype:   (portage.repository.config.RepoConfig)
+        """
+        return self.settings.repositories[repo_name]
+    # --- end of get_repo_config (...) ---
+
     def find_all_cpv_inheriting_expr(self, eclass_name_expr):
         """
         Generator that queries portage's vdb for packages inheriting
