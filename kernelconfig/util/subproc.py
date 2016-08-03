@@ -226,6 +226,12 @@ class SubProc(loggable.AbstractLoggable):
         proc = self.proc
         return proc.returncode if proc is not None else None
 
+    def zap(self):
+        self.proc = None
+        self.stdout = None
+        self.stderr = None
+    # --- end of zap (...) ---
+
     def _get_cwd(self):
         return self.popen_kwargs.get("cwd")
 
@@ -239,14 +245,20 @@ class SubProc(loggable.AbstractLoggable):
 
     cwd = property(_get_cwd, _set_cwd)
 
+    def _set_cmdv(self, command, split_command_str):
+        if command is None:
+            self.cmdv = None
+        elif split_command_str and isinstance(command, str):
+            self.cmdv = self.split_command_str(command)
+        else:
+            self.cmdv = command
+    # ---
+
     def _setup(
         self, command, *,
         env, extra_env, cwd, stdin, popen_kwargs, tmpdir, split_command_str
     ):
-        if split_command_str and isinstance(command, str):
-            self.cmdv = self.split_command_str(command)
-        else:
-            self.cmdv = command
+        self._set_cmdv(command, split_command_str)
 
         kwargs = popen_kwargs.copy()
         kwargs["stdin"] = stdin
