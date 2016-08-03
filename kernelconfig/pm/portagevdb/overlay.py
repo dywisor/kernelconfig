@@ -440,16 +440,18 @@ class TemporaryOverlay(_TemporaryOverlay):
             if not fallback_repo_config:  # None, False
                 raise
 
-            # use the fallback repo config,
-            # rewrite masters to reflect this change
+            # use the fallback repo config
             self.logger.warning(
                 "Using main repo '%s' as fallback", fallback_repo_config.name
             )
             repo_config = fallback_repo_config
-            self.masters = [repo_config.name]
         else:
             self.logger.debug("Found repo config for '%s'", repo_config.name)
         # --
+
+        # set masters
+        self.masters = [repo_config.name]
+        self.masters.extend((r.name for r in repo_config.masters))
 
         eclasses = repo_config.eclass_db.eclasses
         try:
