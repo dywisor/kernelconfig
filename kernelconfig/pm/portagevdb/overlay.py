@@ -275,7 +275,7 @@ class AbstractTemporaryOverlay(AbstractTemporaryOverlayBase):
     # --- end of get_masters_str (...) ---
 
     def is_empty(self):
-        return bool(self.packages)
+        return not bool(self.packages)
 
     def add_package(self, package_info):
         cpv = package_info.cpv
@@ -529,9 +529,12 @@ class TemporaryOverlayUnion(AbstractTemporaryOverlayBase):
     # --- end of get_or_create_overlay (...) ---
 
     def is_empty(self):
-        return self.overlays and any(
-            (not ov.empty() for ov in self.iter_overlays())
-        )
+        if self.overlays:
+            return all(
+                (ov.is_empty() for ov in self.iter_overlays())
+            )
+        else:
+            return False
 
     def add_package(self, package_info):
         ov = self.get_or_create_overlay(package_info.repo_name)
