@@ -304,6 +304,8 @@ class _TemporaryOverlay(AbstractTemporaryOverlay):
         copy_method_name = "symlink"
 
         for pkg_info in self.iter_packages():
+            # if pkg_info.tmp_ebuild_file is not None: ignored
+
             pkg_dir = self.get_filepath(
                 fspath.join_relpath(pkg_info.category, pkg_info.name)
             )
@@ -313,14 +315,14 @@ class _TemporaryOverlay(AbstractTemporaryOverlay):
                 "Importing ebuild for %s as %s",
                 pkg_info.cpv, copy_method_name
             )
-            self.logger.debug("ebuild file: %s", pkg_info.ebuild_file)
+            self.logger.debug("ebuild file: %s", pkg_info.orig_ebuild_file)
 
             fs.dodir(pkg_dir)
             # unnecessary rmfile,
             #  except for running mkoverlays on the same dir again
             fs.rmfile(ebuild_dst)
             try:
-                copy_or_symlink(pkg_info.ebuild_file, ebuild_dst)
+                copy_or_symlink(pkg_info.orig_ebuild_file, ebuild_dst)
             except OSError as oserr:
                 if (
                     copy_or_symlink is os.symlink
@@ -339,9 +341,13 @@ class _TemporaryOverlay(AbstractTemporaryOverlay):
                         "Trying to import ebuild for %s as %s",
                         pkg_info.cpv, copy_method_name
                     )
-                    copy_or_symlink(pkg_info.ebuild_file, ebuild_dst)  # raises
+                    # raises:
+                    copy_or_symlink(pkg_info.orig_ebuild_file, ebuild_dst)
                 else:
                     raise
+            # -- end try
+
+            pkg_info.tmp_ebuild_file = ebuild_dst
         # -- end for
     # --- end of populate (...) ---
 

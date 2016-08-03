@@ -19,20 +19,25 @@ class PackageInfo(object):
     Once handed over to an overlay object,
     instances of this class should be considered readonly,
     although that is not enforced in any way.
+    An exception to that is "tmp_ebuild_file",
+    which gets set by the overlay after importing the original ebuild.
 
-    @ivar cpv:          package cat-pkg-version
-    @ivar category:     the package's category (from cpv)
-    @ivar name:         the package's name (from cpv)
-    @ivar repo_name:    the package's origin
-    @ivar ebuild_file:  path to the package's ebuild (in vdb)
+    @ivar cpv:               package cat-pkg-version
+    @ivar category:          the package's category (from cpv)
+    @ivar name:              the package's name (from cpv)
+    @ivar repo_name:         the package's origin
+    @ivar orig_ebuild_file:  path to the package's ebuild (in vdb)
     """
-    __slots__ = ["cpv", "category", "name", "repo_name", "ebuild_file"]
+    __slots__ = [
+        "cpv", "category", "name", "repo_name",
+        "orig_ebuild_file", "tmp_ebuild_file"
+    ]
 
     __hash__ = None
 
     @property
     def ebuild_name(self):
-        return os.path.basename(self.ebuild_file)
+        return os.path.basename(self.orig_ebuild_file)
 
     def __init__(self, cpv, repo_name, ebuild_file):
         super().__init__()
@@ -41,7 +46,8 @@ class PackageInfo(object):
         self.name = None
 
         self.repo_name = repo_name
-        self.ebuild_file = ebuild_file
+        self.orig_ebuild_file = ebuild_file
+        self.tmp_ebuild_file = None
 
         self._set_cpv(cpv)
     # --- end of __init__ (...) ---
