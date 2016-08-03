@@ -17,6 +17,7 @@ import kernelconfig.kernel.info
 import kernelconfig.kernel.hwdetection.modalias.cachedir
 import kernelconfig.kernel.hwdetection.modalias.modulesdir
 import kernelconfig.kconfig.config.gen
+import kernelconfig.pm.portagevdb
 import kernelconfig.util.fs
 import kernelconfig.util.misc
 import kernelconfig.util.multidir
@@ -125,6 +126,13 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                     (
                         "create files for modalias-based hardware-detection\n"
                         "WARNING: this takes a lot of time!"
+                    )
+                ),
+                (
+                    "eval-config-check", None,
+                    (
+                        "TESTING ONLY: re-evaluate CONFIG_CHECK,\n"
+                        "comparing it against <srctree>"
                     )
                 ),
                 (
@@ -616,6 +624,29 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
     # --- end of do_main_script_genconfig (...) ---
 
+    def do_main_script_eval_config_check(self, arg_config):
+        self.do_main_setup_logging(arg_config)
+        self.do_main_setup_source_info(arg_config)
+
+        pm_info = self.create_loggable(
+            kernelconfig.pm.portagevdb.PMIntegration,
+            install_info=self.install_info,
+            source_info=self.source_info
+        )
+
+        if not pm_info.enqueue_installed_packages():
+            self.logger.info("No packages inheriting linux-info found!")
+            return False
+        # --
+
+        # FIXME: mixing logger and print
+        config_check_map = pm_info.eval_config_check()
+        if not config_check_map:
+            self.logger.info("CONFIG_CHECK is empty or None")
+        else:
+            print(config_check_map)
+    # --- end of do_main_script_eval_config_check (...) ---
+
     def do_main_script_list_sources(self, arg_config, names_only):
         def any_of(sfiles):
             for item in filter(None, sfiles):
@@ -759,6 +790,9 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         elif script_mode[0] == "generate-modalias":
             return self.do_main_script_genmodalias(arg_config)
+
+        elif script_mode[0] == "eval-config-check":
+            return self.do_main_script_eval_config_check(arg_config)
 
         else:
             raise NotImplementedError("script mode", script_mode)
