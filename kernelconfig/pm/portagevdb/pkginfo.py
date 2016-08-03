@@ -16,7 +16,8 @@ class PackageInfo(object):
 
     No functionality is provided by this class, only the necessary variables.
 
-    Instances of this class should be considered readonly,
+    Once handed over to an overlay object,
+    instances of this class should be considered readonly,
     although that is not enforced in any way.
 
     @ivar cpv:          package cat-pkg-version
