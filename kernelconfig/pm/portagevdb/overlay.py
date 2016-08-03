@@ -387,7 +387,7 @@ class _TemporaryOverlay(AbstractTemporaryOverlay):
         with open(
             fspath.join_relpath(metadata_dir, "layout.conf"), "wt"
         ) as fh:
-            fh.write("repo_name = {!s}".format(self.tmp_name))
+            fh.write("repo_name = {!s}\n".format(self.tmp_name))
             # trailing whitespace in absence of "masters": don't care
             fh.write("masters = {!s}\n".format(self.get_masters_str()))
         # --
