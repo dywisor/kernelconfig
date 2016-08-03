@@ -183,6 +183,14 @@ class AbstractTemporaryOverlayBase(loggable.AbstractLoggable):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def iter_packages(self):
+        """
+        @return:  package info object(s)
+        @rtype:   L{PackageInfo}  (genexpr)
+        """
+        raise NotImplementedError()
+
     def __init__(self, root, **kwargs):
         super().__init__(**kwargs)
         self.root = root
@@ -502,6 +510,10 @@ class TemporaryOverlayUnion(AbstractTemporaryOverlayBase):
 
     def iter_overlays(self):
         return self.overlays.values()
+
+    def iter_packages(self):
+        for ov in self.iter_overlays():
+            yield from ov.iter_packages()
 
     def get_or_create_overlay(self, repo_name):
         try:
