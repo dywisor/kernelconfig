@@ -11,7 +11,7 @@ import weakref
 from . import fs
 
 
-__all__ = ["Tmpdir"]
+__all__ = ["Tmpdir", "TmpdirView", "get_tmpdir_or_view"]
 
 
 class _FileWrapper(object):
@@ -227,3 +227,33 @@ else:
 
         def _setup_finalizer(self):
             atexit.register(_finalize_tmpdir, weakref.ref(self))
+# -- end if
+
+
+def get_tmpdir_or_view(arg, parent=None):
+    """
+    @param   arg:
+    @type    arg:     C{None} | C{str} | [subclass-of] L{TmpdirView}
+    @keyword parent:  either None or parent tmpdir [view] object
+                      whose get_new_subdir() method is called to create a
+                      tmpdir when arg is None
+    @type    parent:  C{None} | [subclass-of] L{TmpdirView}
+
+    @return:  tmpdir or tmpdir view
+    @rtype:   [subclass-of] L{TmpdirView}
+    """
+    if arg is None:
+        if parent is not None:
+            return parent.get_new_subdir()
+        else:
+            return Tmpdir()
+
+    elif isinstance(arg, str):
+        return TmpdirView(arg)
+
+    elif isinstance(arg, TmpdirView):
+        return arg
+
+    else:
+        raise TypeError(arg)
+# --- end of get_tmpdir_or_view (...) ---
