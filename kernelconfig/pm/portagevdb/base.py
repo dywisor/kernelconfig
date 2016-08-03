@@ -18,11 +18,10 @@ class PortageInterface(loggable.AbstractLoggable):
     Interface for querying information relevant
     for CONFIG_CHECK-based pm integration via the portage API.
 
-    @ivar port_config:    portage config, not available (readonly)
-    @ivar _port_config:   (portage config, not available)
-    @ivar port_db:        portage db
-    @ivar vartree:        portage vartree
-    @ivar vdb:            portage vdb
+    @ivar settings:    portage config
+    @ivar port_db:     portage db
+    @ivar vartree:     portage vartree
+    @ivar vdb:         portage vdb
     """
 
     # lax expr
@@ -33,19 +32,13 @@ class PortageInterface(loggable.AbstractLoggable):
 
     __hash__ = None
 
-#    @property
-#    def port_config(self):
-#        settings = self._port_config
-#        if settings is None:
-#            settings = portage.config()
-#            assert settings is not None
-#            self._port_config = settings
-#        return settings
-#    # ---
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-#        self._port_config = None
+        # There is no point in lazy-loading these portage objects.
+        # At the time an object this class (PortageInterface) is created,
+        # it should have already been decided to do some portage queries.
+        #
+        self.settings = portage.settings
         self.port_db = portage.db[portage.root]
         self.vartree = self.port_db["vartree"]
         self.vdb = self.vartree.dbapi
