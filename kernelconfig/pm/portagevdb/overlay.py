@@ -11,7 +11,7 @@ from ...util import fs
 from ...util import fspath
 
 
-__all__ = ["TemporaryOverlay"]
+__all__ = ["TemporaryOverlay", "TemporaryOverlayUnion", "EclassImporter"]
 
 
 class EclassImporter(loggable.AbstractLoggable):
