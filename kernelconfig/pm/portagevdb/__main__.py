@@ -104,8 +104,8 @@ def main():
             ov_root.add_package(pkg_info)
         # --
 
-        ov_root.fs_init()
-        ov_root.populate()
+        ov_root.setup(port_iface)
+
     else:
         raise NotImplementedError(arg_config.command)
 # --- end of main (...) ---
