@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from ...abc import informed
+from ...util import accudict
 from ...util import tmpdir as _tmpdir
 
 from . import overlay
@@ -72,6 +73,12 @@ class PMIntegration(informed.AbstractInformed):
     # --- end of enqueue_installed_packages (...) ---
 
     def eval_config_check(self):
+        """
+        @return: dict where keys are config option names,
+                 and values indicate whether an option should be enabled
+                 or disabled
+        @rtype:  C{dict} :: C{str} => C{bool}
+        """
         overlays = self._overlays
 
         if overlays.is_empty():
@@ -86,10 +93,51 @@ class PMIntegration(informed.AbstractInformed):
         )
         config_check_eval_env.setup(self.port_iface)
 
-        return {
-            pkg_info.cpv: config_check_eval_env.eval_config_check(pkg_info)
-            for pkg_info in overlays.iter_packages()
-        }
+        config_check_accu_map = accudict.DictAccumulatorDict()
+        k = 0
+        for cpv, config_check_submap in (
+            config_check_eval_env.iter_eval_config_check(
+                overlays.iter_packages()
+            )
+        ):
+            if config_check_submap:
+                for config_option, value in config_check_submap.items():
+                    config_check_accu_map.add(config_option, (value, cpv))
+        # --
+
+        # now build the actual config_check map, which is a normal dict
+        config_check_map = {}
+        for config_option, node in config_check_accu_map.items():
+            if not node:
+                raise AssertionError("empty config_check_accu_map node")
+
+            elif len(node) == 1:
+                value = next(iter(node))
+                assert value is True or value is False
+                config_check_map[config_option] = value
+
+            else:
+                assert True in node and False in node
+
+                # both True and False suggested for config_option
+                self.logger.warning(
+                    "Conflicting recommendations for config option %s",
+                    config_option
+                )
+                self.logger.warning(
+                    "want enabled: %s", ", ".join(node[True])
+                )
+                self.logger.warning(
+                    "want disabled: %s", ", ".join(node[False])
+                )
+                self.logger.warning(
+                    "Recommendation for %s will be ignored",
+                    config_option
+                )
+            # --
+        # --
+
+        return config_check_map
     # --- end of eval_config_check (...) ---
 
 # --- end of PMIntegration ---

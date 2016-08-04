@@ -11,6 +11,7 @@ from ...util import subproc
 from ...util import usedict
 
 from . import _globals
+from . import util
 
 
 __all__ = ["ConfigCheckEbuildEnv"]
@@ -305,27 +306,31 @@ class ConfigCheckEbuildEnv(EbuildEnv):
         with open(filepath, "rt") as fh:
             config_check_str = fh.read()
 
-        return config_check_str.split()
+        return util.parse_config_check(config_check_str, logger=self.logger)
     # --- end of _read_config_check_outfile (...) ---
 
-    def eval_config_check(self, package_info):
-        self.logger.info(
-            "Getting config recommendations for %s", package_info.cpv
-        )
-        outfile = self.run_ebuild_get_config_check_outfile(package_info)
-        if outfile:
-            self.logger.debug(
-                "%s: has config recommendations", package_info.cpv
-            )
-            return self._read_config_check_outfile(outfile)
+    def iter_eval_config_check(self, package_info_iterable):
+        """
+        @return:  2-tuple(s) (cpv, config check dict)
+        """
+        package_info_list = list(package_info_iterable)
+        num_pkgs = len(package_info_list)
 
-        else:
-            self.logger.debug(
-                "%s: no config recommendations", package_info.cpv
+        for idx, package_info in enumerate(package_info_list):
+            cpv = package_info.cpv
+            self.logger.info(
+                "Getting config recommendations for %s (%d/%d)",
+                cpv, (idx + 1), num_pkgs
             )
-            return None
+            outfile = self.run_ebuild_get_config_check_outfile(package_info)
+            if outfile:
+                self.logger.debug("%s: has config recommendations", cpv)
+                yield (cpv, self._read_config_check_outfile(outfile))
 
-        raise NotImplementedError("read outfile", outfile)
-    # --- end of eval_config_check (...) ---
+            else:
+                self.logger.debug("%s: no config recommendations", cpv)
+                yield (cpv, None)
+        # --
+    # --- end of iter_eval_config_check (...) ---
 
 # --- end of ConfigCheckEbuildEnv ---
