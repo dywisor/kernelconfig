@@ -7,6 +7,7 @@ from ...abc import informed
 from ...util import makeargs
 from ...util import osmisc
 from ...util import subproc
+from ...util import usedict
 
 from . import _globals
 
@@ -111,17 +112,51 @@ class EbuildEnv(informed.AbstractInformed):
         if env is None:
             env = {}
 
-            # noauto -cgroup -distlocks -skiprocheck -ebuild-locks notitles
-            env["FEATURES"] = "-distlocks -skiprocheck notitles"
+            # adjust FEATURES a bit
+            features = (
+                usedict.BoolFlagDict.new_from_str(
+                    os.environ.get("FEATURES")
+                )
+            )
 
-            # DISTDIR
-            # PORTAGE_RO_DISTDIR
-
-            env["EPAUSE_IGNORE"] = "Y"
-
+            # disable downloading of files listed SRC_URI
+            #    vcs-fetching (git/subversion/... eclass) takes place in
+            #    src_unpack(), and config-check re-eval won't get that far
+            #
             null_fetch_cmd_str = "{} ${{FILE}}".format(self.sysnop_prog)
             env["FETCHCOMMAND"] = null_fetch_cmd_str
             env["RESUMECOMMAND"] = null_fetch_cmd_str
+
+            # DISTDIR
+            # PORTAGE_RO_DISTDIR
+            # -- remain unchanged
+
+            # DISTDIR should be considered readonly here,
+            # FETCHCOMMAND, RESUMECOMMAND are set to /bin/true.
+            #
+            # Disables distlocks and the readonly-check.
+            features.disable("distlocks")
+            features.enable("skiprocheck")
+
+            # do not clean up PORTAGE_TMPDIR after a build failure,
+            # it might still contain a usable CONFIG_CHECK tmpfile.
+            features.disable("fail-clean")
+
+            # FIXME: remove, has probably no effect anyway
+            features.enable("notitles")
+
+            # other FEATURES that might be interesting here
+            # -cgroup, -ebuild-locks
+
+            # noauto -cgroup -distlocks -skiprocheck -ebuild-locks notitles
+            env["FEATURES"] = features.get_str()
+
+            # EPAUSE_IGNORE: not set here, only relevant for EAPI 0,1,2
+
+            # FIXME/TODO: for circumventing fatal check-reqs,
+            #             set I_KNOW_WHAT_I_AM_DOING=y.
+            #             However, this could do more harm than good.
+            # env["I_KNOW_WHAT_I_AM_DOING"] = "Y"
 
             # explicitly documented as "Overwritable environment Var"
             # in linux-info.eclass: KERNEL_DIR
@@ -156,6 +191,7 @@ class EbuildEnv(informed.AbstractInformed):
         return subproc.SubProc(
             [
                 self.ebuild_prog, "--skip-manifest",
+                "--ignore-default-opts", "--color", "n",
                 package_info.tmp_ebuild_file
             ],
             extra_env=self.env,
