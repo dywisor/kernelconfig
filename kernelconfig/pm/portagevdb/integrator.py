@@ -45,6 +45,17 @@ class PMIntegration(informed.AbstractInformed):
         for cpv in port_iface.find_all_cpv_inheriting_linux_info():
             pkg_info = port_iface.get_package_info(cpv)
 
+#            # does *not* work: will ignore chromium,
+#            #                  for which CONFIG_CHECK is set in an eclass
+#            if not util.check_ebuild_file_uses_config_check(
+#                pkg_info.orig_ebuild_file
+#            ):
+#                self.logger.debug(
+#                    "Ignoring package %s: does not use CONFIG_CHECK",
+#                    pkg_info.cpv
+#                )
+#                continue
+
             if overlays.add_package(pkg_info):
                 any_package_added = True
             else:
