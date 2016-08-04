@@ -1,7 +1,8 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
-import os.path
+import os
+import subprocess
 
 from ...abc import informed
 from ...util import makeargs
@@ -197,7 +198,9 @@ class EbuildEnv(informed.AbstractInformed):
             extra_env=self.env,
             cwd=pkg_dir,
             tmpdir=self.portage_tmpdir,
-            logger=self.logger
+            logger=self.logger,
+            universal_newlines=True,
+            stdout=subprocess.PIPE, stderr=subprocess.STDOUT
         )
     # --- end of get_ebuild_subproc (...) ---
 
@@ -205,6 +208,62 @@ class EbuildEnv(informed.AbstractInformed):
 
 
 class ConfigCheckEbuildEnv(EbuildEnv):
+
+    _did_warn_about_ebuild_phase_errors = False
+
+    def log_ebuild_phase_error(self, phase, package_info, proc):
+        dolog_fail = self.logger.warning
+
+        dolog_fail(
+            "%s: did not complete the %r phase successfully",
+            package_info.cpv, phase
+        )
+
+        if self.__class__._did_warn_about_ebuild_phase_errors:
+            self.logger.debug("(not repeating the complete warning message)")
+
+        else:
+            dolog_fail(
+                "This could be caused by kernelconfig's modifications"
+                " to linux-info.eclass,"
+            )
+            dolog_fail(
+                "but more likely the ebuild is doing things that should be"
+                " handled in pkg_postinst(), like creating users or groups."
+            )
+            dolog_fail(
+                "See Gentoo Bug #217042 for enewgroup/enewuser related errors,"
+                "do not report them as kernelconfig bugs!"
+            )
+            self.__class__._did_warn_about_ebuild_phase_errors = True
+        # --
+
+        dolog_fail(
+            "Below is the ebuild's output:\n"
+            + proc.stdout.rstrip()  # proc's stderr redirected to stdout
+            + "\n--- snip ---"
+        )
+    # --- end of log_ebuild_phase_error (...) ---
+
+    def run_ebuild_phase(self, package_info, proc, phase):
+        proc.zap()
+        proc.cmdv.append(phase)
+
+        try:
+            with proc:
+                proc_status = proc.join()
+        except subprocess.TimeoutExpired:
+            self.logger.error(
+                "%s: the ebuild call timed out", package_info.cpv
+            )
+            return False
+
+        if not proc_status:
+            self.log_ebuild_phase_error(phase, package_info, proc)
+            return False
+        else:
+            return True
+    # --- end of run_ebuild_phase (...) ---
 
     def run_ebuild_get_config_check_outfile(self, package_info):
         # this is highly specific / relying in portage internals, FIXME
@@ -215,48 +274,31 @@ class ConfigCheckEbuildEnv(EbuildEnv):
 
         proc = self.get_ebuild_subproc(package_info)
 
-#        # if "noauto" in FEATURES
+#        # if "noauto" in FEATURES:
 #
 #        # run pkg_pretend() first and see if that is sufficient
 #        #  packages that call check_extra_config() in both pkg_pretend()
 #        #  and pkg_setup() get ignored this way,
 #        #  but calling pkg_pretend() only is safer
-#        proc.cmdv.append("pretend")
-#        with proc:
-#            proc_status = proc.join()
-#
-#        if not proc_status:
-#            # ebuild failed in pkg_pretend()
-#            if os.path.isfile(outfile):
-#                # recover
-#                pass
-#
-#            raise EbuildEnvRunError()  # TODO
-#
-#        elif os.path.isfile(outfile):
-#            # TODO log
-#            return outfile
 
-        # run pkg_setup()
-#        proc.zap()
-#        proc.cmdv.pop()
-        proc.cmdv.append("setup")
+        status = self.run_ebuild_phase(package_info, proc, "setup")
+        if os.path.isfile(outfile):
+            if not status:
+                # FIXME/TODO: UNSAFE!
+                #   check_extra_config() should create/delete a state
+                #   file indicating whether outfile is safe to use
+                self.logger.warning(
+                    (
+                        "%s did check for config options prior to failing, "
+                        "using the information gathered so far"
+                    ),
+                    package_info.cpv
+                )
+            # --
+            return outfile
 
-        with proc:
-            proc_status = proc.join()
-
-        if not proc_status:
-            # log about it
-            # -- bug #217042 maybe?
-            #  log
-            if os.path.isfile(outfile):
-                # recover
-                pass
-
-            raise EbuildEnvRunError()  # TODO
-        # --
-
-        return (outfile if os.path.isfile(outfile) else None)
+        else:
+            return None
     # --- end of run_ebuild_get_config_check_outfile (...) ---
 
     def _read_config_check_outfile(self, filepath):
@@ -267,10 +309,20 @@ class ConfigCheckEbuildEnv(EbuildEnv):
     # --- end of _read_config_check_outfile (...) ---
 
     def eval_config_check(self, package_info):
+        self.logger.info(
+            "Getting config recommendations for %s", package_info.cpv
+        )
         outfile = self.run_ebuild_get_config_check_outfile(package_info)
         if outfile:
+            self.logger.debug(
+                "%s: has config recommendations", package_info.cpv
+            )
             return self._read_config_check_outfile(outfile)
+
         else:
+            self.logger.debug(
+                "%s: no config recommendations", package_info.cpv
+            )
             return None
 
         raise NotImplementedError("read outfile", outfile)
