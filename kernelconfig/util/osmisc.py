@@ -13,6 +13,7 @@ __all__ = [
     "get_free_space_m",
     "which",
     "which_sbin",
+    "envbool_nonempty",
 ]
 
 
@@ -67,3 +68,31 @@ def which_sbin(prog, *, path=None, **kwargs):
 
     return which(prog, path=concat_lookup_path(path_parts), **kwargs)
 # --- end of which_sbin (...) ---
+
+
+def envbool_nonempty(env_varname, fallback=None, *, env=None):
+    """
+    Returns True if env_varname is set in env (or os.environ) and not empty,
+    False if it is set to the empty str,
+    and fallback or None if it is not set.
+
+    Mostly identical to bool(env.get(env_varname, fallback)),
+    except that fallback does not get converted to bool by this function.
+
+    @param   env_varname:
+    @type    env_varname:  C{str}
+    @keyword fallback:     fallback value in case then env_varname is not set
+    @type    fallback:     undefined
+    @keyword env:          env dict, defaults to None (-> os.environ)
+    @type    env:
+
+    @return:  True/False/fallback
+    @rtype:   C{bool} | undefined
+    """
+    try:
+        value = (os.environ if env is None else env)[env_varname]
+    except KeyError:
+        return fallback
+    else:
+        return bool(value)
+# --- end of envbool_nonempty (...) ---
