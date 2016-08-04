@@ -1,13 +1,13 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
-import collections
 import portage
 import re
 
 
 from ...abc import loggable
 from . import pkginfo
+from . import util
 
 
 __all__ = ["PortageInterface"]
@@ -23,12 +23,6 @@ class PortageInterface(loggable.AbstractLoggable):
     @ivar vartree:     portage vartree
     @ivar vdb:         portage vdb
     """
-
-    # lax expr
-    #  FIXME: does not really belong to this class (also parse_config_check)
-    RE_CONFIG_CECK_ITEM = re.compile(
-        r'^(?P<prefix>[\@\!\~]+)?(?P<config_option>[a-zA-Z0-9\_]+)$'
-    )
 
     __hash__ = None
 
@@ -151,63 +145,7 @@ class PortageInterface(loggable.AbstractLoggable):
     # --- end of find_all_cpv_inheriting_linux_info (...) ---
 
     def parse_config_check(self, config_check_str):
-        """
-        @return:  dict of config option name X want config option enabled
-        @rtype:   dict :: C{str} => C{bool}
-        """
-        #  FIXME: does not really belong to this class
-
-        def parse_inner(config_check_str):
-            match_config_check_word = self.RE_CONFIG_CECK_ITEM.match
-
-            for word in config_check_str.split():
-                match = match_config_check_word(word)
-                if not match:
-                    self.logger.warning(
-                        "Could not parse CONFIG_CHECK item %r", word
-                    )
-
-                else:
-                    prefix = match.group("prefix")
-
-                    if "@" in prefix:
-                        # "reworkmodules" -- undocumented, no example found
-                        self.logger.warning(
-                            "Skipping 'reworkmodules' CONFIG_CHECK item %r",
-                            word
-                        )
-                    else:
-                        yield (
-                            match.group("config_option"),
-                            ("!" not in prefix)
-                        )
-        # --- end of parse_inner (...) ---
-
-        config_options = collections.OrderedDict()
-        for config_option, want_enabled in parse_inner(config_check_str):
-            if config_option in config_options:
-                # conflict!
-                # if want_enabled matches the value of the existing entry: ok
-                # otherwise: error, cannot recommended both
-                #            CONFIG_A=ym and CONFIG_A=n at the same time
-                self.logger.info(
-                    "config option appears twice in CONFIG_CHECK: %s",
-                    config_option
-                )
-
-                if config_options[config_option] == want_enabled:
-                    pass
-                else:
-                    raise NotImplementedError(
-                        "conflict in CONFIG_CHECK", config_option
-                    )
-
-            else:
-                config_options[config_option] = want_enabled
-            # --
-        # --
-
-        return config_options
+        return util.parse_config_check(config_check_str, logger=self.logger)
     # --- end of parse_config_check (...) ---
 
 # --- end of PortageInterface ---
