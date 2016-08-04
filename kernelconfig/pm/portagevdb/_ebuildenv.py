@@ -76,6 +76,10 @@ class EbuildEnv(informed.AbstractInformed):
             env["KERNEL_DIR"] = self.source_info.get_path()
             assert env["KERNEL_DIR"]
 
+            # do not leak KV_FULL from os.environ,
+            # it is used to determine whether various KV_* vars are set.
+            env["KV_FULL"] = None
+
             self.env = env
         # --
 
