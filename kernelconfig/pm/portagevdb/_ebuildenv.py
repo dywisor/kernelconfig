@@ -71,6 +71,11 @@ class EbuildEnv(informed.AbstractInformed):
             env["FETCHCOMMAND"] = null_fetch_cmd_str
             env["RESUMECOMMAND"] = null_fetch_cmd_str
 
+            # explicitly documented as "Overwritable environment Var"
+            # in linux-info.eclass: KERNEL_DIR
+            env["KERNEL_DIR"] = self.source_info.get_path()
+            assert env["KERNEL_DIR"]
+
             self.env = env
         # --
 
