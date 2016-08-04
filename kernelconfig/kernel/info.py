@@ -26,6 +26,10 @@ class SourceInfo(loggable.AbstractLoggable):
         self.srctree = srctree
     # --- end of __init__ (...) ---
 
+    def get_path(self):
+        return self.srctree
+    # --- end of get_path (...) ---
+
     def get_filepath(self, relpath=None):
         """Interprets a path relative to the source directory and returns
         its absolute path.
