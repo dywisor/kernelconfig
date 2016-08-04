@@ -9,13 +9,13 @@ import tempfile
 
 
 from .....util import fs
+from .....util import makeargs
 from .....util import misc
 from .....util import osmisc
 from .....util import subproc
 from .....util import tmpdir
 
 from . import exc
-from . import util
 from . import _base
 
 
@@ -275,7 +275,7 @@ class ModaliasCacheBuilder(_base.ModaliasCacheBase):
         # --
 
         # build the argument list that is passed to the modalias makefile cmd
-        mkscript_argv = util.MakeArgs()
+        mkscript_argv = makeargs.MakeArgs()
 
         #  source-info related vars (ARCH=...)
         #   not using iter_out_of_tree_build_make_vars() here,
