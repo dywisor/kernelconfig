@@ -97,7 +97,9 @@ def main():
         # --
 
     elif arg_config.command == "mkoverlays":
-        ov_root = overlay.TemporaryOverlayUnion(arg_config.overlays_rootdir)
+        ov_root = overlay.TemporaryOverlayUnion(
+            arg_config.overlays_rootdir, source_info=None
+        )
 
         for cpv in port_iface.find_all_cpv_inheriting_linux_info():
             pkg_info = port_iface.get_package_info(cpv)

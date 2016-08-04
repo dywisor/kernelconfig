@@ -22,6 +22,10 @@ class AbstractTemporaryOverlayBase(loggable.AbstractLoggable):
     @type root:  C{str}
     """
 
+    # not inheriting AbstractSourceInformed,
+    #  overlay objects do not need to know about source_info,
+    #  only the overlay union
+
     # copy-paste inherit FsView
 
     @abc.abstractmethod
@@ -373,6 +377,9 @@ class TemporaryOverlay(_TemporaryOverlay):
 
 class TemporaryOverlayUnion(AbstractTemporaryOverlayBase):
     """
+    @ivar source_info:
+    @type source_info:
+
     @ivar overlays:
     @type overlays:  C{dict} :: C{str} => L{TemporaryOverlay}
     """
@@ -383,8 +390,9 @@ class TemporaryOverlayUnion(AbstractTemporaryOverlayBase):
         self.populate()
     # --- end of setup (...) ---
 
-    def __init__(self, root, **kwargs):
+    def __init__(self, root, *, source_info, **kwargs):
         super().__init__(root, **kwargs)
+        self.source_info = source_info
         self.overlays = {}
 
     def iter_overlays(self):
@@ -434,7 +442,9 @@ class TemporaryOverlayUnion(AbstractTemporaryOverlayBase):
     # --- end of assign_repo_config (...) ---
 
     def fs_init(self):
-        eclass_importer = self.create_loggable(_eclass.EclassImporter)
+        eclass_importer = self.create_loggable(
+            _eclass.EclassImporter, source_info=self.source_info
+        )
 
         fs.dodir(self.root)
         for ov in self.iter_overlays():

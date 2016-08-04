@@ -3,14 +3,14 @@
 
 import shutil
 
-from ...abc import loggable
+from ...abc import informed
 from ...util import fs
 
 
 __all__ = ["EclassImporter"]
 
 
-class EclassImporter(loggable.AbstractLoggable):
+class EclassImporter(informed.AbstractSourceInformed):
     """
     Each temporary has its own dir with copied and modified eclass files,
     but in case of "linux-info.eclass" this likely results in modifying
@@ -35,7 +35,7 @@ class EclassImporter(loggable.AbstractLoggable):
     @type _imported:  C{dict} :: C{str} => C{str}
     """
 
-    def __init__(self, *undef_args, **kwargs):
+    def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._imported = {}
 

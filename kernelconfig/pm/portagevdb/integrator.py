@@ -24,7 +24,7 @@ class PMIntegration(informed.AbstractInformed):
         )
         self._tmpdir = _tmpdir.get_tmpdir_or_view(tmpdir, parent_tmpdir)
 
-        self._overlays = self.create_loggable(
+        self._overlays = self.create_source_informed(
             overlay.TemporaryOverlayUnion, self._tmpdir.dodir("overlays")
         )
 
