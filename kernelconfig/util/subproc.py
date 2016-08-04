@@ -150,7 +150,7 @@ class SubProc(loggable.AbstractLoggable):
     def __init__(
         self, command, *,
         env=None, extra_env=None, cwd=True, stdin=subprocess.DEVNULL,
-        split_command_str=True, tmpdir=None, logger=None, **kwargs
+        quiet=False, split_command_str=True, tmpdir=None, logger=None, **kwargs
     ):
         """
         @param   command:            the command
@@ -177,6 +177,10 @@ class SubProc(loggable.AbstractLoggable):
 
         @keyword stdin:              stdin, defaults to subprocess.DEVNULL
         @type    stdin:
+
+        @keyword quiet:              whether to default unset stdio to devnull
+                                     Defaults to False.
+        @type    quiet:              C{bool}
 
         @keyword split_command_str:  whether to split command with
                                      split_command_str() if it is a string
@@ -215,6 +219,7 @@ class SubProc(loggable.AbstractLoggable):
             extra_env=extra_env,
             cwd=cwd,
             stdin=stdin,
+            quiet=quiet,
             popen_kwargs=kwargs,
             tmpdir=tmpdir,
             split_command_str=split_command_str
@@ -256,12 +261,24 @@ class SubProc(loggable.AbstractLoggable):
 
     def _setup(
         self, command, *,
-        env, extra_env, cwd, stdin, popen_kwargs, tmpdir, split_command_str
+        env, extra_env, cwd, stdin, quiet, popen_kwargs, tmpdir,
+        split_command_str
     ):
         self._set_cmdv(command, split_command_str)
 
         kwargs = popen_kwargs.copy()
         kwargs["stdin"] = stdin
+        for key in ["stdin", "stdout", "stderr"]:
+            try:
+                value = kwargs[key]
+            except KeyError:
+                # unreachable for "stdin"
+                if quiet:
+                    kwargs[key] = subprocess.DEVNULL
+            else:
+                if value is False:
+                    kwargs[key] = subprocess.DEVNULL
+        # --
 
         # COULDFIX: avoid env copy,
         #            but non-empty popen_tmpdir always requires a copy
