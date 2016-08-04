@@ -32,7 +32,8 @@ class EbuildEnv(informed.AbstractInformed):
 
     def __init__(self, tmpdir, **kwargs):
         super().__init__(**kwargs)
-        self.portage_tmpdir = tmpdir
+        self._tmpdir = tmpdir
+        self.portage_tmpdir = None
         self.ebuild_prog = None
         self.sysnop_prog = None
         self.env = None
@@ -50,6 +51,9 @@ class EbuildEnv(informed.AbstractInformed):
 
         if self.sysnop_prog is None:
             self.sysnop_prog = self._find_prog("true")
+
+        if self.portage_tmpdir is None:
+            self.portage_tmpdir = self._tmpdir.get_new_subdir()
 
         env = self.env
         if env is None:
