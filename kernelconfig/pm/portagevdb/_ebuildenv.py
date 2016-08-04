@@ -5,6 +5,7 @@ import os.path
 
 from ...abc import informed
 from ...util import fspath
+from ...util import makeargs
 from ...util import osmisc
 from ...util import subproc
 
@@ -34,6 +35,7 @@ class EbuildEnv(informed.AbstractInformed):
         super().__init__(**kwargs)
         self._tmpdir = tmpdir
         self.portage_tmpdir = None
+        self.kbuild_output = None
         self.ebuild_prog = None
         self.sysnop_prog = None
         self.env = None
@@ -44,6 +46,55 @@ class EbuildEnv(informed.AbstractInformed):
             raise EbuildEnvSetupMissingProgramError(name)
         return prog
     # ---
+
+    def _get_kbuild_output_dir(self):
+        if not self.source_info.check_supports_out_of_tree_build():
+            self.logger.warning(
+                'Sources being processed do not support out-of-tree building'
+                ', this most likely means that they are not kernel sources'
+                ', but pm-integration does not support anything else'
+            )
+            raise AssertionError(
+                "not a kernel srctree", self.source_info.get_path()
+            )
+        # --
+
+        kbuild_output = self._tmpdir.dodir("kbuild")
+
+        # build up the make command for creating kbuild_output
+        #  (which creates the wrapper Makefile and other files)
+        #
+        #  If the configuration is already available, it could be used as
+        #  .config in this directory, but for now, use "defconfig" as target.
+        #
+        mk_cmdv = makeargs.MakeArgs(
+            ["make", "-C", self.source_info.get_path()]
+        )
+
+        #  source-info related vars (ARCH=...)
+        mk_cmdv.addv(self.source_info.iter_make_vars())
+
+        #  source-info out-of-tree build related vars (O=...)
+        mk_cmdv.addv(
+            self.source_info.iter_out_of_tree_build_make_vars(kbuild_output)
+        )
+
+        # the make target
+        #   "kernelversion" or similar would probably also work when using
+        #   using the configuration basis as .config
+        #
+        mk_cmdv.append("defconfig")
+
+        self.logger.debug("Creating KBUILD_OUTPUT: %s", kbuild_output)
+        with subproc.SubProc(mk_cmdv, quiet=True, logger=self.logger) as proc:
+            if not proc.join():
+                self.logger.warning("Failed to create KBUILD_OUTPUT")
+                return None
+        # --
+
+        self.logger.debug("Created KBUILD_OUTPUT")
+        return kbuild_output
+    # --- end of _get_kbuild_output_dir (...) ---
 
     def setup(self, port_iface):
         if self.ebuild_prog is None:
@@ -81,6 +132,15 @@ class EbuildEnv(informed.AbstractInformed):
             env["KV_FULL"] = None
 
             self.env = env
+        # --
+
+        if self.kbuild_output is None:
+            kbuild_output = self._get_kbuild_output_dir()
+            if not kbuild_output:
+                raise EbuildEnvSetupError("KBUILD_OUTPUT")
+
+            self.kbuild_output = kbuild_output
+            env["KBUILD_OUTPUT"] = kbuild_output
         # --
 
         env["PORTAGE_TMPDIR"] = self.portage_tmpdir.get_path()
