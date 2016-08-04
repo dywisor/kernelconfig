@@ -94,7 +94,6 @@ class PMIntegration(informed.AbstractInformed):
         config_check_eval_env.setup(self.port_iface)
 
         config_check_accu_map = accudict.DictAccumulatorDict()
-        k = 0
         for cpv, config_check_submap in (
             config_check_eval_env.iter_eval_config_check(
                 overlays.iter_packages()
