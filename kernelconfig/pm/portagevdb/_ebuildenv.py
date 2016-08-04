@@ -4,10 +4,11 @@
 import os.path
 
 from ...abc import informed
-from ...util import fspath
 from ...util import makeargs
 from ...util import osmisc
 from ...util import subproc
+
+from . import _globals
 
 
 __all__ = ["ConfigCheckEbuildEnv"]
@@ -174,7 +175,7 @@ class ConfigCheckEbuildEnv(EbuildEnv):
         pkg_tmpdir = self.portage_tmpdir.get_filepath(
             "tmp/portage/tmp/portage/{cpv!s}/temp".format(cpv=package_info.cpv)
         )
-        outfile = fspath.join_relpath(pkg_tmpdir, "kernelconfig_config_check")
+        outfile = _globals.get_vars().get_config_check_tmpfile_path(pkg_tmpdir)
 
         proc = self.get_ebuild_subproc(package_info)
 

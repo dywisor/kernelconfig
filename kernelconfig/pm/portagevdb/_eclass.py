@@ -7,6 +7,8 @@ from ...abc import informed
 from ...util import fs
 from ...util import osmisc
 
+from . import _globals
+
 
 __all__ = ["EclassImporter"]
 
@@ -199,11 +201,13 @@ class EclassImporter(informed.AbstractSourceInformed):
         self.logger.debug(
             "Overriding check_extra_config() in linux-info.eclass"
         )
+        config_check_tmpfile = (
+            _globals.get_vars().get_config_check_tmpfile_path("${T}")
+        )
         yield "unset -f check_extra_config"
         yield "check_extra_config() {"
-        yield (
-            "\tprintf '%s\\n' \"${CONFIG_CHECK}\""
-            " >> \"${T}/kernelconfig_config_check\""
+        yield "\tprintf '%s\\n' \"${{CONFIG_CHECK}}\" >> \"{}\"".format(
+            config_check_tmpfile
         )
         yield "}"
 
