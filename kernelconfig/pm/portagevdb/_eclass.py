@@ -5,6 +5,7 @@ import shutil
 
 from ...abc import informed
 from ...util import fs
+from ...util import osmisc
 
 
 __all__ = ["EclassImporter"]
@@ -25,19 +26,86 @@ class EclassImporter(informed.AbstractSourceInformed):
     To substantiate the assumption, this class takes also care of the
     modifying the eclass files (i.e. "linux-info").
 
-    @cvar LINUX_INFO_KV_HACK:  whether to override get_version() from
-                               linux-info.eclass with a variant that
-                               sets the KV_* vars from self.source_info
-                               (determined at eclass modification time)
-    @type LINUX_INFO_KV_HACK:  C{bool}
+    @cvar LINUX_INFO_HACKS:     whether to allow non-essential modifications
+                                to linux-info.eclass.
+                                Some provide better CONFIG_CHECK results,
+                                while others increase performance.
+
+                                Defaults to True, and can be disabled
+                                by setting the environment variable
+                                KERNELCONFIG_PORTAGE_LINUX_INFO_HACKS
+                                to the empty string.
+    @type LINUX_INFO_HACKS:     C{bool}
+
+    @cvar LINUX_INFO_HACKS_KV:  whether to override get_version() from
+                                linux-info.eclass with a variant that
+                                sets the KV_* vars from self.source_info
+                                (determined at eclass modification time)
+
+                                The instance behavior is controlled
+                                by the linux_info_hacks_kv variable,
+                                LINUX_INFO_HACKS_KV simply controls whether
+                                it is allowed to enable it automatically.
+
+                                Disabled if LINUX_INFO_HACKS is disabled.
+                                Otherwise, defaults True and can be disabled
+                                by setting the environment variable
+                                KERNELCONFIG_PORTAGE_LINUX_INFO_HACKS_KV
+                                to the empty string.
+    @type LINUX_INFO_HACKS_KV:  C{bool}
+
+    @ivar linux_info_hacks_kv:  see LINUX_INFO_HACKS_KV
+                                Defaults to None, which enables the "kv hack"
+                                IFF LINUX_INFO_HACKS_KV is set to True
+                                and a source info object is present.
+    @type linux_info_hacks_kv:  C{bool}
 
     @ivar _imported:  imported eclass files, src => first dst
     @type _imported:  C{dict} :: C{str} => C{str}
     """
 
+    LINUX_INFO_HACKS = osmisc.envbool_nonempty(
+        "KERNELCONFIG_PORTAGE_LINUX_INFO_HACKS", True
+    )
+
+    LINUX_INFO_HACKS_KV = (
+        LINUX_INFO_HACKS
+        and osmisc.envbool_nonempty(
+            "KERNELCONFIG_PORTAGE_LINUX_INFO_HACKS_KV", True
+        )
+    )
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self._imported = {}
+        self._linux_info_hacks_kv = None
+
+    @property
+    def linux_info_hacks_kv(self):
+        linux_info_hacks_kv = self._linux_info_hacks_kv
+        if linux_info_hacks_kv is None:
+            if self.LINUX_INFO_HACKS_KV:
+                linux_info_hacks_kv = bool(self.source_info is not None)
+            else:
+                linux_info_hacks_kv = False
+            # --
+
+            self._linux_info_hacks_kv = linux_info_hacks_kv
+        # --
+        return linux_info_hacks_kv
+    # --- end of property linux_info_hacks_kv (...) ---
+
+    @linux_info_hacks_kv.setter
+    def _set_linux_info_hacks_kv(self, value):
+        if not value:
+            self._linux_info_hacks_kv = False
+
+        elif self.source_info is not None:
+            self._linux_info_hacks_kv = True
+
+        else:
+            raise ValueError(value)
+    # --- end of _set_linux_info_hacks_kv (...) ---
 
     def _reimport_eclass_file(self, src, dst):
         """
@@ -128,6 +196,9 @@ class EclassImporter(informed.AbstractSourceInformed):
         #  and overriding check_extra_config() skips the reading of .config
         #  (which would be read multiple times per ebuild!).
         #
+        self.logger.debug(
+            "Overriding check_extra_config() in linux-info.eclass"
+        )
         yield "unset -f check_extra_config"
         yield "check_extra_config() {"
         yield (
@@ -136,12 +207,52 @@ class EclassImporter(informed.AbstractSourceInformed):
         )
         yield "}"
 
-        # TODO: To improve the performance further,
-        # it would be possible to skip repeated makefile kernelversion parsing
-        # by overriding linux-info_get_any_version().
+        # To improve the performance further,
+        # skip repeated makefile kernelversion parsing
+        # by overriding get_version().
         #
-        # It is being considered, but not essential for initial testing.
+        # This is, of course, quite hacky,
+        # but reduces ebuild processing time considerably.
         #
+        # The override versions sets all global variables that
+        # the original function would.
+        #
+        # KV_LOCAL remains empty.
+        #
+        # Note:
+        #  KV_MAJOR is VERSION
+        #  KV_MINOR is PATCHLEVEL    !
+        #  KV_PATCH is SUBLEVEL      !
+        #  KV_EXTRA is EXTRAVERSION
+        #
+        if self.linux_info_hacks_kv:
+            self.logger.debug("Overriding get_version() in linux-info.eclass")
+
+            source_info = self.source_info
+            # assert source_info is not None
+            kver = source_info.kernelversion
+
+            yield ""
+            yield "unset -f get_version"
+            yield "get_version() {"
+            for varname, value in [
+                ("KV_DIR", "${KERNEL_DIR:?kernelconfig bug}"),
+                ("KV_DIR_OUT", "${KBUILD_OUTPUT:?kernelconfig bug}"),
+                (
+                    "KERNEL_MAKEFILE",
+                    "${KERNEL_DIR:?kernelconfig bug}/Makefile"
+                ),
+                ("KV_FULL", kver),
+                ("KV_MAJOR", kver.version or 0),
+                ("KV_MINOR", kver.patchlevel or 0),
+                ("KV_PATCH", kver.sublevel or 0),
+                ("KV_EXTRA", kver.extraversion or ""),
+                ("KV_LOCAL", ""),
+            ]:
+                yield "\t{0!s}=\"{1!s}\"".format(varname, value)
+            # implicit return
+            yield "}"
+        # -- end if kv_hack
     # --- end of gen_linux_info_modification_lines (...) ---
 
 # --- end of EclassImporter ---
