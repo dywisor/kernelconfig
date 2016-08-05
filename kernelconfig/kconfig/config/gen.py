@@ -90,14 +90,9 @@ class _ConfigGenerator(AbstractConfigGenerator):
             choices.ConfigChoices, self.get_config()
         )
 
+    @abc.abstractmethod
     def _create_config_choices_interpreter(self):
-        return self.create_loggable(
-            interpreter.KernelConfigLangInterpreter,
-            self.install_info,
-            self.source_info,
-            self.get_config_choices(),
-            self.get_hwdetector()
-        )
+        raise NotImplementedError()
 
     get_kconfig_symbols = _lazy_constructor("_kconfig_symbols")
     get_config = _lazy_constructor("_config")
@@ -146,5 +141,14 @@ class KernelConfigGenerator(_ConfigGenerator):
     def get_hwdetector(self):
         return self._hwdetector
     # --- end of get_hwdetector (...) ---
+
+    def _create_config_choices_interpreter(self):
+        return self.create_loggable(
+            interpreter.KernelConfigLangInterpreter,
+            self.install_info,
+            self.source_info,
+            self.get_config_choices(),
+            self.get_hwdetector()
+        )
 
 # --- end of KernelConfigGenerator ---
