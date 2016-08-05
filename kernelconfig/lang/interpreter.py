@@ -1132,6 +1132,10 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 # already logged
                 return False
 
+            if not config_suggestions:
+                # no suggestions
+                return True
+
             dispatcher = self.config_choices.option_set_to
             for option, value in config_suggestions.items():
                 if not dispatcher(option, value):
