@@ -58,6 +58,9 @@ class KernelConfigLangLexer(object):
 
         "modalias":          "KW_MODALIAS",
 
+        "packages":          "OP_PACKAGES",
+        "pkg":               "OP_PACKAGES",
+
         "if":                "KW_IF",
         "unless":            "KW_UNLESS",
 

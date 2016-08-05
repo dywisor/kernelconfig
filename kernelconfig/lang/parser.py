@@ -18,6 +18,7 @@ class KernelConfigOp(enum.IntEnum):
     (
         op_include,
         op_hwdetect,
+        op_packages,
         op_disable,
         op_module,
         op_builtin,
@@ -37,7 +38,7 @@ class KernelConfigOp(enum.IntEnum):
         condop_operator_cmp_func,
         condop_exists,
         condop_hwmatch,
-    ) = range(20)
+    ) = range(21)
 
     @classmethod
     def is_op(cls, value):
@@ -181,6 +182,13 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
     def p_command_hwdetect_basic(self, p):
         '''command : OP_HWDETECT'''
         p[0] = [KernelConfigOp.op_hwdetect, None]
+
+    # ---
+    # pm integration
+    #
+    def p_command_packages_basic(self, p):
+        '''command : OP_PACKAGES'''
+        p[0] = [KernelConfigOp.op_packages, None]
 
     # ---
     # "d-m-b option"
