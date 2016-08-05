@@ -52,7 +52,9 @@ class ModulesMap(loggable.AbstractLoggable, collections.abc.Mapping):
     # --- end of _get_mk_modmap (...) ---
 
     def _load_new_mk_modmap(self):
-        scanner = mkscanner.ModuleConfigOptionsScanner(self.source_info)
+        scanner = self.create_loggable(
+            mkscanner.ModuleConfigOptionsScanner, self.source_info
+        )
         return scanner.get_module_options_map()
     # --- end of _load_new_mk_modmap (...) ---
 
