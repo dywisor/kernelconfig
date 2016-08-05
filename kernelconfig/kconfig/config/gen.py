@@ -6,12 +6,11 @@ import abc
 from ...abc import informed
 from ...lang import interpreter
 
-from ...kernel.hwdetection import detector
-
 from .. import symbolgen
 
 from . import data
 from . import choices
+from . import choicemodules
 
 
 __all__ = ["KernelConfigGenerator"]
@@ -100,6 +99,9 @@ class _ConfigGenerator(AbstractConfigGenerator):
     get_config_choices_interpreter = \
         _lazy_constructor("_config_choices_interpreter")
 
+    def get_config_choice_modules(self):
+        return None
+
     def commit(self):
         if self._config_choices is None:
             return True
@@ -122,24 +124,26 @@ class KernelConfigGenerator(_ConfigGenerator):
             install_info=install_info, source_info=source_info, **kwargs
         )
 
-        # hwdetector lazy-inits itself
-        self._hwdetector = self.create_informed(
-            detector.HWDetect, modules_dir=modules_dir
+        self._config_choice_modules = self.create_informed(
+            choicemodules.KernelConfigChoiceModules
         )
     # --- end of __init__ (...) ---
 
+    def get_config_choice_modules(self):
+        return self._config_choice_modules
+
     def get_modules_map(self):
         # FIXME: remove
-        return self._hwdetector.get_modules_map()
+        return self.get_hwdetector().get_modules_map()
     # --- end of get_modules_map (...) ---
 
     def get_modalias_map(self):
         # FIXME: remove
-        return self._hwdetector.get_modalias_map()
+        return self.get_hwdetector().get_modalias_map()
     # --- end of get_modalias_map (...) ---
 
     def get_hwdetector(self):
-        return self._hwdetector
+        return self.get_config_choice_modules()["hwdetector"]
     # --- end of get_hwdetector (...) ---
 
     def _create_config_choices_interpreter(self):
