@@ -28,6 +28,9 @@ Instructions that operate on Kconfig symbols:
    hardware-detect
    hwdetect
 
+   packages           [build-time|re-eval]
+   pkg                [build-time|re-eval]
+
 The language is case-insensitive and ignores whitespace.
 String values should be quoted.
 
@@ -46,6 +49,8 @@ put the ``driver`` keyword after the command and before the module names:
     # not supported for set, append, add
 
     # not supported for hardware-detect
+
+    # not supported for packages
 
 The ``modalias`` allows to specify module aliases,
 its usage is identical to ``driver``.
@@ -171,6 +176,19 @@ Kconfig Instructions
    but get logged.
 
    Alternative names: ``hwdetect``.
+
+``packages [build-time|re-eval]``
+    Query portage for a list of installed packages that use
+    ``linux-info.eclass`` and get their build-time value of the
+    ``CONFIG_CHECK`` variable or re-evaluate config recommendations
+    against the kernel sources for which a configuration is being created.
+
+    Recommended config options are enabled as builtin or module (``OPTION``),
+    or disabled (``!OPTION``), respectively.
+
+    If the modifier is omitted, ``re-eval`` is assumed.
+
+    Alternative names: ``pkg``.
 
 ``module KCONFIG_OPTION [KCONFIG_OPTION...]``
    Enable one or more kernel config options as module.
