@@ -26,6 +26,8 @@ class KernelConfigOp(enum.IntEnum):
         op_set_to,
         op_append,
         op_add,
+        opmod_static,
+        opmod_dynamic,
         oper_option,
         oper_driver,
         oper_modalias,
@@ -38,7 +40,7 @@ class KernelConfigOp(enum.IntEnum):
         condop_operator_cmp_func,
         condop_exists,
         condop_hwmatch,
-    ) = range(21)
+    ) = range(23)
 
     @classmethod
     def is_op(cls, value):
@@ -93,6 +95,9 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
         }
     )
 
+    keywords_packages_dynamic = frozenset({"dynamic", "re-eval", "reeval"})
+    keywords_packages_static = frozenset({"static", "build-time"})
+
     @classmethod
     def build_cond_expr(cls, cond_type, cond_func, cond_args):
         if __debug__:
@@ -100,6 +105,19 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
             assert cond_func is None or hasattr(cond_func, "__call__")
         # --
         return [cond_type, cond_func, cond_args]
+
+    def get_packages_opmod(self, arg):
+        if not arg:
+            return None
+
+        keyword = arg.lower()
+        if keyword in self.keywords_packages_dynamic:
+            return KernelConfigOp.opmod_dynamic
+        elif keyword in self.keywords_packages_static:
+            return KernelConfigOp.opmod_static
+        else:
+            return None
+    # --- end of get_packages_opmod (...) ---
 
     def create_dmb_command(self, opcode, options):
         return [opcode, KernelConfigOp.oper_option, options]
@@ -186,9 +204,23 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
     # ---
     # pm integration
     #
+
+    def p_command_packages_one_arg(self, p):
+        '''command : OP_PACKAGES STR'''
+        opmod = self.get_packages_opmod(p[2])
+        if opmod is not None:
+            p[0] = [KernelConfigOp.op_packages, opmod]
+        else:
+            self.handle_parse_error(
+                p, 2,
+                "expected a modifier after {} directive, not {}".format(
+                    p[1], p[2]
+                )
+            )
+
     def p_command_packages_basic(self, p):
         '''command : OP_PACKAGES'''
-        p[0] = [KernelConfigOp.op_packages, None]
+        p[0] = [KernelConfigOp.op_packages, KernelConfigOp.opmod_dynamic]
 
     # ---
     # "d-m-b option"
