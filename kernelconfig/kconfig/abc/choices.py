@@ -210,6 +210,153 @@ class AbstractConfigChoices(loggable.AbstractLoggable):
         """Convenience wrapper that calls option_set_to(key, value)."""
         return self.option_set_to(key, value)
 
+    def set_options_from_map(
+        self, config_options, source=None, *,
+        ignore_missing=False, allow_empty=True, filter_func=None
+    ):
+        """Sets several config options to their (individual) values.
+
+        This helper method acts like a "mass-option_set_to()" and adds
+        a few convenience features such as filtering out unknown options.
+
+        The "config options" parameter should be a dict where the keys are
+        config option names, and values are config option values.
+        It can also be a sequence of 2-tuples, similar to dict.update().
+
+        Any false value, e.g. None, is also accepted,
+        and makes this method immediately return "success" or "failure",
+        depending on the "allow_empty" keyword parameter.
+
+        @param   config_options:   either a dict of config option name X value,
+                                   or an iterable of 2-tuples(option, value).
+
+                                   See option_set_to() for a description
+                                   of possible config option names and values.
+        @type    config_options:   dict :: C{str} => undef
+                                   or iterable of 2-tuple (C{str}, undef)
+                                   or anything false
+
+        @keyword source:           additional information about the decision's
+                                   origin. Defaults to None.
+        @type    source:           undef or C{None}
+
+        @keyword ignore_missing:   whether to ignore nonexistent config options
+                                   Normally, this an error, but if the config
+                                   options come from an unreliable source,
+                                   this keyword may be set to True to discard
+                                   unknown options.
+                                   Defaults to False.
+        @type    ignore_missing:   C{bool}
+
+        @keyword allow_empty:      whether an empty (or otherwise false)
+                                   config_options parameter should be
+                                   interpreted as success or failure.
+                                   Defaults to True, which allows empty input.
+
+                                   The meaning of "empty" here is
+                                   "no config option has been set".
+                                   An input config options sequence
+                                   that has been completely filtered out
+                                   due to unknown options is considered
+                                   as "equally" empty as an empty dict.
+        @type    allow_empty:      usually C{bool}
+
+        @keyword filter_func:      either None,
+                                   which disables name/value-based filtering,
+                                   True which filters out false values,
+                                   or a function that receives a config option
+                                   name as first and its value as second
+                                   argument and returns True if the option
+                                   should be set and false otherwise.
+        @type    filter_func:      C{None} | C{bool} | callable :: n,v -> bool
+
+        @return: success (True/False)
+        @rtype:  C{bool}
+        """
+        if not config_options:
+            return allow_empty
+        elif hasattr(config_options, "keys"):
+            options_iter = ((k, config_options[k]) for k in config_options)
+        else:
+            options_iter = config_options
+
+        if ignore_missing:
+            # check has_option() before calling option_set_to(),
+            # there's no way to know why option_set_to() failed
+
+            def verbosely_check_option_exists(
+                item, *, has_option=self.has_option
+            ):
+                # item: 2-tuple (name, value)
+                if has_option(item[0]):
+                    return True
+                else:
+                    self.logger.warning("Unknown config option: %s", item[0])
+                    return False
+            # ---
+
+            options_iter = filter(verbosely_check_option_exists, options_iter)
+        # --
+
+        if not filter_func:
+            def check_option_value_allowed(option, value):
+                return True
+        elif filter_func is True:
+            def check_option_value_allowed(option, value):
+                if not value:
+                    # COULDFIX: empty str -- is a false value
+                    return False
+                else:
+                    return True
+        else:
+            check_option_value_allowed = filter_func
+        # --
+
+        option_set_to = self.option_set_to
+        have_set_any_config_option = False
+        for config_option, value in options_iter:
+            if not check_option_value_allowed(config_option, value):
+                self.logger.debug(
+                    "Ignoring %r decision for config option %s (filtered out)",
+                    value, config_option
+                )
+
+            elif option_set_to(config_option, value, source=source):
+                have_set_any_config_option = True
+
+            else:
+                return False
+        # --
+
+        return True if have_set_any_config_option else allow_empty
+    # --- end of set_options_from_map (...) ---
+
+    def set_options_from_suggestions(self, config_suggestions, **kwargs):
+        """
+        Accepts a config suggestions result object
+        as returned by AbstractChoiceModule.get_suggestions()
+        and sets config options accordingly if no errors occurred.
+        Otherwise, returns False.
+
+        See set_options_from_map() for accepted keyword arguments.
+
+        @param config_suggestions:  config suggestions,
+                                    a 2-tuple (errors, config options map)
+        @type  config_suggestions:  2-tuple (undef, dict)
+
+        @param kwargs:              see set_options_from_map()
+
+        @return: success (True/False)
+        @rtype:  C{bool}
+        """
+        errors, config_options = config_suggestions
+        if errors:
+            # assume already logged
+            return False
+        else:
+            return self.set_options_from_map(config_options, **kwargs)
+    # --- end of set_options_from_suggestions (...) ---
+
     @_decision_method
     def option_append(self, config_option, value, source=None):
         """Appends a value to the existing value of a config option.
