@@ -421,7 +421,7 @@ class TemporaryOverlayUnion(AbstractTemporaryOverlayBase):
                 (ov.is_empty() for ov in self.iter_overlays())
             )
         else:
-            return False
+            return True
 
     def add_package(self, package_info):
         ov = self.get_or_create_overlay(package_info.repo_name)
