@@ -4,7 +4,7 @@
 import json
 import logging
 
-from ...abc import informed
+from ...kconfig.abc import choicemodules
 
 from . import sysfs_scan
 from . import modulesmap
@@ -20,7 +20,7 @@ class HWDetectFileFormatError(ValueError):
     pass
 
 
-class HWDetect(informed.AbstractInformed):
+class HWDetect(choicemodules.AbstractChoiceModule):
     """
     This class provides methods that suggest config options
     based on information from /sys.
@@ -305,6 +305,55 @@ class HWDetect(informed.AbstractInformed):
             drivers_origin_map, modalias_origin_map
         )
     # --- end of detect_modules (...) ---
+
+    def get_suggestions(self, hwdetect_file=None):
+        if hwdetect_file is None:
+            hwdetect_result = self.detect_modules()
+        else:
+            hwdetect_result = (
+                self.detect_modules_from_hwdetect_file(hwdetect_file)
+            )
+        # --
+
+        all_modules, modules_missing, options = hwdetect_result
+
+        # failure to resolve some modules is tolerated
+        # as long as at least one module could be resolved
+        if modules_missing and not options:
+            # detect_modules() has already logged about this
+            self.logger.debug("Hardware detection failed")
+            return (True, None)
+
+        # taken over from lang interpreter,
+        #  the log messages suggest that the options get actually set,
+        #  which is true at the moment, but may change when using hwdetector
+        #  "for fun" / without the intent to set config options.
+        #
+        if self.logger.isEnabledFor(logging.DEBUG):
+            # FIXME: hidden function
+            def join_sort_modules(module_names):
+                return ", ".join(
+                    sorted(module_names, key=lambda w: w.lower())
+                )
+            # ---
+
+            self.logger.debug(
+                "Setting options for these modules: %s",
+                join_sort_modules(
+                    all_modules - set(modules_missing)
+                )
+            )
+
+            self.logger.debug(
+                "Not setting options for these modules: %s",
+                join_sort_modules(modules_missing)
+            )
+        # --
+
+        # for now, "enable-or-module" options detected by hwdetect
+        # TODO/MAYBE: add "all builtin" option as keyword param
+        return (None, {option: True for option in options})
+    # --- end of get_suggestions (...) ---
 
     def detect_modules_from_hwdetect_file(self, hwdetect_file):
         """

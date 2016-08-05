@@ -52,4 +52,10 @@ class KernelConfigChoiceModules(_ConfigChoiceModules):
         }
         super().__init__(**kwargs)
 
+    def create_dynamic_module_hwdetector(self):
+        # NOTE: changes to _config will not affect already loaded modules
+        return self.create_informed(
+            detector.HWDetect, modules_dir=self._config["modules_dir"]
+        )
+
 # ---
