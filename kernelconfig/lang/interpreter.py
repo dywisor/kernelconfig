@@ -1139,21 +1139,9 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 return False
             # --
 
-            errors, config_suggestions = hwdetector.get_suggestions()
-            if errors:
-                # already logged
-                return False
-
-            if not config_suggestions:
-                # no suggestions
-                return True
-
-            dispatcher = self.config_choices.option_set_to
-            for option, value in config_suggestions.items():
-                if not dispatcher(option, value):
-                    return False
-
-            return True
+            return self.config_choices.set_options_from_suggestions(
+                hwdetector.get_suggestions()
+            )
 
         elif cmd_arg is _KernelConfigOp.op_packages:
             # "packages" conditionals are context free,
@@ -1195,23 +1183,10 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 raise NotImplementedError("unknown command modifier", cmdv[1])
             # --
 
-            errors, config_suggestions = pm_suggestions.get_suggestions(
-                **pm_kwargs
+            return self.config_choices.set_options_from_suggestions(
+                pm_suggestions.get_suggestions(**pm_kwargs),
+                ignore_missing=True
             )
-            if errors:
-                # already logged
-                return False
-
-            if not config_suggestions:
-                # no suggestions
-                return True
-
-            dispatcher = self.config_choices.option_set_to
-            for option, value in config_suggestions.items():
-                if not dispatcher(option, value):
-                    return False
-
-            return True
 
         elif cmd_arg in self._choice_op_dispatchers:
             # dispatcher X options
