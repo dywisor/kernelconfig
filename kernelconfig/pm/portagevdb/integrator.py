@@ -1,7 +1,7 @@
 # This file is part of kernelconfig.
 # -*- coding: utf-8 -*-
 
-from ...abc import informed
+from ...kconfig.abc import choicemodules
 from ...util import accudict
 from ...util import tmpdir as _tmpdir
 
@@ -13,7 +13,7 @@ from . import _ebuildenv
 __all__ = ["PMIntegration"]
 
 
-class PMIntegration(informed.AbstractInformed):
+class PMIntegration(choicemodules.AbstractChoiceModule):
 
     def __init__(
         self, install_info, source_info,
@@ -178,5 +178,44 @@ class PMIntegration(informed.AbstractInformed):
                 config_check_accu_map
             )
     # --- end of get_package_build_time_config_check (...) ---
+
+    def get_suggestions(self, *, re_eval=True, enqueue_installed=True):
+        """
+        @keyword re_eval:  whether to re-evaluate CONFIG_CHECK by running
+                           ebuild phases (True) or retrieve the package
+                           build-time value of CONFIG_CHECK (False).
+                           Defaults to "re-eval" (True).
+
+                           Note the re_eval=False does not work for
+                           packages that are not installed.
+        @type    re_eval:  C{bool}
+
+        @keyword enqueue_installed:  whether to add installed packages
+                                     to the temporary overlays
+                                     prior to getting suggestions
+                                     Defaults to True.
+
+                                     Has no effect when re_eval is False,
+                                     since "static CONFIG_CHECK" operates
+                                     on *all* installed packages only.
+        @type    enqueue_installed:  C{bool}
+
+        @return:  2-tuple (errors, config suggestions possibly None)
+        """
+        if re_eval:
+            if enqueue_installed:
+                if not self.enqueue_installed_packages():
+                    self.logger.info(
+                        "No packages inheriting linux-info found!"
+                    )
+            # --
+
+            config_check_map = self.eval_config_check()
+        else:
+            config_check_map = self.get_package_build_time_config_check()
+        # --
+
+        return (None, config_check_map)
+    # --- end of get_suggestions (...) ---
 
 # --- end of PMIntegration ---
