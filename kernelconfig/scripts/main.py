@@ -550,7 +550,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             return False
 
         config_gen = self.create_loggable(
-            kernelconfig.kconfig.config.gen.ConfigGenerator,
+            kernelconfig.kconfig.config.gen.KernelConfigGenerator,
             install_info=self.install_info,
             source_info=self.source_info,
             modules_dir=modules_dir
