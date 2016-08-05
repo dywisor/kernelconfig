@@ -7,6 +7,7 @@ from ...util import tmpdir as _tmpdir
 
 from . import overlay
 from . import base
+from . import util
 from . import _ebuildenv
 
 __all__ = ["PMIntegration"]
@@ -145,5 +146,37 @@ class PMIntegration(informed.AbstractInformed):
 
         return self._create_config_check_map_from_accu(config_check_accu_map)
     # --- end of eval_config_check (...) ---
+
+    def get_package_build_time_config_check(self):
+        any_package_found = False
+
+        config_check_accu_map = accudict.DictAccumulatorDict()
+        for cpv, config_check_str in self.port_iface.zipmap_get_var(
+            self.port_iface.find_all_cpv_inheriting_linux_info(),
+            "CONFIG_CHECK"
+        ):
+            if config_check_str:
+                config_check_submap = util.parse_config_check(
+                    config_check_str, logger=self.logger
+                )
+                if config_check_submap:
+                    for config_option, value in config_check_submap.items():
+                        config_check_accu_map.add(config_option, (value, cpv))
+
+                    # unlikely enqueue_installed_packages(),
+                    # only packages with non-empty CONFIG_CHECK
+                    # count towards "any package found"
+                    any_package_found = True
+            # --
+        # --
+
+        if not any_package_found:
+            self.logger.info("No packages with non-empty CONFIG_CHECK found!")
+            return None
+        else:
+            return self._create_config_check_map_from_accu(
+                config_check_accu_map
+            )
+    # --- end of get_package_build_time_config_check (...) ---
 
 # --- end of PMIntegration ---
