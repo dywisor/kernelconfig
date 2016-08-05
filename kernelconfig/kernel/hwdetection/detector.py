@@ -306,7 +306,7 @@ class HWDetect(choicemodules.AbstractChoiceModule):
         )
     # --- end of detect_modules (...) ---
 
-    def get_suggestions(self, hwdetect_file=None):
+    def get_suggestions(self, *, hwdetect_file=None):
         if hwdetect_file is None:
             hwdetect_result = self.detect_modules()
         else:
