@@ -134,7 +134,9 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
 
     def p_command_list_bad_missing_sep(self, p):
         '''command_list : conditional_command error'''
-        self.handle_parse_error(p, 2, "expected newline or ';' after command")
+        self.handle_parse_error(
+            p, 2, "unknown command or missing newline or ';' after command"
+        )
 
     def p_conditional_command_nocond(self, p):
         '''conditional_command : command'''
