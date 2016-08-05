@@ -1155,6 +1155,64 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
 
             return True
 
+        elif cmd_arg is _KernelConfigOp.op_packages:
+            # "packages" conditionals are context free,
+            #  pass an empty context function dict
+            cond_dynamic, cond_eval = self.evaluate_conditional(
+                conditional, {}
+            )
+
+            # don't bother scanning /sys if the conditional evaluated to false
+            if not cond_eval:
+                self.logger.debug(
+                    'packages directive disabled by unmet conditions'
+                )
+                return True
+            # --
+
+            try:
+                pm_suggestions = self.choice_modules["pm"]
+            except KeyError:
+                pm_suggestions = None
+
+            if pm_suggestions is None:
+                self.logger.warning(
+                    "Package Management Integration is not available"
+                )
+                return False
+            # --
+
+            pm_kwargs = {"enqueue_installed": True}
+            # cmdv[1] is the instruction modifier
+            if cmdv[1] is _KernelConfigOp.opmod_static:
+                pm_kwargs["re_eval"] = False
+
+            elif cmdv[1] is _KernelConfigOp.opmod_dynamic:
+                pm_kwargs["re_eval"] = True
+
+            else:
+                self.logger.error("Unknown command modifier %r", cmdv[1])
+                raise NotImplementedError("unknown command modifier", cmdv[1])
+            # --
+
+            errors, config_suggestions = pm_suggestions.get_suggestions(
+                **pm_kwargs
+            )
+            if errors:
+                # already logged
+                return False
+
+            if not config_suggestions:
+                # no suggestions
+                return True
+
+            dispatcher = self.config_choices.option_set_to
+            for option, value in config_suggestions.items():
+                if not dispatcher(option, value):
+                    return False
+
+            return True
+
         elif cmd_arg in self._choice_op_dispatchers:
             # dispatcher X options
             dispatcher = self._choice_op_dispatchers[cmd_arg]
