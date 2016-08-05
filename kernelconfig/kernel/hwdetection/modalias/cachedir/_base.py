@@ -6,7 +6,7 @@ import re
 import stat
 
 
-from .....abc import loggable
+from .....abc import informed
 from .....util import fspath
 from .....util import misc
 from .....util import objcache
@@ -95,7 +95,7 @@ class ModaliasCacheKey(_ModaliasCacheKey):
 # ---
 
 
-class ModaliasCacheBase(loggable.AbstractLoggable):
+class ModaliasCacheBase(informed.AbstractInformed):
 
     CACHE_DIR_RELPATH = "modalias"
 
@@ -130,10 +130,10 @@ class ModaliasCacheBase(loggable.AbstractLoggable):
                 )
     # --- end of iter_cache_dir_entries (...) ---
 
-    def __init__(self, install_info, source_info, **logger_kwargs):
-        super().__init__(**logger_kwargs)
-        self.install_info = install_info
-        self.source_info = source_info
+    def __init__(self, install_info, source_info, **kwargs):
+        super().__init__(
+            install_info=install_info, source_info=source_info, **kwargs
+        )
         self._cache_key_str = None
     # --- end of __init__ (...) ---
 

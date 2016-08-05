@@ -3,7 +3,7 @@
 
 import collections.abc
 
-from ....abc import loggable
+from ....abc import informed
 
 from . import mkscanner
 from .. import util
@@ -12,7 +12,7 @@ from .. import util
 __all__ = ["ModulesMap"]
 
 
-class ModulesMap(loggable.AbstractLoggable, collections.abc.Mapping):
+class ModulesMap(informed.AbstractSourceInformed, collections.abc.Mapping):
 
     normalize_module_name = staticmethod(util.normalize_module_name)
 
@@ -25,8 +25,7 @@ class ModulesMap(loggable.AbstractLoggable, collections.abc.Mapping):
     # --- end of load (...) ---
 
     def __init__(self, source_info, **kwargs):
-        super().__init__(**kwargs)
-        self.source_info = source_info
+        super().__init__(source_info=source_info, **kwargs)
         self._mk_modmap = None
     # --- end of __init__ (...) ---
 

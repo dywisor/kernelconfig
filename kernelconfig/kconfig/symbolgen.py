@@ -4,6 +4,7 @@
 import logging
 
 from ..abc import loggable
+from ..abc import informed
 from . import symbol
 from . import symbols
 from . import symbolexpr
@@ -205,7 +206,7 @@ class KconfigSymbolExpressionBuilder(loggable.AbstractLoggable):
 # ---
 
 
-class KconfigSymbolGenerator(loggable.AbstractLoggable):
+class KconfigSymbolGenerator(informed.AbstractSourceInformed):
     """Creates kconfig symbols using the kconfig parser
     from the linux kernel sources.
 
@@ -263,8 +264,7 @@ class KconfigSymbolGenerator(loggable.AbstractLoggable):
     # --- end of get_default_symbol_constants (...) ---
 
     def __init__(self, source_info, **kwargs):
-        super().__init__(**kwargs)
-        self.source_info = source_info
+        super().__init__(source_info=source_info, **kwargs)
         self._symbols = symbols.KconfigSymbols()
         self._dir_deps = {}
         self._vis_deps = {}

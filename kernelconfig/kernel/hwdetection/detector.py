@@ -4,7 +4,7 @@
 import json
 import logging
 
-from ...abc import loggable
+from ...abc import informed
 
 from . import sysfs_scan
 from . import modulesmap
@@ -20,7 +20,7 @@ class HWDetectFileFormatError(ValueError):
     pass
 
 
-class HWDetect(loggable.AbstractLoggable):
+class HWDetect(informed.AbstractInformed):
     """
     This class provides methods that suggest config options
     based on information from /sys.
@@ -57,11 +57,7 @@ class HWDetect(loggable.AbstractLoggable):
                 )
             )
 
-            modalias_cache = self.create_loggable(
-                cachedir.ModaliasCache,
-                source_info=self.source_info,
-                install_info=self.install_info
-            )
+            modalias_cache = self.create_informed(cachedir.ModaliasCache)
 
             modules_dir = modalias_cache.get_modules_dir()
             modules_dir.set_logger(parent_logger=self.logger)
@@ -86,13 +82,11 @@ class HWDetect(loggable.AbstractLoggable):
                                 Defaults to None.
         @type    modules_dir:   subclass of L{AbstractModulesDir} or C{None}
         """
-        super().__init__(**kwargs)
-        self.install_info = install_info
-        self.source_info = source_info
-
-        self.modules_map = self.create_loggable(
-            modulesmap.ModulesMap, self.source_info
+        super().__init__(
+            install_info=install_info, source_info=source_info, **kwargs
         )
+
+        self.modules_map = self.create_source_informed(modulesmap.ModulesMap)
 
         self.modalias_map = self.create_loggable(
             modalias.ModaliasLookup,
