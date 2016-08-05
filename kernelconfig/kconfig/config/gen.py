@@ -146,6 +146,12 @@ class KernelConfigGenerator(_ConfigGenerator):
         return self.get_config_choice_modules()["hwdetector"]
     # --- end of get_hwdetector (...) ---
 
+    def get_pm_suggestions(self):
+        # FIXME: method name implies to return suggestions,
+        #        but the returned object is a choice module
+        return self.get_config_choice_modules()["pm"]
+    # --- end of get_pm_suggestions (...) ---
+
     def _create_config_choices_interpreter(self):
         return self.create_loggable(
             interpreter.KernelConfigLangInterpreter,

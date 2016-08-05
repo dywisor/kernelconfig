@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 from ...kernel.hwdetection import detector
+from ...pm.portagevdb import integrator
+from ...util import tmpdir as _tmpdir
 
 from ..abc import choicemodules as _choicemodules_abc
 
@@ -46,16 +48,36 @@ class _ConfigChoiceModules(_choicemodules_abc.AbstractChoiceModules):
 
 class KernelConfigChoiceModules(_ConfigChoiceModules):
 
-    def __init__(self, *, modules_dir=True, **kwargs):
+    def __init__(
+        self, *, modules_dir=True, tmpdir=None, parent_tmpdir=None, **kwargs
+    ):
         self._config = {
             "modules_dir": modules_dir
         }
+
+        if tmpdir is None and parent_tmpdir is None:
+            self._tmpdir = None
+        else:
+            self._tmpdir = _tmpdir.get_tmpdir_or_view(tmpdir, parent_tmpdir)
+
         super().__init__(**kwargs)
+
+    def get_tmpdir(self):
+        tmpdir = self._tmpdir
+        if tmpdir is None:
+            tmpdir = _tmpdir.Tmpdir()
+            self._tmpdir = tmpdir
+        return tmpdir
 
     def create_dynamic_module_hwdetector(self):
         # NOTE: changes to _config will not affect already loaded modules
         return self.create_informed(
             detector.HWDetect, modules_dir=self._config["modules_dir"]
+        )
+
+    def create_dynamic_module_pm(self):
+        return self.create_informed(
+            integrator.PMIntegration, parent_tmpdir=self.get_tmpdir()
         )
 
 # ---
