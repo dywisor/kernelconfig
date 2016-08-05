@@ -719,7 +719,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
     """
 
     def __init__(
-        self, install_info, source_info, config_choices, hwdetector, *,
+        self, install_info, source_info, config_choices, choice_modules, *,
         object_cache_size=32, **kwargs
     ):
         super().__init__(**kwargs)
@@ -729,7 +729,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         self.install_info = install_info
         self.source_info = None
         self.config_choices = None
-        self.hwdetector = None
+        self.choice_modules = None
         self._choice_op_dispatchers = None
         self._choice_str_op_dispatchers = None
         self._config_option_cond_context = None
@@ -738,7 +738,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
 
         self.bind_config_choices(config_choices)
         self.bind_source_info(source_info)
-        self.bind_hwdetector(hwdetector)
+        self.bind_choice_modules(choice_modules)
         self.bind_cmp_vars()
     # --- end of __init__ (...) ---
 
@@ -774,8 +774,8 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         # ---
     # ---
 
-    def bind_hwdetector(self, hwdetector):
-        self.hwdetector = hwdetector
+    def bind_choice_modules(self, choice_modules):
+        self.choice_modules = choice_modules
     # ---
 
     def bind_source_info(self, source_info):
@@ -827,6 +827,18 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         # -- end if source info
     # --- end of bind_cmp_vars (...) ---
 
+    def get_choice_module(self, name):
+        choice_modules = self.choice_modules
+        if choice_modules is None:
+            # unlikely
+            return None
+        else:
+            try:
+                return choice_modules[name]
+            except KeyError:
+                return None
+    # --- end of get_choice_module (...) ---
+
     def lookup_cmp_operand(self, arg):
         lowarg = arg.lower()
         try:
@@ -866,7 +878,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
         """
         modlist = list(module_names)
 
-        hwdetector = self.hwdetector
+        hwdetector = self.get_choice_module("hwdetector")
         if hwdetector is None:
             self.logger.warning(
                 (
@@ -902,7 +914,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                  )
         @rtype:  2-tuple (C{list} of C{str}, C{list} of C{str})
         """
-        hwdetector = self.hwdetector
+        hwdetector = self.get_choice_module("hwdetector")
         if hwdetector is None:
             self.logger.warning(
                 (
@@ -1121,7 +1133,7 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 return True
             # --
 
-            hwdetector = self.hwdetector
+            hwdetector = self.get_choice_module("hwdetector")
             if hwdetector is None:
                 self.logger.warning("Hardware detection is not available")
                 return False

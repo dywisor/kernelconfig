@@ -152,7 +152,7 @@ class KernelConfigGenerator(_ConfigGenerator):
             self.install_info,
             self.source_info,
             self.get_config_choices(),
-            self.get_hwdetector()
+            self.get_config_choice_modules()
         )
 
 # --- end of KernelConfigGenerator ---
