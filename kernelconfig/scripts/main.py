@@ -570,14 +570,21 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         # load hwdetect-from-file data early on
         #  downloading a conf basis and then erroring out due to a wrong
         #  hwdetect file format would be a waste of user time
-        hwdetect_data = None
+        hwdetect_suggestions = None
         if arg_config.get("hwdetect_file"):
             hwdetector = config_gen.get_hwdetector()
             assert hwdetector is not None
-            hwdetect_data = hwdetector.detect_modules_from_hwdetect_file(
-                arg_config["hwdetect_file"]
+            hwdetect_errors, hwdetect_suggestions = (
+                hwdetector.get_suggestions(
+                    hwdetect_file=arg_config["hwdetect_file"]
+                )
             )
-            assert hwdetect_data is not None
+
+            if hwdetect_errors:
+                # already logged
+                return False
+
+            assert hwdetect_suggestions is not None
         # --
 
         # * load input config
@@ -593,7 +600,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         # --
 
         #   2. hwdetect from file
-        if hwdetect_data is not None:
+        if hwdetect_suggestions is not None:
             # TODO/FIXME: better logging, maybe add this to config choices
             #             (and dedup/reuse related interpreter code)
             #             in particular,
@@ -601,8 +608,8 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             self.logger.debug("Adding hwdetect-from-file config options")
             conf_choices = config_gen.get_config_choices()
 
-            for option in hwdetect_data[-1]:
-                if not conf_choices.option_builtin_or_module(option):
+            for option, value in hwdetect_suggestions.items():
+                if not conf_choices.option_set_to(option, value):
                     return False
         # --
 
