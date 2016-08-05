@@ -72,39 +72,11 @@ class PMIntegration(informed.AbstractInformed):
         return any_package_added
     # --- end of enqueue_installed_packages (...) ---
 
-    def eval_config_check(self):
-        """
-        @return: dict where keys are config option names,
-                 and values indicate whether an option should be enabled
-                 or disabled
-        @rtype:  C{dict} :: C{str} => C{bool}
-        """
-        overlays = self._overlays
+    def _create_config_check_map_from_accu(self, config_check_accu_map):
+        # dict: config_option => (dict :: value => cpv)
+        #   ==> dict: config_option => value
 
-        if overlays.is_empty():
-            self.logger.info("No packages found - nothing to do")
-            return None
-        # --
-
-        overlays.setup(self.port_iface)
-        config_check_eval_env = self.create_informed(
-            _ebuildenv.ConfigCheckEbuildEnv,
-            tmpdir=self.portage_tmpdir
-        )
-        config_check_eval_env.setup(self.port_iface)
-
-        config_check_accu_map = accudict.DictAccumulatorDict()
-        for cpv, config_check_submap in (
-            config_check_eval_env.iter_eval_config_check(
-                overlays.iter_packages()
-            )
-        ):
-            if config_check_submap:
-                for config_option, value in config_check_submap.items():
-                    config_check_accu_map.add(config_option, (value, cpv))
-        # --
-
-        # now build the actual config_check map, which is a normal dict
+        # build the actual config_check map, which is a normal dict
         config_check_map = {}
         for config_option, node in config_check_accu_map.items():
             if not node:
@@ -137,6 +109,41 @@ class PMIntegration(informed.AbstractInformed):
         # --
 
         return config_check_map
+    # --- end of _create_config_check_map_from_accu (...) ---
+
+    def eval_config_check(self):
+        """
+        @return: dict where keys are config option names,
+                 and values indicate whether an option should be enabled
+                 or disabled
+        @rtype:  C{dict} :: C{str} => C{bool}
+        """
+        overlays = self._overlays
+
+        if overlays.is_empty():
+            self.logger.info("No packages found - nothing to do")
+            return None
+        # --
+
+        overlays.setup(self.port_iface)
+        config_check_eval_env = self.create_informed(
+            _ebuildenv.ConfigCheckEbuildEnv,
+            tmpdir=self.portage_tmpdir
+        )
+        config_check_eval_env.setup(self.port_iface)
+
+        config_check_accu_map = accudict.DictAccumulatorDict()
+        for cpv, config_check_submap in (
+            config_check_eval_env.iter_eval_config_check(
+                overlays.iter_packages()
+            )
+        ):
+            if config_check_submap:
+                for config_option, value in config_check_submap.items():
+                    config_check_accu_map.add(config_option, (value, cpv))
+        # --
+
+        return self._create_config_check_map_from_accu(config_check_accu_map)
     # --- end of eval_config_check (...) ---
 
 # --- end of PMIntegration ---
