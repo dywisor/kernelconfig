@@ -39,7 +39,7 @@ class AbstractChoiceModule(informed.AbstractInformed):
         "config suggestions" is a dict that maps config option names to
         the requested value, which can be True (builtin or module),
         False (disable), a tristate value, an integer or a str.
-        It can also be None in case of errors.
+        It can also be None for if no suggestions are available.
 
         Note: except for "builtin-or-module" (True), it is not possible to
               suggest variant config option values such as {tristate n, m}
