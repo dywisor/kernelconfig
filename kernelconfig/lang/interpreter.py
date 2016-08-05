@@ -1127,42 +1127,14 @@ class KernelConfigLangInterpreter(AbstractKernelConfigLangInterpreter):
                 return False
             # --
 
-            all_modules, modules_missing, options = hwdetector.detect_modules()
-
-            # failure to resolve some modules is tolerated
-            # as long as at least one module could be resolved
-            if modules_missing and not options:
-                # detect_modules() has already logged about this
-                self.logger.debug("Hardware detection failed")
+            errors, config_suggestions = hwdetector.get_suggestions()
+            if errors:
+                # already logged
                 return False
 
-            # for now, "enable-or-module" options detected by hwdetect
-            # TODO/MAYBE: add "all builtin" option to instruction
-
-            if self.logger.isEnabledFor(logging.DEBUG):
-                # FIXME: hidden function
-                def join_sort_modules(module_names):
-                    return ", ".join(
-                        sorted(module_names, key=lambda w: w.lower())
-                    )
-                # ---
-
-                self.logger.debug(
-                    "Setting options for these modules: %s",
-                    join_sort_modules(
-                        all_modules - set(modules_missing)
-                    )
-                )
-
-                self.logger.debug(
-                    "Not setting options for these modules: %s",
-                    join_sort_modules(modules_missing)
-                )
-            # --
-            opcode_rewrite = _KernelConfigOp.op_builtin_or_module
-            dispatcher = self._choice_op_dispatchers[opcode_rewrite]
-            for option in options:
-                if not dispatcher(option):
+            dispatcher = self.config_choices.option_set_to
+            for option, value in config_suggestions.items():
+                if not dispatcher(option, value):
                     return False
 
             return True
