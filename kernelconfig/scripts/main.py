@@ -608,9 +608,8 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             self.logger.debug("Adding hwdetect-from-file config options")
             conf_choices = config_gen.get_config_choices()
 
-            for option, value in hwdetect_suggestions.items():
-                if not conf_choices.option_set_to(option, value):
-                    return False
+            if not conf_choices.set_options_from_map(hwdetect_suggestions):
+                return False
         # --
 
         #   3. settings->[options]
