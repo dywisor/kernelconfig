@@ -239,6 +239,13 @@ class KconfigSymbolGenerator(informed.AbstractSourceInformed):
     @type _dir_deps:    C{dict} :: L{AbstractKconfigSymbol} => L{Expr}
     @ivar _vis_deps:    a symbol -> vis_dep mapping
     @type _vis_deps:    C{dict} :: L{AbstractKconfigSymbol} => L{Expr}
+    @ivar _def_deps:    a symbol -> intermediate symbol defaults mapping
+                        "intermediate symbol defaults" are
+                        2-tuples (dir_dep, vis_dep).
+                        They are converted to L{KconfigSymbolDefault} objects
+                        during the "link deps" phase.
+    @type _def_deps:    C{dict} :: L{AbstractKconfigSymbol}
+                                => C{list} of 2-tuple <L{Expr}>
     """
 
     SYMBOL_TYPE_TO_CLS_MAP = {
@@ -268,6 +275,7 @@ class KconfigSymbolGenerator(informed.AbstractSourceInformed):
         self._symbols = symbols.KconfigSymbols()
         self._dir_deps = {}
         self._vis_deps = {}
+        self._def_deps = {}
     # --- end of __init__ (...) ---
 
     def read_lkc_symbols(self):
@@ -343,6 +351,7 @@ class KconfigSymbolGenerator(informed.AbstractSourceInformed):
         kconfig_symbols = self._symbols
         dir_deps = self._dir_deps
         vis_deps = self._vis_deps
+        def_deps = self._def_deps
 
         for sym_view in self.get_lkc_symbols():
             sym_cls = get_symbol_cls(sym_view.s_type)
@@ -357,6 +366,23 @@ class KconfigSymbolGenerator(informed.AbstractSourceInformed):
                 vis_deps[sym] = expr_builder.createv_or(
                     (p[1] for p in sym_prompts)
                 )
+
+                # get symbol defaults
+                #  keep dependency and visibility depepencies separate,
+                #  visibility does not contribute to the default value
+                #  except that it can limit a tristate "y" to "m" (and similar)
+                #
+                # spare the overhead if defaults
+                # are not supported for the symbol (type)
+                if sym.supports_defaults():
+                    def_deps[sym] = [
+                        (
+                            expr_builder.create(def_dir_dep),
+                            expr_builder.create(def_vis_dep),
+                        )
+                        for def_dir_dep, def_vis_dep in sym_view.get_defaults()
+                    ]
+                # --
             # --
         # --
     # --- end of _prepare_symbols (...) ---
@@ -379,9 +405,30 @@ class KconfigSymbolGenerator(informed.AbstractSourceInformed):
                         )
             # ---
 
+            def expand_def_dep_dict(def_dep_dict, symbol_names_missing):
+                # def_dep_dict: sym -> list of 2-tuple (dir_dep, vis_dep)
+                nonlocal symbol_map, constants
+                for sym_key in list(def_dep_dict):
+                    dep_exprv = def_dep_dict[sym_key]
+                    if dep_exprv:
+                        def_dep_dict[sym_key] = [
+                            [
+                                (
+                                    dep_expr.expand_symbols_shared(
+                                        symbol_map, constants,
+                                        symbol_names_missing
+                                    ) if dep_expr is not None else None
+                                ) for dep_expr in dep_tuple
+                            ]
+                            for dep_tuple in dep_exprv
+                        ]
+            # ---
+
             symbol_names_missing = set()
             expand_dep_dict(self._dir_deps, symbol_names_missing)
             expand_dep_dict(self._vis_deps, symbol_names_missing)
+            expand_def_dep_dict(self._def_deps, symbol_names_missing)
+
             return symbol_names_missing
         # ---
 
@@ -428,6 +475,34 @@ class KconfigSymbolGenerator(informed.AbstractSourceInformed):
 
         for sym, vis_expr in self._vis_deps.items():
             sym.vis_dep = None if vis_expr is None else vis_expr.simplify()
+
+        for sym, def_exprv in self._def_deps.items():
+            sym.defaults = None  # nop
+            if def_exprv:
+                simplified_def_exprv = [
+                    [
+                        (None if dep_expr is None else dep_expr.simplify())
+                        for dep_expr in dep_tuple
+                    ] for dep_tuple in def_exprv
+                ]
+
+                # construct KconfigSymbolDefault objects
+                #  FIXME: does it make sense to construct a default
+                #         if dir_dep is None?
+                #  FIXME: filter out constant "n"
+                defaultv = [
+                    symbol.KconfigSymbolDefault(
+                        dir_dep=dir_dep, vis_dep=vis_dep
+                    )
+                    for dir_dep, vis_dep in simplified_def_exprv
+                    if (dir_dep is not None or vis_dep is not None)
+                ]
+
+                if defaultv:
+                    sym.defaults = defaultv
+                # -- end if set defaults?
+            # -- otherwise keep None
+        # --
     # --- end of _link_deps (...) ---
 
     def get_symbols(self):
