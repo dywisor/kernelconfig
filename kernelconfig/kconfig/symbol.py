@@ -5,7 +5,7 @@ import re
 import enum
 import numbers
 
-from .abc.symbol import AbstractKconfigSymbol
+from .abc import symbol as _symbol_abc
 
 __all__ = [
     "KconfigSymbolValueType",
@@ -45,7 +45,25 @@ class TristateKconfigSymbolValue(enum.IntEnum):
 # --- end of TristateKconfigSymbolValue ---
 
 
-class _KconfigSymbol(AbstractKconfigSymbol):
+class KconfigSymbolDefault(_symbol_abc.AbstractKconfigDepObject):
+    __slots__ = []
+
+    def evaluate_vis_dep(self, symbol_value_map):
+        if self.vis_dep is None:
+            return TristateKconfigSymbolValue.y
+        else:
+            return self.vis_dep.evaluate(symbol_value_map)
+
+    def evaluate_dir_dep(self, symbol_value_map):
+        if self.dir_dep is None:
+            return None
+        else:
+            return self.dir_dep.evaluate(symbol_value_map)
+
+# --- end of KconfigSymbolDefault ---
+
+
+class _KconfigSymbol(_symbol_abc.AbstractKconfigSymbol):
     __slots__ = []
 
     VALUE_FMT_STR = "{name}={value!s}"
@@ -73,6 +91,39 @@ class _KconfigSymbol(AbstractKconfigSymbol):
         return self.DEP_VALUE_REINTERPRET_MAP.get(trival, trival)
     # --- end of evaluate_vis_dep (...) ---
 
+    def get_visibile_default_expr(self, symbol_value_map):
+        if self.def_dep is None:
+            return (None, None)
+
+        for sym_default in self.defaults:
+            vis_val = sym_default.evaluate_vis_dep(symbol_value_map)
+            if vis_val:
+                return (sym_default, vis_val)
+        # -- end for
+
+        return (None, None)
+    # --- end of get_visibile_default_expr (...) ---
+
+    @classmethod
+    def supports_defaults(cls):
+        # in principle, dir_dep contains the default value
+        # However, the methods available for evaluating deps/finding a solution
+        # degenerate that value to tristate.
+        # So, generally, "defaults" are not supported, except for tristate.
+        return False
+
+    def evaluate_default(self, symbol_value_map):
+        # provided for all classes,
+        # whether their def_dep should participate in config resolving or not
+        sym_default, vis_val = self.get_visibile_default_expr(symbol_value_map)
+        if sym_default is None:
+            return None
+
+        else:
+            dir_dep_val = sym_default.evaluate_dir_dep(symbol_value_map)
+            return (dir_dep_val, vis_val)
+    # --- end of evaluate_default (...) ---
+
     @classmethod
     def get_value_fmt_arg(cls, value):
         return value
@@ -95,6 +146,10 @@ class _KconfigSymbol(AbstractKconfigSymbol):
 class TristateKconfigSymbol(_KconfigSymbol):
     __slots__ = []
     type_name = "tristate"
+
+    @classmethod
+    def supports_defaults(cls):
+        return True
 
     @classmethod
     def normalize_and_validate(cls, value, lenient=False):
