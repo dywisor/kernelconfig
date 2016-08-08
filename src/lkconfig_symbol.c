@@ -199,6 +199,56 @@ static PyObject* lkconfig_SymbolViewObject_get_selects (
 }
 
 
+static int lkconfig_SymbolViewObject__create_default_and_append_to_list (
+    PyObject* const l, const struct property* const def_prop
+) {
+    PyObject* default_tuple;
+    PyObject* eview_dir_dep;
+    PyObject* eview_vis_dep;
+
+    eview_dir_dep = lkconfig_ExprViewObject_new_from_struct ( def_prop->expr );
+    if ( eview_dir_dep == NULL ) { return -1; }
+
+    eview_vis_dep = lkconfig_ExprViewObject_new_from_struct (
+        (def_prop->visible).expr
+    );
+    if ( eview_vis_dep == NULL ) {
+        Py_DECREF ( eview_dir_dep );
+        return -1;
+    }
+
+    default_tuple = Py_BuildValue ( "(OO)", eview_dir_dep, eview_vis_dep );
+    Py_DECREF ( eview_dir_dep ); eview_dir_dep = NULL;
+    Py_DECREF ( eview_vis_dep ); eview_vis_dep = NULL;
+
+    return lkconfig_list_append_steal_ref ( l, default_tuple );
+}
+
+static PyObject* lkconfig_SymbolViewObject_get_defaults (
+    lkconfig_SymbolViewObject* const self, PyObject* const noargs
+) {
+    const struct property* prop;
+    PyObject* def_list;
+
+    def_list = PyList_New(0);
+    if ( def_list == NULL ) { return NULL; }
+
+    for_all_defaults ( self->kconfig_sym, prop ) {
+        /* (prop->visible.expr AND prop->expr) OR rev_dep */
+        if (
+            lkconfig_SymbolViewObject__create_default_and_append_to_list (
+                def_list, prop
+            ) != 0
+        ) {
+            Py_DECREF ( def_list );
+            return NULL;
+        }
+    }
+
+    return def_list;
+}
+
+
 static void lkconfig_SymbolViewObject_dealloc (
     lkconfig_SymbolViewObject* const self
 ) {
@@ -287,6 +337,15 @@ static PyMethodDef lkconfig_SymbolViewObject_methods[] = {
         PyDoc_STR (
             "get_prompts() -- returns a list of 2-tuples"
             " (prompt string, prompt visibility ExpressionView)"
+        )
+    },
+    {
+        "get_defaults",
+        (PyCFunction) lkconfig_SymbolViewObject_get_defaults,
+        METH_NOARGS,
+        PyDoc_STR (
+            "get_defaults() -- returns a list of 2-tuples"
+            " (symbol default dir dep, vis dep)"
         )
     },
     {
