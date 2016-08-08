@@ -2,12 +2,38 @@
 # -*- coding: utf-8 -*-
 
 import abc
-import collections.abc
 
 __all__ = ["AbstractKconfigSymbol"]
 
 
-class AbstractKconfigSymbol(collections.abc.Hashable):
+class AbstractKconfigDepObject(object, metaclass=abc.ABCMeta):
+    __slots__ = ["dir_dep", "vis_dep"]
+
+    def __init__(self, dir_dep=None, vis_dep=None):
+        super().__init__()
+        self.dir_dep = dir_dep
+        self.vis_dep = vis_dep
+    # --- end of __init__ (...) ---
+
+    def __repr__(self):
+        return (
+            "{cls.__name__}(dir_dep={dir_dep!r}, vis_dep={vis_dep!r})".format(
+                dir_dep=self.dir_dep, vis_dep=self.vis_dep,
+                cls=self.__class__,
+            )
+        )
+    # --- end of __repr__ (...) ---
+
+    def __str__(self):
+        return "dir_dep: {dir_dep!s}\nvis_dep: {vis_dep!s}".format(
+            dir_dep=self.dir_dep, vis_dep=self.vis_dep
+        )
+    # --- end of __str__ (...) ---
+
+# --- end of AbstractKconfigDepObject ---
+
+
+class AbstractKconfigSymbol(AbstractKconfigDepObject):
     """
     A(n abstract) kconfig option,
 
@@ -36,7 +62,7 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
     @type VALUE_NOT_SET_FMT_STR: C{str}
     """
 
-    __slots__ = ["__weakref__", "name", "dir_dep", "vis_dep"]
+    __slots__ = ["__weakref__", "name"]
 
     VALUE_NOT_SET_FMT_STR = "# {name} is not set"
 
@@ -166,10 +192,8 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
     # ---
 
     def __init__(self, name, dir_dep=None, vis_dep=None):
-        super().__init__()
+        super().__init__(dir_dep=dir_dep, vis_dep=vis_dep)
         self.name = name
-        self.dir_dep = dir_dep
-        self.vis_dep = vis_dep
 
     def __hash__(self):
         return hash((self.__class__, self.name))
@@ -196,5 +220,8 @@ class AbstractKconfigSymbol(collections.abc.Hashable):
 
     def __repr__(self):
         return "{c.__qualname__}<{s.name!s}>".format(c=self.__class__, s=self)
+
+    def __str__(self):
+        return self.name or "<sym?>"
 
 # --- end of AbstractKconfigSymbol ---
