@@ -140,6 +140,14 @@ class ConfigGraph(loggable.AbstractLoggable):
             return output_set
         # --- end of set_union (...) ---
 
+        def get_dep_syms(expr):
+            nonlocal empty_set
+            if expr is not None:
+                return expr.get_dependent_symbols()
+            else:
+                return empty_set
+        # --- end of get_dep_syms (...) ---
+
         empty_set = set()
         dep_graph = self.dep_graph  # ref
 
@@ -147,17 +155,20 @@ class ConfigGraph(loggable.AbstractLoggable):
         while syms_in_need_of_expansion:
             syms_next = set()
             for sym in syms_in_need_of_expansion:
-                if sym.dir_dep is not None:
-                    sym_deps = sym.dir_dep.get_dependent_symbols()
-                else:
-                    sym_deps = empty_set
+                sym_deps = get_dep_syms(sym.dir_dep)
+                sym_vis_deps = get_dep_syms(sym.vis_dep)
 
-                if sym.vis_dep is not None:
-                    sym_vis_deps = sym.vis_dep.get_dependent_symbols()
+                if sym.supports_defaults() and sym.defaults:
+                    sym_def_deps = set()
+                    for sym_default in sym.defaults:
+                        sym_def_deps.update(get_dep_syms(sym_default.dir_dep))
+                        sym_def_deps.update(get_dep_syms(sym_default.vis_dep))
+                    # --
                 else:
-                    sym_vis_deps = empty_set
+                    sym_def_deps = empty_set
+                # --
 
-                sym_all_deps = set_union(sym_deps, sym_vis_deps)
+                sym_all_deps = set_union(sym_deps, sym_vis_deps, sym_def_deps)
                 if sym_all_deps:
                     dep_graph[sym] = sym_all_deps
                     syms_next.update(sym_all_deps)
@@ -295,9 +306,7 @@ class ConfigGraph(loggable.AbstractLoggable):
         self.decisions = decisions
 
     def accumulate_solutions(self, sym_group, decisions_at_this_level):
-        def merge_sym_solutions(
-            dir_dep_sol, vis_dep_sol, *, _SolutionCache=solcache.SolutionCache
-        ):
+        def merge_sym_solutions(dir_dep_sol, vis_dep_sol):
             if dir_dep_sol is True:
                 return vis_dep_sol
             elif vis_dep_sol is True:
