@@ -50,11 +50,15 @@ class AbstractKconfigSymbol(AbstractKconfigDepObject):
     @ivar dir_dep:  the symbol's dependencies ("depends on"). May be None.
     @type dir_dep:  C{None} or undef
 
-    and optionally visibility dependencies on other symbols
+    optionally visibility dependencies on other symbols,
     @ivar vis_dep:  the symbol's visiblity dependencies
                      (visibilty of the symbol's prompts, OR-merged)
     @type vis_dep:  C{None} or undef
 
+    and also optionally a default other than tristate "n", as expression
+    @ivar defaults: the symbol's defaults,
+                    list of dependency expressions
+    @type defaults: C{None} or undef
 
     Additionally, a class-wide variables exists for str-formatting the
     option in case of "is not set" values:
@@ -62,12 +66,26 @@ class AbstractKconfigSymbol(AbstractKconfigDepObject):
     @type VALUE_NOT_SET_FMT_STR: C{str}
     """
 
-    __slots__ = ["__weakref__", "name"]
+    __slots__ = ["__weakref__", "name", "defaults"]
 
     VALUE_NOT_SET_FMT_STR = "# {name} is not set"
 
     @abc.abstractproperty
     def type_name(cls):  # pylint: disable=E0213
+        raise NotImplementedError()
+
+    @abc.abstractclassmethod
+    def supports_defaults(cls):
+        """
+        Returns whether this symbol class supports calculation of a default
+        value with evaluate_default().
+
+        This is meaningful to config resolving, as it indicates
+        whether to consider defaults for a given symbol or not.
+
+        @return:  True if defaults supported and False otherwise
+        @rtype:   C{bool}
+        """
         raise NotImplementedError()
 
     @abc.abstractclassmethod
@@ -146,6 +164,28 @@ class AbstractKconfigSymbol(AbstractKconfigDepObject):
         """
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def evaluate_default(self, symbol_value_map):
+        """
+        Given a symbol => value map,
+        calculates the default value of this symbol.
+
+        As per kconfig semantics,
+        the default is determined by the first visible "default" property.
+
+        Derived classes must implement this method, they may return
+        "NotImplemented" if they do not support this operation.
+        In that case, the supports_defaults() classmethod should return False.
+
+        @param symbol_value_map:  (incomplete) symbol to value mapping
+        @type  symbol_value_map:  C{dict} :: L{AbstractKconfigSymbol} => _
+
+        @return: None
+                 or 2-tuple (tristate dir_dep value, tristate vis_dep value)
+        @rtype:  C{None} or 2-tuple <L{TristateKconfigSymbolValue}>
+        """
+        raise NotImplementedError()
+
     def evaluate_dep(self, symbol_value_map):
         """Given a symbol => value map,
         calculates the tristate value of this symbol's dependencies
@@ -191,9 +231,10 @@ class AbstractKconfigSymbol(AbstractKconfigDepObject):
         raise NotImplementedError()
     # ---
 
-    def __init__(self, name, dir_dep=None, vis_dep=None):
+    def __init__(self, name, dir_dep=None, vis_dep=None, defaults=None):
         super().__init__(dir_dep=dir_dep, vis_dep=vis_dep)
         self.name = name
+        self.defaults = None
 
     def __hash__(self):
         return hash((self.__class__, self.name))
