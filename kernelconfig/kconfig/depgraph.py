@@ -319,6 +319,120 @@ class ConfigGraph(loggable.AbstractLoggable):
                     return sol
         # --- end of merge_sym_solutions (...) ---
 
+        def find_defaults_solution(
+            sym, want_vis_values, *, _SolutionCache=solcache.SolutionCache
+        ):
+            """
+            Find a solution so that any of the symbol's defaults dir_dep
+            evaluates to true and its vis_dep to any of want_vis_values.
+
+            Returns whether at least one solution exists
+            as well as all found solutions.
+
+            @return:  (defaults solvable, defaults sol_cache)
+            """
+            nonlocal want_expr_ym
+
+            if not sym.supports_defaults() or not sym.defaults:
+                return (False, None)
+            # --
+
+            defaults_solutions = []
+            for sym_default in sym.defaults:
+                if sym_default.dir_dep is not None:
+                    def_dir_dep_solvable, def_dir_dep_solutions = (
+                        sym_default.dir_dep.find_solution(want_expr_ym)
+                    )
+                else:
+                    def_dir_dep_solvable = True
+                    def_dir_dep_solutions = True
+                # --
+
+                # ignore the default if its dir_dep is not solvable
+                if def_dir_dep_solvable:
+                    if sym_default.vis_dep is not None:
+                        def_vis_dep_solvable, def_vis_dep_solutions = (
+                            sym_default.vis_dep.find_solution(want_vis_values)
+                        )
+                    else:
+                        def_vis_dep_solvable = True
+                        def_vis_dep_solutions = True
+                    # --
+
+                    # likewise, ignore the default if vis_dep is not solvable
+                    if def_vis_dep_solvable:
+                        # AND-merge the solutions
+                        # then, if still solvable, add to defaults_solutions
+                        def_solutions = merge_sym_solutions(
+                            def_dir_dep_solutions, def_vis_dep_solutions
+                        )
+                        if def_solutions:
+                            defaults_solutions.append(def_solutions)
+                        # --
+                    # -- end if vis_dep solvable?
+                # -- end if dir_dep solvable?
+            # -- end for sym_default : find solutions
+
+            if not defaults_solutions:
+                # then no default exist,
+                # at least none that should be considered by the depgraph
+                return (False, None)
+
+            elif len(defaults_solutions) == 1:
+                # same as below, but shortcut the return
+                return (True, defaults_solutions[0])
+
+            else:
+                # create a "merged alternatives" solution
+                #  merged_solution := []
+                #  for solution in defaults_solutions:
+                #      merged_solution.extend(solution)
+                #  .
+
+                # dedup the empty solution (a.k.a "no change")
+                have_empty_sol = False
+                # keep track of whether there has been at least one
+                # non-empty solution
+                have_nonempty_sol = False
+
+                sol_alternatives = []
+                for sol_cache in defaults_solutions:
+                    if sol_cache is True:
+                        if not have_empty_sol:
+                            # empty solution #1/2
+                            sol_alternatives.append({})
+                            have_empty_sol = True
+                        # --
+
+                    else:
+                        for sol_dict in sol_cache.solutions:
+                            if sol_dict:
+                                # non-empty solution
+                                sol_alternatives.append(sol_dict)
+                                have_nonempty_sol = True
+                            elif not have_empty_sol:
+                                # empty solution #2/2
+                                assert isinstance(sol_dict, dict)
+                                sol_alternatives.append({})
+                                have_empty_sol = True
+                            # --
+                        # --
+                    # --
+                # -- end for sol_cache
+
+                assert sol_alternatives
+
+                if have_nonempty_sol:
+                    alt_sol = _SolutionCache()
+                    alt_sol.solutions = sol_alternatives
+                elif have_empty_sol:
+                    alt_sol = True
+                else:
+                    raise AssertionError("neither empty nor nonempty solution")
+
+                return (True, alt_sol)
+        # --- end of find_defaults_solution (...) ---
+
         _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
         want_expr_ym = self.EXPR_VALUES_YM
         want_expr_y = self.EXPR_VALUES_Y
