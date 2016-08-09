@@ -105,6 +105,10 @@ class AbstractKconfigSymbol(AbstractKconfigDepObject):
         """
         raise NotImplementedError()
 
+    @abc.abstractclassmethod
+    def check_value_within_vis_range(cls, vis_value, value):
+        raise NotImplementedError()
+
     @classmethod
     def normalize_and_validate_set(cls, value_set):
         """Converts a sequence of values to their normalized form.

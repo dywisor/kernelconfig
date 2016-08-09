@@ -161,6 +161,13 @@ class TristateKconfigSymbol(_KconfigSymbol):
             raise ValueError(value)
     # ---
 
+    @classmethod
+    def check_value_within_vis_range(cls, vis_value, value):
+        if not vis_value:
+            return False
+        else:
+            return value <= vis_value
+
     def get_lkconfig_value_repr(self, value):
         return int(value)
 
@@ -185,6 +192,15 @@ class BooleanKconfigSymbol(TristateKconfigSymbol):
 
         return normval
     # --- end of normalize_and_validate (...) ---
+
+    @classmethod
+    def check_value_within_vis_range(cls, vis_value, value):
+        if not vis_value:
+            return False
+        elif value is TristateKconfigSymbolValue.m:
+            return False
+        else:
+            return value <= vis_value
 
 # --- end of BooleanKconfigSymbol ---
 
@@ -223,6 +239,15 @@ class StringKconfigSymbol(_KconfigSymbol):
     def get_value_fmt_arg(cls, value):
         return cls.escape_value(value)
 
+    @classmethod
+    def check_value_within_vis_range(cls, vis_value, value):
+        if not vis_value:
+            return False
+        elif value is TristateKconfigSymbolValue.m:
+            return False
+        else:
+            return True
+
     def get_lkconfig_value_repr(self, value):
         return value
 
@@ -241,6 +266,15 @@ class IntKconfigSymbol(_KconfigSymbol):
     def normalize_and_validate(cls, value, lenient=False):
         return int(value)
     # --- end of normalize_and_validate (...) ---
+
+    @classmethod
+    def check_value_within_vis_range(cls, vis_value, value):
+        if not vis_value:
+            return False
+        elif value is TristateKconfigSymbolValue.m:
+            return False
+        else:
+            return True
 
     def get_lkconfig_value_repr(self, value):
         if value is TristateKconfigSymbolValue.n:
