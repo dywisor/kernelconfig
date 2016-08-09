@@ -7,6 +7,7 @@ import os
 import sys
 
 from ..abc import loggable
+from ..util import osmisc
 
 
 __all__ = ["MainScriptBase"]
@@ -34,6 +35,10 @@ class MainScriptBase(loggable.AbstractLoggable):
 
     CONSOLE_LOG_FMT = "%(levelname)-8s [%(name)s] %(message)s"
 
+    SHOW_EXC_ON_KEYBOARD_INTERRUPT = osmisc.envbool_nonempty(
+        "KERNELCONFIG_SHOW_EXC_CTRLC", False
+    )
+
     @classmethod
     def run_main(cls, prog=None, argv=None, **kwargs):
         """Runs the script and exits (via sys.exit()).
@@ -58,6 +63,8 @@ class MainScriptBase(loggable.AbstractLoggable):
 
         except KeyboardInterrupt:
             exit_code = cls.EX_KBD_INTERRUPT
+            if cls.SHOW_EXC_ON_KEYBOARD_INTERRUPT:
+                raise
 
         # except NonExitingArgumentParserExit:
         #     catch argparse exit
