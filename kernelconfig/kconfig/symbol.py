@@ -91,8 +91,8 @@ class _KconfigSymbol(_symbol_abc.AbstractKconfigSymbol):
         return self.DEP_VALUE_REINTERPRET_MAP.get(trival, trival)
     # --- end of evaluate_vis_dep (...) ---
 
-    def get_visibile_default_expr(self, symbol_value_map):
-        if self.def_dep is None:
+    def get_visible_default_expr(self, symbol_value_map):
+        if not self.defaults:
             return (None, None)
 
         for sym_default in self.defaults:
@@ -102,7 +102,7 @@ class _KconfigSymbol(_symbol_abc.AbstractKconfigSymbol):
         # -- end for
 
         return (None, None)
-    # --- end of get_visibile_default_expr (...) ---
+    # --- end of get_visible_default_expr (...) ---
 
     @classmethod
     def supports_defaults(cls):
@@ -114,8 +114,8 @@ class _KconfigSymbol(_symbol_abc.AbstractKconfigSymbol):
 
     def evaluate_default(self, symbol_value_map):
         # provided for all classes,
-        # whether their def_dep should participate in config resolving or not
-        sym_default, vis_val = self.get_visibile_default_expr(symbol_value_map)
+        # whether their defaults should participate in config resolving or not
+        sym_default, vis_val = self.get_visible_default_expr(symbol_value_map)
         if sym_default is None:
             return None
 
