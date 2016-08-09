@@ -6,6 +6,8 @@ import logging
 
 import toposort
 
+from ..util import osmisc
+
 from ..abc import loggable
 from . import symbolexpr
 from . import symbol
@@ -86,6 +88,10 @@ class ConfigGraph(loggable.AbstractLoggable):
     EXPR_VALUES_M = symbolexpr.Expr.EXPR_VALUES_M
     EXPR_VALUES_Y = symbolexpr.Expr.EXPR_VALUES_Y
     EXPR_VALUES_YM = symbolexpr.Expr.EXPR_VALUES_YM
+
+    DISCARD_N_SOLUTIONS = osmisc.envbool_nonempty(
+        "KERNELCONFIG_DEPGRAPH_DISCARD_N", False
+    )
 
     def __init__(self, default_config, decisions, **kwargs):
         super().__init__(**kwargs)
@@ -881,16 +887,26 @@ class ConfigGraph(loggable.AbstractLoggable):
 
                 else:
                     dec_values = values - vset_no
-                    if not dec_values:
+                    if dec_values:
+                        dec[sym] = dec_values
+                        change_count += 1
+
+                    elif self.DISCARD_N_SOLUTIONS:
                         # discard "n" solution
                         self.logger.debug(
-                            "Discarding n decision %r", solution
+                            "Discarding %s=n decision %r", sym.name, solution
                         )
                         return (None, None)
-                    # --
 
-                    dec[sym] = dec_values
-                    change_count += 1
+                    else:
+                        # allow "n" decisions,
+                        # but with a high change count penalty
+                        self.logger.warning(
+                            "allowing %s=n decision", sym.name
+                        )
+                        dec[sym] = values
+                        change_count += 100
+                    # --
                 # --
             # -- end for
 
