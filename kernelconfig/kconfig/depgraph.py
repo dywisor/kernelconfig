@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import enum
+import logging
 
 import toposort
 
@@ -305,7 +306,7 @@ class ConfigGraph(loggable.AbstractLoggable):
         self._resolve_downwards_propagation(decisions)
         self.decisions = decisions
 
-    def accumulate_solutions(self, sym_group, decisions_at_this_level):
+    def accumulate_solutions(self, level, sym_group, decisions_at_this_level):
         def merge_sym_solutions(dir_dep_sol, vis_dep_sol):
             if dir_dep_sol is True:
                 return vis_dep_sol
@@ -433,9 +434,29 @@ class ConfigGraph(loggable.AbstractLoggable):
                 return (True, alt_sol)
         # --- end of find_defaults_solution (...) ---
 
+        def get_want_vis_values(sym, min_value):
+            nonlocal want_expr_ym
+            nonlocal want_expr_y
+
+            if symbol.is_tristate_symbol(sym):
+                # then sym_value must be <= vis
+                if min_value is _TristateKconfigSymbolValue.y:
+                    return want_expr_y
+                else:
+                    return want_expr_ym
+
+            else:
+                return want_expr_ym
+            # --
+        # ---
+
         _TristateKconfigSymbolValue = symbol.TristateKconfigSymbolValue
         want_expr_ym = self.EXPR_VALUES_YM
         want_expr_y = self.EXPR_VALUES_Y
+
+        want_debuglog = self.logger.isEnabledFor(logging.DEBUG)
+        value_nodes = self.value_nodes
+        symbol_value_map = None
 
         accumulated_solutions = True
 
@@ -466,21 +487,111 @@ class ConfigGraph(loggable.AbstractLoggable):
             sym_values = decisions_at_this_level[sym]
             assert type(sym_values) is set  # FIXME: debug assert, remove
             min_sym_value = min(sym_values)
+            vnode = value_nodes[sym]
+
+            # each if-branch must set dep_solutions to True or a SolutionCache
+            # object
+            dep_solutions = False
 
             if min_sym_value is _TristateKconfigSymbolValue.n:
-                pass
+                dep_solutions = True
 
-            else:
-                if symbol.is_tristate_symbol(sym):
-                    # then sym_value must be <= vis
-                    if min_sym_value is _TristateKconfigSymbolValue.y:
-                        want_vis_values = want_expr_y
-                    else:
-                        want_vis_values = want_expr_ym
+            elif (
+                vnode.status >= ConfigValueDecisionState.default
+                and vnode.value in sym_values
+            ):
+                # The symbol is already set to one of the requested values
+                # in the base configuration.
+                # In that case, do not try to find a solution,
+                # but instead identify the existing solution(s).
+                #
+                # This assumes a [near-]valid base configuration.
+                #
+                # * dir_dep must be met by the existing config
+                # * assuming a valid base config,
+                #   visibility is not taken strictly into account here
+                #
+                #   This could be extended, however, the following cases
+                #   should be considered:
+                #
+                #       config A
+                #           bool "" if B
+                #           default !B
+                #
+                #   and
+                #       config X
+                #           bool "" if Y
+                #           default Z
+                #
+                #       where Y and Z block each other
+                #
+                self.logger.debug(
+                    "constifying %s (existing value: %s)",
+                    sym.name, vnode.value
+                )
+
+                if symbol_value_map is None:
+                    # lazy-init preliminary symbol X value map
+                    symbol_value_map = {
+                        vsym: value_nodes[vsym].value
+                        for vsym in self.iter_symbols_upto(level)
+                    }
+                # --
+
+                constify_syms = None
+
+                if sym.dir_dep is None:
+                    dir_dep_solvable = True
+                    dir_dep_syms = True
+                else:
+                    dir_dep_solvable, dir_dep_syms = (
+                        sym.dir_dep.evaluate_solution(
+                            symbol_value_map, want_expr_ym
+                        )
+                    )
+                # --
+
+                if dir_dep_solvable:
+                    constify_syms = dir_dep_syms
+                # --
+
+                if constify_syms is None:
+                    self.logger.debug(
+                        (
+                            'Could not identify which symbols '
+                            'to constify-propagate for symbol %s'
+                        ),
+                        sym.name
+                    )
+                    dep_solutions = True
+
+                elif not constify_syms or constify_syms is True:
+                    self.logger.debug(
+                        "Nothing to constify-propagate for symbol %s",
+                        sym.name
+                    )
+                    dep_solutions = True
 
                 else:
-                    want_vis_values = want_expr_ym
+                    if want_debuglog:
+                        self.logger.debug(
+                            'Constify-propagate for symbol %s: %s',
+                            sym.name,
+                            ", ".join(sorted((s.name for s in constify_syms)))
+                        )
+                    # --
+
+                    constify_solution = {
+                        vsym: {symbol_value_map[vsym], }
+                        for vsym in constify_syms
+                    }
+
+                    dep_solutions = solcache.SolutionCache()
+                    dep_solutions.solutions = [constify_solution]
                 # --
+
+            else:
+                want_vis_values = get_want_vis_values(sym, min_sym_value)
 
                 # FIXME: a single solution cache for both dir_dep and vis_dep
                 #        would be sufficient
@@ -515,24 +626,25 @@ class ConfigGraph(loggable.AbstractLoggable):
                 dep_solutions = merge_sym_solutions(
                     dir_dep_solutions, vis_dep_solutions
                 )
-                if not dep_solutions:
-                    raise ConfigUnresolvableError(
-                        "combined symbol deps", sym.name
-                    )
-                # --
-
-                if accumulated_solutions is True:
-                    accumulated_solutions = dep_solutions
-
-                elif dep_solutions is True:
-                    pass
-
-                elif not accumulated_solutions.merge(dep_solutions):
-                    raise ConfigUnresolvableError(
-                        "group", decisions_at_this_level
-                    )
-                # -- end if <merge solutions>
             # -- end if <find solutions>
+
+            if not dep_solutions:
+                raise ConfigUnresolvableError(
+                    "combined symbol deps", sym.name
+                )
+            # --
+
+            if accumulated_solutions is True:
+                accumulated_solutions = dep_solutions
+
+            elif dep_solutions is True:
+                pass
+
+            elif not accumulated_solutions.merge(dep_solutions):
+                raise ConfigUnresolvableError(
+                    "group", decisions_at_this_level
+                )
+            # -- end if <merge solutions>
         # -- end for decision symbol
 
         if accumulated_solutions is True:
@@ -549,6 +661,7 @@ class ConfigGraph(loggable.AbstractLoggable):
         _is_stringlike_symbol = symbol.is_stringlike_symbol
 
         def check_value_within_vis_range(sym, sym_vis_dep_val, new_val):
+            # TODO: sym has a check_value_within_vis_range() method now
             if not sym_vis_dep_val:
                 return False
 
@@ -686,7 +799,7 @@ class ConfigGraph(loggable.AbstractLoggable):
     ):
         # find solutions
         solutions = self.accumulate_solutions(
-            sym_group, decisions_at_this_level
+            level, sym_group, decisions_at_this_level
         )
 
         # resolve solutions
@@ -738,8 +851,8 @@ class ConfigGraph(loggable.AbstractLoggable):
                         self.logger.debug(
                             (
                                 'Discarding decision-conflicting solution %r'
-                                ', conflicts with %s (%r)'
-                            ), solution, sym.name, dec[sym]
+                                ', conflicts with %s (want %r, have %r)'
+                            ), solution, sym.name, dec[sym], solution[sym]
                         )
                         return (None, None)
                     # --
