@@ -212,6 +212,37 @@ class Expr(Visitable):
     def _find_solution(self, expr_values, sol_cache):
         raise NotImplementedError()
 
+    def evaluate_solution(self, symbol_value_map, expr_values):
+        """
+        Given a symbol => value map,
+        calculates the value of this expression
+        as well as which symbols were involved in the calculation.
+
+        This is meant for identifying which symbols contribute to
+        a tristate m or y value of the expression,
+        and acts like a shortcut find_solution().
+
+        @param symbol_value_map:  (incomplete) symbol to value mapping
+        @type  symbol_value_map:  C{dict} :: L{AbstractKconfigSymbol} => _
+        @param expr_values:       set of desired expression values,
+                                  should contain tristate m or y
+        @type  expr_values:       set of tristate
+
+        @return: 2-tuple (solvable, set of symbols)
+        """
+        solution = set()
+        ret = self._evaluate_solution(symbol_value_map, expr_values, solution)
+        return (ret, solution)
+    # ---
+
+    @abc.abstractmethod
+    def _evaluate_solution(self, symbol_value_map, expr_values, solution):
+        """
+        @return: solvable
+        @rtype:  C{bool}
+        """
+        raise NotImplementedError()
+
     def get_dependent_symbols(self):
         symbol_set = set()
         self.get_dependent_symbols_shared(symbol_set)
@@ -546,6 +577,9 @@ class Expr_Constant(_UnaryValueExpr):
     def _find_solution(self, expr_values, sol_cache):
         return self.evaluate(None) in expr_values
 
+    def _evaluate_solution(self, symbol_value_map, expr_values, solution):
+        return self.evaluate(None) in expr_values
+
 # --- end of Expr_Constant ---
 
 
@@ -573,6 +607,13 @@ class Expr_Symbol(_UnaryValueExpr):
             self.expr,
             self.expr.normalize_and_validate_set(expr_values)[1]
         )
+
+    def _evaluate_solution(self, symbol_value_map, expr_values, solution):
+        if self.evaluate(symbol_value_map) in expr_values:
+            solution.add(self.expr)
+            return True
+        else:
+            return False
 
 # --- end of Expr_Symbol ---
 
@@ -640,6 +681,9 @@ class Expr_SymbolName(_UnaryExpr):
         yield (indent, self.EXPR_FMT.format(self.expr))
 
     def _find_solution(self, expr_values, sol_cache):
+        raise TypeError()
+
+    def _evaluate_solution(self, symbol_value_map, expr_values, solution):
         raise TypeError()
 
 # ---
@@ -759,6 +803,41 @@ class _Expr_SymbolValueComparison(Expr):
     def _solve_constant_x_constant(self, expr_value, sol_cache, lsym, rsym):
         return bool(self.evaluate(None)) == bool(expr_value)
 
+    def _get_solve_func_type(self):
+        """
+        @return:
+                  0 => symbol X symbol
+                  1 => symbol X constant
+                  2 => constant X symbol
+                  3 => constant X constant
+        """
+        lsym = self.lsym
+        rsym = self.rsym
+
+        if isinstance(lsym, Expr_Symbol):
+            if isinstance(rsym, Expr_Symbol):
+                return 0
+
+            elif isinstance(rsym, Expr_Constant):
+                return 1
+
+            else:
+                raise TypeError("rsym", type(rsym))
+
+        elif isinstance(lsym, Expr_Constant):
+            if isinstance(rsym, Expr_Symbol):
+                return 2
+
+            elif isinstance(rsym, Expr_Constant):
+                return 3
+
+            else:
+                raise TypeError("rsym", type(rsym))
+
+        else:
+            raise TypeError("lsym", type(lsym))
+    # --- end of _get_solve_func_type (...) ---
+
     def _find_solution(self, expr_values, sol_cache):
         expr_value = bool(max(expr_values))
         lsym = self.lsym
@@ -796,6 +875,19 @@ class _Expr_SymbolValueComparison(Expr):
             raise TypeError("lsym", type(self.lsym))
     # ---
 
+    def _evaluate_solution(self, symbol_value_map, expr_values, solution):
+        loper = self.lsym.get_value(symbol_value_map)
+        roper = self.rsym.get_value(symbol_value_map)
+
+        if self.OP_EVAL(loper, roper):
+            for operand in (self.lsym, self.rsym):
+                if isinstance(operand, Expr_Symbol):
+                    solution.add(operand.expr)
+            # --
+            return True
+        else:
+            return False
+    # ---
 # ---
 
 
@@ -966,7 +1058,19 @@ class Expr_Not(_UnaryExpr):
             return self.expr._find_solution(
                 self.EXPR_VALUES_N, sol_cache
             )
+    # ---
 
+    def _evaluate_solution(self, symbol_value_map, expr_values, solution):
+        # see _find_solution()
+        if symbol.TristateKconfigSymbolValue.n in expr_values:
+            return self.expr._evaluate_solution(
+                symbol_value_map, self.EXPR_VALUES_YM, solution
+            )
+        else:
+            return self.expr._evaluate_solution(
+                symbol_value_map, self.EXPR_VALUES_N, solution
+            )
+    # ---
 # ---
 
 
@@ -993,6 +1097,15 @@ class Expr_And(_SelfConsumingMultiExpr):
     def _find_solution(self, expr_values, sol_cache):
         for subexpr in self.exprv:
             if not subexpr._find_solution(expr_values, sol_cache):
+                return False
+        return True
+    # ---
+
+    def _evaluate_solution(self, symbol_value_map, expr_values, solution):
+        for subexpr in self.exprv:
+            if not subexpr._evaluate_solution(
+                symbol_value_map, expr_values, solution
+            ):
                 return False
         return True
     # ---
@@ -1109,6 +1222,18 @@ class Expr_Or(_SelfConsumingMultiExpr):
         # --
 
         return sol_cache.merge_alternatives(sub_solutions)
+    # ---
+
+    def _evaluate_solution(self, symbol_value_map, expr_values, solution):
+        for subexpr in self.exprv:
+            solvable, sub_solution = subexpr.evaluate_solution(
+                symbol_value_map, expr_values
+            )
+            if solvable:
+                solution.update(sub_solution)
+                return True
+        # --
+        return False
     # ---
 
 # --- end of Expr_Or ---
