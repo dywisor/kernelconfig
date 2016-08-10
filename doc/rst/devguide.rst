@@ -68,6 +68,13 @@ and write it to the output ``.config``:
    translates them into config options,
    which are then transformed into modification requests.
 
+   **Package management integration** retrieves config recommendations
+   from installed packages and transforms them into modification requests.
+   *static pm-integration* queries portage for the package build-time
+   value of ``CONFIG_CHECK``, whereas *dynamic pm-integration* runs the
+   relevant ebuild phases for getting recommendations based on the kernel
+   sources being processed.
+
    Modification requests are stored in an intermediate *decision* object,
    accumulate with other requests, and form a *decision dict*
    where each Kconfig symbol is mapped to a specific value or a range
@@ -400,3 +407,156 @@ and expanded again in an oldconfig-like procedure:
         END WHILE LOOP;
 
         RETURN config;
+
+
+
+Package Management Integration
+==============================
+
+*pm integration* is about getting config modification requests
+from the package manager.
+
+Only ``portage`` is supported, and the implementation
+reuses the ``CONFIG_CHECK`` mechanism from ``linux-info.eclass``.
+Two variants exist, a **static** and a **dynamic** one.
+The *static* variant retrieves the build-time value of ``CONFIG_CHECK``,
+and the *dynamic* variant re-evaluates ``CONFIG_CHECK``
+by running the ``pkg_pretend()`` and ``src_setup()`` ebuild phases.
+
+.. Note::
+
+    The code examples in this chapter are not an exact transcript
+    of the actual code, but rather give an idea of how it generally works.
+
+
+Static Package Management Integration
+-------------------------------------
+
+The *static pm-integration* variant uses portage's Python API.
+
+After initializing the vdb,
+
+    .. code:: Python
+
+        import portage
+        vdb = portage.db[portage.root]["vartree"].dbapi
+
+
+it starts with identifying which of the installed packages
+inherit ``linux-info.eclass``,
+
+  .. code:: Python
+
+        packages = []
+        for cpv in vdb.cpv_all():
+            inherited = vdb.aux_get(cpv, ["INHERITED"])[0]
+
+            if "linux-info" in inherited:
+                packages.append(cpv)
+
+
+and retrieves their package build-time ``CONFIG_CHECK`` value.
+
+    .. code:: Python
+
+        config_check = set()
+        for cpv in packages:
+            pkg_config_check = vdb.aux_get(cpv, ["CONFIG_CHECK"])[0]
+            config_check.update(pkg_config_check.split())
+
+
+The ``CONFIG_CHECK`` recommendations are then transformed
+into config option modification requests:
+
+.. table::
+
+    +----------------------------------+-------------------------+
+    | ``CONFIG_CHECK`` recommendation  | modification request    |
+    +==================================+=========================+
+    | ``OPT``, ``~OPT``                | enabled ``OPT``         |
+    |                                  | as builtin or module    |
+    +----------------------------------+-------------------------+
+    | ``!OPT``, ``~!OPT``              | disable ``OPT``         |
+    +----------------------------------+-------------------------+
+    | ``@A``, ``@!A``                  | *ignored*,              |
+    |                                  | no documentation on     |
+    |                                  | ``reworkmodulenames``   |
+    |                                  | found.                  |
+    +----------------------------------+-------------------------+
+
+
+
+Dynamic Package Management Integration
+--------------------------------------
+
+*Dynamic pm-integration* is similar to the *static* variant,
+but instead of retrieving the package build-time ``CONFIG_CHECK`` value,
+it creates temporary overlays hosting ebuilds for installed packages
+inheriting ``linux-info.eclass``,
+creates a modified ``linux-info`` eclass that captures ``CONFIG_CHECK``
+by intercepting calls to ``check_extra_config()``,
+and runs ``ebuild(1)`` in a specially prepared environment.
+
+Multiple, per-repo overlays are created in order to get proper *masters* lookup.
+If a package's original repo cannot be found, ``gentoo`` is used as fallback.
+
+Each temporary overlay consists of the following files::
+
+    <overlay>
+    <overlay>/eclass
+    <overlay>/eclass/linux-info.eclass
+    <overlay>/metadata
+    <overlay>/metadata/layout.conf
+    <overlay>/profiles
+    <overlay>/profiles/categories
+    <overlay>/profiles/repo_name
+
+    <overlay>/$CATEGORY/$PN/$PF.ebuild ...
+
+Ebuilds are created as symbolic links to ``/var/db/pkg/``
+if the filesystem supports it, and are copied otherwise.
+
+The ``linux-info`` eclass is a copy from the original repo,
+but with a few extra lines appended
+that make calls to ``check_extra_config()`` write to a temporary file
+instead of checking the kernel configuration:
+
+.. code:: bash
+
+    <original eclass EOF>
+
+
+    # KERNELCONFIG MODIFICATIONS START HERE
+    unset -f check_extra_config
+    check_extra_config() {
+        printf '%s\n' "${CONFIG_CHECK}" >> <config_check_tmpfile>
+    }
+
+After creating the temporary overlays,
+kernelconfig sets up the environment for running ``ebuild(1)``:
+
+* ``KERNEL_DIR`` gets set to the kernel sources for which a configuration
+  is about to be created, so that ``linux-info`` uses the correct sources
+  when comparing e.g. the kernel version
+
+* a dummy ``KBUILD_OUTPUT`` directory is created,
+  so that unintercepted ``linux-info`` functions have a base ``.config``
+  for comparisons (without having to touch files in ``KERNEL_DIR``)
+
+* fetching of ``SRC_URI`` is disabled by setting ``FETCHCOMMAND``
+  and ``RESUMECOMMAND`` to ``/bin/true``
+
+* a separate ``PORTAGE_TMPDIR`` is created
+  so that the ebuild re-evaluation does not interfere with other
+  portage processes
+
+Then, ``ebuild --skip-manifest <ebuild> setup`` is run
+for each ebuild in the temporary overlays,
+and ``CONFIG_CHECK`` is read from the ``<config_check_tmpfile>`` files.
+Ebuilds that do not create a ``<config_check_tmpfile>`` file are ignored.
+
+If ``src_setup`` does not complete successfully,
+kernelconfig logs a warning and processes the ``<config_check_tmpfile>`` file
+as described above.
+This allows to process ebuilds that check for config options,
+but fail later on due to ``enewuser``.
