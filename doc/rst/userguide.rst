@@ -7,6 +7,9 @@
 .. _Python String Formatting:
     https://docs.python.org/3/library/string.html#format-string-syntax
 
+.. _Gentoo Bug \#217042:
+    https://bugs.gentoo.org/show_bug.cgi?id=217042
+
 .. _macros file format:
     macros_lang.rst
 
@@ -49,6 +52,8 @@ Required:
 
 
 Optional, but recommended:
+
+* portage for *package management integration*
 
 * kmod with Python bindings
   for hardware detection based on module aliases
@@ -867,6 +872,18 @@ it has no effect if the ``--hwdetect`` option is passed to kernelconfig::
 
     hwdetect
 
+Config recommendations from installed packages can be requested with
+``packages``.
+The recommendations can be based on what was present at package build-time::
+
+    packages build-time
+
+or re-evaluated against the kernel sources for which a configuration
+is being created::
+
+    packages
+    # packages re-eval  # alternatively
+
 It also possible to load so-called *feature set* files::
 
     include  feature
@@ -1064,6 +1081,54 @@ but a comma after the last item is not allowed.
 By using dummy null values,
 this detail can be mostly ignored in the collector script,
 with a small file size overhead of one dummy item per list/object.
+
+
+
+Package Management Integration
+------------------------------
+
+Installed packages can serve as source for config option recommendations.
+This feature relies on packages being managed by portage,
+and can be requested with ``packages`` in the `\[options\]`_ section
+of the settings file.
+
+Two variants of *pm-integration* are available, *static* and *dynamic*,
+both query the value of the ``CONFIG_CHECK`` variable from installed packages,
+but to a different extent.
+
+*static pm-integration* uses the package build-time value of ``CONFIG_CHECK``,
+which can be retrieved quickly, but is not reliable,
+because ``CONFIG_CHECK`` could have been set conditionally,
+e.g. by comparing the kernel version
+against the kernel sources being present at package build time.
+
+For that reason, a more reliable but also more (time-)complex solution exists,
+*dynamic pm-integration*, which re-evaluates ``CONFIG_CHECK``
+by running the relevant ebuild phases again.
+
+Either variant transforms ``CONFIG_CHECK`` into a sequence of
+*enable option as builtin or module* and *disable option* config modifications.
+Unknown config options listed in ``CONFIG_CHECK`` are ignored.
+
+.. Warning::
+
+    *dynamic pm-integration* runs the ``src_setup()`` ebuild phase
+    for all installed packages that inherit ``linux-info.eclass``,
+    as regular user.
+
+    Since ``src_setup`` can do arbitrary things like creating users,
+    this can fail for individual packages, in which case kernelconfig
+    prints a warning message  and tries to use the information gathered
+    from running the ebuild so far.
+
+    #. It is very unlikely that the failure is caused by kernelconfig,
+       more likely the ebuild is doing things in ``src_setup()``
+       that should be handled during ``pkg_postinst()`` or ``pkg_preinst()``
+
+    #. Do not run kernelconfig as root,
+       especially when using *dynamic pm-integration*!
+
+    For ``enewuser/enewgroup`` related failures, see `Gentoo Bug \#217042`_.
 
 
 
