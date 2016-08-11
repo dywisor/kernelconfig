@@ -147,6 +147,24 @@ check-pyflakes:
 PHONY += check
 check: $(addprefix check-,typo pep8 pyflakes)
 
+
+prepare-installinfo: $(_BUILD_DIR:/=)/installinfo.py
+
+$(_BUILD_DIR:/=)/installinfo.py:
+	$(RMF) -- '$(@)' '$(@).make_tmp'
+
+	$(MKDIRP) -- '$(@D)'
+	{ set -e; \
+		printf '%s = "%s"\n' sys_config_dir '$(PRJ_SYSCONFDIR)'; \
+		printf '%s = "%s"\n' sys_data_dir   '$(PRJ_DATADIR)'; \
+	} > '$(@).make_tmp'
+
+	-$(X_PEP8) '$(@).make_tmp'
+	$(X_PYFLAKES) '$(@).make_tmp'
+
+	$(MV) -- '$(@).make_tmp' '$(@)'
+
+
 PHONY += print-lkc-files
 print-lkc-files:
 	@{ \
