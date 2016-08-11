@@ -3,6 +3,7 @@ __MAIN_MK_DIR  := $(patsubst %/,%,$(dir $(__MAIN_MK_FILE)))
 
 include $(__MAIN_MK_DIR)/mk/prj.mk
 include $(__MAIN_MK_DIR)/mk/progs.mk
+include $(__MAIN_MK_DIR)/mk/install.mk
 
 X_PEP8 = pep8
 PEP8_EXCLUDE = parsetab.py

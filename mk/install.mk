@@ -1,0 +1,24 @@
+DESTDIR       =
+PREFIX        = /usr/local
+EXEC_PREFIX   = $(PREFIX)
+BINDIR        = $(EXEC_PREFIX:/=)/bin
+SBINDIR       = $(EXEC_PREFIX:/=)/sbin
+LIBDIR_NAME   = lib
+LIBDIR        = $(EXEC_PREFIX:/=)/$(LIBDIR_NAME)
+DATAROOTDIR   = $(PREFIX:/=)/share
+DATADIR       = $(DATAROOTDIR)
+SYSCONFDIR    = $(PREFIX:/=)/etc
+LOCALSTATEDIR = $(PREFIX:/=)/var
+
+EXEMODE ?= 0755
+INSMODE ?= 0644
+DIRMODE ?= 0755
+
+INSTALL  = install
+DODIR    = $(INSTALL) -d -m $(DIRMODE)
+DOEXE    = $(INSTALL) -D -m $(EXEMODE)
+DOINS    = $(INSTALL) -D -m $(INSMODE)
+DOSYM    = $(LN) -f -s
+
+PRJ_SYSCONFDIR = $(SYSCONFDIR:/=)/$(PN)
+PRJ_DATADIR    = $(DATADIR:/=)/$(PN)
