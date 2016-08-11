@@ -21,6 +21,7 @@ X_WGET = wget
 WGET_OPTS =
 
 PRJ_LKC_SRC = $(_PRJROOT)/src/lkc
+PRJ_LKC_SRC_BUNDLED = $(PRJ_LKC_SRC)-bundled
 LK_SRC_URI = https://raw.githubusercontent.com/torvalds/linux/master
 
 # a list of files to import from the kernel sources
@@ -212,6 +213,7 @@ import-lkc: $(LK_SRC)
 	}
 endif
 
+PHONY += fetch-lkc
 ifeq ("","$(LK_SRC_URI)")
 fetch-lkc:
 	$(error LK_SRC_URI is not set)
@@ -229,12 +231,30 @@ fetch-lkc:
 endif
 
 
+PHONY += bundle-lkc
+bundle-lkc: $(PRJ_LKC_SRC_BUNDLED)
+
+$(PRJ_LKC_SRC_BUNDLED): FORCE | $(filter import-lkc fetch-lkc,$(MAKECMDGOALS))
+	$(call f_sanity_check_output_dir,$(@))
+	test ! -d '$(@)' || $(RM) -r -- '$(@)'
+
+	$(MKDIRP) -- '$(@)'
+	{ set -e; \
+		for fname in COPYING $(patsubst %_shipped,%,$(LKC_FILE_NAMES)); do \
+			$(CP) -- "$(PRJ_LKC_SRC)/$${fname}" "$(@)/$${fname}"; \
+		done; \
+	}
+
+
 PHONY += help
 help:
 	@echo  'Helper targets:'
 	@echo  '  check                      - perform some basic code checks (pep8, pyflakes)'
-	@echo  '  import-lkc [LK_SRC=...]    - import lkc files from linux kernel '
+	@echo  '  import-lkc [LK_SRC=...]    - import lkc files from linux kernel'
 	@echo  '                               source tree LK_SRC'
+	@echo  '  fetch-lkc [LK_SRC_URI=...] - download lkc files'
+	@echo  '  bundle-lkc                 - update the bundled lkc files'
+	@echo  '                               with newly imported files'
 	@echo  ''
 	@echo  'Cleanup Targets:'
 	@echo  '  clean                      - does nothing'
