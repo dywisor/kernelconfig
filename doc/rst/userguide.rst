@@ -1112,17 +1112,17 @@ Unknown config options listed in ``CONFIG_CHECK`` are ignored.
 
 .. Warning::
 
-    *dynamic pm-integration* runs the ``src_setup()`` ebuild phase
+    *dynamic pm-integration* runs the ``pkg_setup()`` ebuild phase
     for all installed packages that inherit ``linux-info.eclass``,
     as regular user.
 
-    Since ``src_setup`` can do arbitrary things like creating users,
+    Since ``pkg_setup`` can do arbitrary things like creating users,
     this can fail for individual packages, in which case kernelconfig
     prints a warning message  and tries to use the information gathered
     from running the ebuild so far.
 
     #. It is very unlikely that the failure is caused by kernelconfig,
-       more likely the ebuild is doing things in ``src_setup()``
+       more likely the ebuild is doing things in ``pkg_setup()``
        that should be handled during ``pkg_postinst()`` or ``pkg_preinst()``
 
     #. Do not run kernelconfig as root,

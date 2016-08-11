@@ -421,7 +421,7 @@ reuses the ``CONFIG_CHECK`` mechanism from ``linux-info.eclass``.
 Two variants exist, a **static** and a **dynamic** one.
 The *static* variant retrieves the build-time value of ``CONFIG_CHECK``,
 and the *dynamic* variant re-evaluates ``CONFIG_CHECK``
-by running the ``pkg_pretend()`` and ``src_setup()`` ebuild phases.
+by running the ``pkg_pretend()`` and ``pkg_setup()`` ebuild phases.
 
 .. Note::
 
@@ -555,7 +555,7 @@ for each ebuild in the temporary overlays,
 and ``CONFIG_CHECK`` is read from the ``<config_check_tmpfile>`` files.
 Ebuilds that do not create a ``<config_check_tmpfile>`` file are ignored.
 
-If ``src_setup`` does not complete successfully,
+If ``pkg_setup`` does not complete successfully,
 kernelconfig logs a warning and processes the ``<config_check_tmpfile>`` file
 as described above.
 This allows to process ebuilds that check for config options,
