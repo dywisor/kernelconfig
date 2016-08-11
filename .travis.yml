@@ -15,7 +15,7 @@ install:
     - pip install pep8
 
 before_script:
-    - make fetch-lkc
+    - make fetch-lkc -j 3
     - make check-typo check-pep8 || true
     - make check-pyflakes
     - python ./setup.py build --standalone --build-base ./build --build-lib ./build/pym

@@ -18,7 +18,7 @@ PYREVERSE_OPTS = -p '$(_PRJNAME)' -fALL
 X_DOT = dot
 DOT_OPTS =
 X_WGET = wget
-WGET_OPTS =
+WGET_OPTS = -q
 
 PRJ_LKC_SRC = $(_PRJROOT)/src/lkc
 PRJ_LKC_SRC_BUNDLED = $(PRJ_LKC_SRC)-bundled
@@ -196,18 +196,21 @@ print-lkc-files:
 		printf '%s\n' 'COPYING'; \
 	} | sort
 
+
+$(PRJ_LKC_SRC):
+	$(MKDIRP) -- '$(@)'
+
 PHONY += import-lkc
 ifeq ("","$(LK_SRC)")
 import-lkc:
 	$(error LK_SRC is not set)
 
 else
-import-lkc: $(LK_SRC)
-	$(MKDIRP) -- $(PRJ_LKC_SRC)
-	$(CPV) -- '$(LK_SRC)/COPYING' '$(PRJ_LKC_SRC)/COPYING'
+import-lkc: $(LK_SRC) $(PRJ_LKC_SRC)
+	$(CPV) -- '$(<)/COPYING' '$(PRJ_LKC_SRC)/COPYING'
 	{ set -e; \
 		for fname in $(LKC_FILE_NAMES); do \
-			$(CPV) -- "$(LK_SRC)/scripts/kconfig/$${fname}" \
+			$(CPV) -- "$(<)/scripts/kconfig/$${fname}" \
 				"$(PRJ_LKC_SRC)/$${fname%_shipped}"; \
 		done; \
 	}
@@ -219,15 +222,25 @@ fetch-lkc:
 	$(error LK_SRC_URI is not set)
 
 else
-fetch-lkc:
-	$(MKDIRP) -- $(PRJ_LKC_SRC)
-	$(X_WGET) $(WGET_OPTS) '$(LK_SRC_URI)/COPYING' -O '$(PRJ_LKC_SRC)/COPYING'
-	{ set -e; \
-		for fname in $(LKC_FILE_NAMES); do \
-			$(X_WGET) $(WGET_OPTS) "$(LK_SRC_URI)/scripts/kconfig/$${fname}" \
-				-O "$(PRJ_LKC_SRC)/$${fname%_shipped}"; \
-		done; \
-	}
+
+$(PRJ_LKC_SRC)/COPYING: $(PRJ_LKC_SRC) FORCE
+	$(X_WGET) $(WGET_OPTS) '$(LK_SRC_URI)/COPYING' -O '$(@)'
+
+# make sure to fetch COPYING first by depending on it
+$(addprefix $(PRJ_LKC_SRC)/,$(LKC_FILE_NAMES)): \
+	$(PRJ_LKC_SRC)/%: $(PRJ_LKC_SRC)/COPYING FORCE
+
+	$(X_WGET) $(WGET_OPTS) '$(LK_SRC_URI)/scripts/kconfig/$(*)' -O '$(@)'
+
+$(patsubst %_shipped,%,\
+	$(addprefix $(PRJ_LKC_SRC)/,$(filter %_shipped,$(LKC_FILE_NAMES)))): \
+	$(PRJ_LKC_SRC)/%: $(PRJ_LKC_SRC)/%_shipped
+
+	$(CP) -- '$(<)' '$(@)'
+
+fetch-lkc: $(patsubst %_shipped,%,\
+	$(addprefix $(PRJ_LKC_SRC)/,COPYING $(LKC_FILE_NAMES)))
+
 endif
 
 
