@@ -165,6 +165,28 @@ $(_BUILD_DIR:/=)/installinfo.py:
 	$(MV) -- '$(@).make_tmp' '$(@)'
 
 
+PHONY += install-data
+install-data:
+	$(DODIR) -- '$(DESTDIR)$(PRJ_DATADIR)'
+	$(DODIR) -- '$(DESTDIR)$(PRJ_DATADIR)/scripts'
+
+	$(DOINS) -- '$(SRC_FILESDIR)/scripts/modalias.mk' \
+		'$(DESTDIR)$(PRJ_DATADIR)/scripts/modalias.mk'
+
+PHONY += install-config
+install-config:
+	$(DODIR) -- '$(DESTDIR)$(PRJ_SYSCONFDIR)'
+
+	$(call doins_recursive,$(SRC_CONFDIR),$(DESTDIR)$(PRJ_SYSCONFDIR))
+
+PHONY += install-hwcollect
+install-hwcollect:
+	$(DODIR) -- '$(DESTDIR)$(BINDIR)'
+
+	$(DOEXE) -- '$(SRC_FILESDIR)/scripts/hwcollect.sh' \
+		'$(DESTDIR)$(BINDIR)/$(PN)-hwcollect'
+
+
 PHONY += print-lkc-files
 print-lkc-files:
 	@{ \
