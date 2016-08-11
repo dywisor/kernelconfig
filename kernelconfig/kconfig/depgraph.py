@@ -17,6 +17,29 @@ from . import solcache
 __all__ = ["ConfigGraph"]
 
 
+def fmt_decisions(decmap):
+    """
+    @param decmap:  symbol => value set mapping
+    @type  decmap:  C{dict} :: L{AbstractKconfigSymbol} => set of _
+
+    @return:  formatted string
+    @rtype:   C{str}
+    """
+    def fmt_values(values):
+        for value in values:
+            if isinstance(value, symbol.TristateKconfigSymbolValue):
+                yield value.name
+            else:
+                yield value
+    # ---
+
+    return sorted(
+        ((sym, sorted(fmt_values(values))) for sym, values in decmap.items()),
+        key=lambda xv: xv[0].name
+    )
+# ---
+
+
 def reversed_enumerate(listlike):
     last_idx = len(listlike) - 1
     for k, item in enumerate(reversed(listlike)):
@@ -534,7 +557,7 @@ class ConfigGraph(loggable.AbstractLoggable):
 
             elif not accumulated_solutions.merge(dep_solutions):
                 raise ConfigUnresolvableError(
-                    "group", decisions_at_this_level
+                    "group", fmt_decisions(decisions_at_this_level)
                 )
             # -- end if <merge solutions>
         # -- end for decision symbol
