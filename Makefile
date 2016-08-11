@@ -21,6 +21,7 @@ X_WGET = wget
 WGET_OPTS =
 
 PRJ_LKC_SRC = $(_PRJROOT)/src/lkc
+LK_SRC_URI = https://raw.githubusercontent.com/torvalds/linux/master
 
 # a list of files to import from the kernel sources
 LKC_FILE_NAMES  = $(addsuffix .h,expr list lkc lkc_proto)

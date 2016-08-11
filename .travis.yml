@@ -1,9 +1,6 @@
 language: python
 
 env:
-    global:
-        - LK_SRC_URI=https://raw.githubusercontent.com/torvalds/linux/master
-
     matrix:
         - CC=gcc
         - CC=clang
