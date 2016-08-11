@@ -19,6 +19,9 @@ X_DOT = dot
 DOT_OPTS =
 X_WGET = wget
 WGET_OPTS = -q
+X_GIT = git
+GIT_OPTS = --no-pager
+GIT_COMMIT_OPTS =
 
 PRJ_LKC_SRC = $(_PRJROOT)/src/lkc
 PRJ_LKC_SRC_BUNDLED = $(PRJ_LKC_SRC)-bundled
@@ -257,6 +260,20 @@ $(PRJ_LKC_SRC_BUNDLED): FORCE | $(filter import-lkc fetch-lkc,$(MAKECMDGOALS))
 			$(CP) -- "$(PRJ_LKC_SRC)/$${fname}" "$(@)/$${fname}"; \
 		done; \
 	}
+
+
+PHONY += commit-bundle-lkc
+commit-bundle-lkc: bundle-lkc
+	$(X_GIT) $(GIT_OPTS) add -A -- '$(PRJ_LKC_SRC_BUNDLED)/'
+
+	if $(X_GIT) $(GIT_OPTS) status --porcelain \
+		-- '$(PRJ_LKC_SRC_BUNDLED)/' | $(X_GREP) -q -- '^[MADRCU]'; \
+	then \
+		$(X_GIT) $(GIT_OPTS) commit $(GIT_COMMIT_OPTS) \
+			-m "update bundled lkc files" \
+			-m "Automated commit." \
+			-- "$(PRJ_LKC_SRC_BUNDLED)/" || exit 5; \
+	fi
 
 
 PHONY += help
