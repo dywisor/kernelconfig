@@ -4,6 +4,7 @@
 __all__ = ["get_install_info"]
 
 
+from . import _base
 from . import _info
 
 
@@ -20,6 +21,13 @@ class _InstallInfoStruct(object):
 
             elif hasattr(_info, "InstallInfo"):
                 install_info = _info.InstallInfo.new_instance()
+
+            elif (
+                _base.DefaultModuleInstallInfo.check_pym_is_installinfo(_info)
+            ):
+                install_info = (
+                    _base.DefaultModuleInstallInfo.new_instance(_info)
+                )
 
             else:
                 raise Exception("cannot get nor instantiate install info!")

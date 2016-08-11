@@ -368,3 +368,24 @@ class DefaultInstallInfo(InstallInfoBase):
     # --- end of get_cache_search_dirs (...) ---
 
 # --- end of DefaultInstallInfo ---
+
+
+class DefaultModuleInstallInfo(DefaultInstallInfo):
+
+    @classmethod
+    def new_instance(cls, py_module):
+        return super().new_instance(
+            sys_config_dir=py_module.sys_config_dir,
+            sys_data_dir=py_module.sys_data_dir
+        )
+    # --- end of new_instance (...) ---
+
+    @classmethod
+    def check_pym_is_installinfo(self, py_module):
+        return all((
+            hasattr(py_module, attr_name)
+            for attr_name in ("sys_config_dir", "sys_data_dir")
+        ))
+    # --- end of check_pym_is_installinfo (...) ---
+
+# --- end of DefaultModuleInstallInfo (...) ---
