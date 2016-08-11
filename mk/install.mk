@@ -22,3 +22,16 @@ DOSYM    = $(LN) -f -s
 
 PRJ_SYSCONFDIR = $(SYSCONFDIR:/=)/$(PN)
 PRJ_DATADIR    = $(DATADIR:/=)/$(PN)
+
+# _f_install_files_recursive(ins_mode, src_root, dst_root)
+define _f_install_files_recursive
+	( cd '$(2:/=)/' && find ./ -type f; ) | sed -e 's=^[.]/==' | \
+		xargs -r -n 1 -I '{}' \
+			$(INSTALL) -D -m '$(1)' --  '$(2:/=)/{}' '$(3:/=)/{}'
+endef
+
+# f_install_files_recursive(ins_mode, src_root, dst_root)
+f_install_files_recursive = $(call \
+	_f_install_files_recursive,$(strip $(1)),$(strip $(2)),$(strip $(3)))
+
+doins_recursive = $(call f_install_files_recursive,$(INSMODE),$(1),$(2))
