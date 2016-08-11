@@ -170,7 +170,7 @@ install-data:
 	$(DODIR) -- '$(DESTDIR)$(PRJ_DATADIR)'
 	$(DODIR) -- '$(DESTDIR)$(PRJ_DATADIR)/scripts'
 
-	$(DOINS) -- '$(SRC_FILESDIR)/scripts/modalias.mk' \
+	$(DOINS) -- '$(SRC_FILESDIR)/data/scripts/modalias.mk' \
 		'$(DESTDIR)$(PRJ_DATADIR)/scripts/modalias.mk'
 
 PHONY += install-config
