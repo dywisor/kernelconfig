@@ -1,0 +1,156 @@
+# kernelconfig -- bash completion
+# -*- coding: utf-8 -*-
+
+_kernelconfig_comp() {
+    local cur
+    local prev
+    local script_mode
+    local v
+    local w
+    local -i idx
+    local -a words
+    local -a SCRIPT_MODES
+    local -a LONGOPTS_SCRIPT_MODE
+    local -a OPTS_BASIC
+    local -a OPTS_COMMON
+    local -a OPTS_GENCONFIG
+    local -a OPTS_GENMODALIAS
+
+    COMPREPLY=()
+    _get_comp_words_by_ref cur prev
+
+    # script modes that can be specified with --script-mode
+    SCRIPT_MODES=(
+        generate-config
+        generate-modalias
+        eval-config-check
+        list-source-names
+        list-sources
+        help-sources
+    )
+
+    # script mode options that can be specified with --<script mode>
+    LONGOPTS_SCRIPT_MODE=()
+    for w in help-source "${SCRIPT_MODES[@]}"; do
+        LONGOPTS_SCRIPT_MODE+=( "--${w}" )
+    done
+
+    OPTS_BASIC=(
+        -h --help --usage -V --print-version -q --quiet -v --verbose
+    )
+
+    OPTS_COMMON=( -a --arch -k --kernel )
+
+    OPTS_GENCONFIG=(
+        -s --settings --config -O --outconfig -H --hwdetect
+        -m --modules-dir --{,un}safe-modalias -I
+    )
+
+    OPTS_GENMODALIAS=( -j --jobs --modalias-build-dir )
+
+    # get the script mode
+    #  do not break on first mode arg found,
+    #  it might be overridden by later args
+    #
+    # While options/args are completed (mostly) script-mode agnostic,
+    # the "new-arg" completion at the end of this function
+    # suggests only options that are relevant for the selected script mode.
+    #
+    script_mode=""
+    idx=1  # skip argv[0]
+    while [[ ${idx} -lt ${COMP_CWORD} ]]; do
+        w="${COMP_WORDS[${idx}]}"
+        case "${w}" in
+            --script-mode=*)
+                script_mode="${w#*=}"
+            ;;
+            --script-mode)
+                # then next arg contains the script mode
+                if [[ $(( idx + 1 )) -lt ${COMP_CWORD} ]]; then
+                    ((idx++))
+                    script_mode="${COMP_WORDS[${idx}]}"
+                # else: break-loop not necessary
+                fi
+            ;;
+            --*)
+                # then possibly a script mode option
+                for v in "${LONGOPTS_SCRIPT_MODE[@]}"; do
+                    if [[ "${w}" == "${v}" ]]; then
+                        script_mode="${w#\-\-}"
+                        break
+                    fi
+                done
+            ;;
+            # otherwise not of interest here
+        esac
+
+        ((idx++)) || :
+    done
+
+    case "${prev}" in
+        -k|--kernel|--modalias-build-dir)
+            # <dir>
+            _filedir -d
+        ;;
+        --config|-I|-O|--outconfig|-H|--hwdetect)
+            # various options followed by a <file> arg
+            _filedir
+        ;;
+        -j|--jobs)
+            # <int>
+            true
+        ;;
+        -a|--arch)
+            # target architecture
+            #  STUB
+            true
+        ;;
+        -s|--settings)
+            # <file> or name
+            #  STUB
+            _filedir
+        ;;
+        -m|--modules-dir)
+            # <dir> or one of none,auto,optional
+            _filedir -d
+            COMPREPLY+=( $( compgen -W "none auto optional" -- "${cur}" ) )
+        ;;
+        --script-mode)
+            # followed by a script mode name
+            COMPREPLY=( $( compgen -W "${SCRIPT_MODES[*]}" -- "${cur}" ) )
+        ;;
+        --help-source)
+            # followed by the name of a configuration source
+            #  STUB
+            true
+        ;;
+        *)
+            words=()
+
+            # script mode
+            if [[ -z "${script_mode}" ]]; then
+                words+=( "${LONGOPTS_SCRIPT_MODE[@]}" "--script-mode" )
+            fi
+
+            # script mode specific args
+            #  the default mode is "generate-config"
+            case "${script_mode}" in
+                ""|"generate-config")
+                    words+=( "${OPTS_GENCONFIG[@]}" )
+                ;;
+                "generate-modalias")
+                    words+=( "${OPTS_GENMODALIAS[@]}" )
+                ;;
+            esac
+
+            # common args
+            words+=( "${OPTS_COMMON[@]}" )
+
+            # basic args
+            words+=( "${OPTS_BASIC[@]}" )
+
+            COMPREPLY=( $( compgen -W "${words[*]}" -- "${cur}" ) )
+        ;;
+    esac
+}
+complete -F _kernelconfig_comp kernelconfig
