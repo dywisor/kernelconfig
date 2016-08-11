@@ -1,0 +1,7 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import kernelconfig.scripts.main
+
+if __name__ == "__main__":
+    kernelconfig.scripts.main.KernelConfigMainScript.run_main()

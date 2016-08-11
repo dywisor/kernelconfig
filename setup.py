@@ -67,11 +67,14 @@ class ProjectSetup(object):
 
     @classmethod
     def setup(cls):
+        scripts_dir = os.path.join("files", "scripts")
+
         distutils.core.setup(
             name        = cls.PRJ_NAME,
             version     = cls.PRJ_VER,
             license     = "GPLv2",
             ext_modules = cls.get_ext_modules(),
+            scripts     = [os.path.join(scripts_dir, "kernelconfig")],
             packages    = cls.pym_names(
                 None,
                 "abc",
