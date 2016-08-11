@@ -1,32 +1,8 @@
-unexport PYTHONDONTWRITEBYTECODE
-export PYTHONDONTWRITEBYTECODE=y
+__MAIN_MK_FILE := $(realpath $(lastword $(MAKEFILE_LIST)))
+__MAIN_MK_DIR  := $(patsubst %/,%,$(dir $(__MAIN_MK_FILE)))
 
-SHELL ?= sh
-
-_PRJNAME := kernelconfig
-_PRJROOT := $(patsubst %/,%,$(dir $(realpath $(lastword $(MAKEFILE_LIST)))))
-PN := $(_PRJNAME)
-
-S := $(_PRJROOT)
-O := $(S)
-SRC_FILESDIR := $(S:/=)/files
-SRC_DOCDIR := $(S:/=)/doc
-SRC_CONFDIR := $(S:/=)/config
-SRC_CONFSOURCEDIR := $(SRC_CONFDIR:/=)/sources
-
-_BUILD_DIR := $(O:/=)/build
-_PYMOD_DIRS := $(addprefix $(S:/=)/,$(_PRJNAME))
-_SETUP_PY := $(S:/=)/setup.py
-_EPYDOC_DIR = $(SRC_DOCDIR:/=)/epydoc
-
-MKDIR = mkdir
-MKDIRP = $(MKDIR) -p
-CP = cp
-CPV = $(CP) -v
-RM = rm
-RMF = $(RM) -f
-LN = ln
-LNS = $(LN) -s
+include $(__MAIN_MK_DIR)/mk/prj.mk
+include $(__MAIN_MK_DIR)/mk/progs.mk
 
 X_PEP8 = pep8
 PEP8_EXCLUDE = parsetab.py
@@ -176,8 +152,6 @@ print-lkc-files:
 		$(foreach n,$(LKC_FILE_NAMES),printf '%s\n' '$(n)';) \
 		printf '%s\n' 'COPYING'; \
 	} | sort
-
-
 
 PHONY += import-lkc
 ifeq ("","$(LK_SRC)")
