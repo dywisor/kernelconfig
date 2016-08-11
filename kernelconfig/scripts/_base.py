@@ -4,7 +4,10 @@
 import abc
 import logging
 import os
+import signal
 import sys
+import traceback
+
 
 from ..abc import loggable
 from ..util import osmisc
@@ -40,6 +43,11 @@ class MainScriptBase(loggable.AbstractLoggable):
     )
 
     @classmethod
+    def handle_sigusr1(cls, signum, frame):
+        # i/o from signal handler?
+        traceback.print_stack(frame)
+
+    @classmethod
     def run_main(cls, prog=None, argv=None, **kwargs):
         """Runs the script and exits (via sys.exit()).
 
@@ -58,6 +66,8 @@ class MainScriptBase(loggable.AbstractLoggable):
 
         exit_code = None
         try:
+            signal.signal(signal.SIGUSR1, cls.handle_sigusr1)
+
             with cls(prog, **kwargs) as main_obj:
                 exit_code = main_obj.run(argv)
 
@@ -75,6 +85,9 @@ class MainScriptBase(loggable.AbstractLoggable):
                 exit_code = cls.EX_OK
             elif exit_code is False:
                 exit_code = cls.EX_ERR
+
+        finally:
+            signal.signal(signal.SIGUSR1, signal.SIG_DFL)
         # --
 
         sys.exit(exit_code)
