@@ -441,6 +441,56 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
         )
 
     # ---
+    # "set-eq"  (v0 compatibility)
+    #   set OPTION=n
+    #   set OPTION=m
+    #   set OPTION=y
+    #   set OPTION=ym
+    #   set OPTION="..str.."
+    #
+
+    def p_command_disable_seteq(self, p):
+        '''command : OP_SET_TO STR EQ     OP_DISABLE
+                   | OP_SET_TO STR COL_EQ OP_DISABLE
+        '''
+        p[0] = self.create_dmb_command(KernelConfigOp.op_disable, [p[2]])
+
+    def p_command_module_seteq(self, p):
+        '''command : OP_SET_TO STR EQ     OP_MODULE
+                   | OP_SET_TO STR COL_EQ OP_MODULE
+        '''
+        p[0] = self.create_dmb_command(KernelConfigOp.op_module, [p[2]])
+
+    def p_command_builtin_seteq(self, p):
+        '''command : OP_SET_TO STR EQ     OP_BUILTIN
+                   | OP_SET_TO STR COL_EQ OP_BUILTIN
+        '''
+        p[0] = self.create_dmb_command(KernelConfigOp.op_builtin, [p[2]])
+
+    def p_command_builtin_or_module_seteq(self, p):
+        '''command : OP_SET_TO STR EQ     OP_BUILTIN_OR_MODULE
+                   | OP_SET_TO STR COL_EQ OP_BUILTIN_OR_MODULE
+        '''
+        p[0] = self.create_dmb_command(
+            KernelConfigOp.op_builtin_or_module, [p[2]]
+        )
+
+    def p_command_set_to_seteq(self, p):
+        '''command : OP_SET_TO STR EQ     STR
+                   | OP_SET_TO STR COL_EQ STR
+        '''
+        p[0] = self.create_seapad_command(KernelConfigOp.op_set_to, p[2], p[4])
+
+    def p_command_seteq_bad(self, p):
+        '''command : OP_SET_TO STR EQ       error
+                   | OP_SET_TO STR COL_EQ   error
+                   | OP_SET_TO STR PLUS_EQ  error
+                   | OP_SET_TO STR BITOR_EQ error'''
+        self.handle_parse_error(
+            p, 3, "expected value after %s%s" % (p[2], p[3])
+        )
+
+    # ---
     # str list
     #
 
