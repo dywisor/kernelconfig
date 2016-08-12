@@ -28,10 +28,12 @@ _kernelconfig_comp() {
     local cur
     local prev
     local script_mode
+    local kernel_srctree
     local v
     local w
     local -i idx
     local -a words
+    local -a DEFAULT_KERNEL_ARCH_NAMES
     local -a SCRIPT_MODES
     local -a LONGOPTS_SCRIPT_MODE
     local -a OPTS_BASIC
@@ -41,6 +43,21 @@ _kernelconfig_comp() {
 
     COMPREPLY=()
     _get_comp_words_by_ref cur prev
+
+    # target kernel architecture names,
+    # used as fallback if no --kernel is specified
+    # and /usr/src/linux does not provide useful information
+    #
+    # Create with:
+    #    find  .  -mindepth 1 -maxdepth 1 -type d | \
+    #    xargs -n 1 basename | sort | xargs echo | fold -s -w 60
+    #
+    DEFAULT_KERNEL_ARCH_NAMES=(
+        alpha arc arm arm64 avr32 blackfin c6x cris frv h8300
+        hexagon ia64 m32r m68k metag microblaze mips mn10300 nios2
+        openrisc parisc powerpc s390 score sh sparc tile um
+        unicore32 x86 xtensa
+    )
 
     # script modes that can be specified with --script-mode
     SCRIPT_MODES=(
@@ -79,6 +96,10 @@ _kernelconfig_comp() {
     # the "new-arg" completion at the end of this function
     # suggests only options that are relevant for the selected script mode.
     #
+    # get the kernel srctree
+    #  used for --arch autocompletion
+    #
+    kernel_srctree=""
     script_mode=""
     idx=1  # skip argv[0]
     while [[ ${idx} -lt ${COMP_CWORD} ]]; do
@@ -95,12 +116,21 @@ _kernelconfig_comp() {
                 # else: break-loop not necessary
                 fi
             ;;
+            --kernel=*)
+                kernel_srctree="${w#*=}"
+            ;;
+            -k|--kernel)
+                if [[ $(( idx + 1 )) -lt ${COMP_CWORD} ]]; then
+                    ((idx++))
+                    kernel_srctree="${COMP_WORDS[${idx}]}"
+                fi
+            ;;
             --*)
                 # then possibly a script mode option
                 for v in "${LONGOPTS_SCRIPT_MODE[@]}"; do
                     if [[ "${w}" == "${v}" ]]; then
                         script_mode="${w#\-\-}"
-                        break
+                        break  # BREAK-LOOP for v: find matching longopt
                     fi
                 done
             ;;
@@ -125,8 +155,38 @@ _kernelconfig_comp() {
         ;;
         -a|--arch)
             # target architecture
-            #  STUB
-            true
+
+            # if %kernel_srctree is empty,
+            # then either has not been set,
+            # or an empty arg was supplied for --kernel
+            #
+            # In that case, /usr/src/linux is searched for arch names,
+            # and a hardcoded arch name list is used as fallback.
+
+            # store in %v whether %kernel_srctree was empty,
+            # and default %kernel_srctree to /usr/src/linux
+            v="${kernel_srctree}"
+            : "${kernel_srctree:=/usr/src/linux}"
+
+            # %w: whitespace-separated arch name list
+            w=""
+            if [[ -d "${kernel_srctree}/arch" ]]; then
+                # -exec test -e '{}/Makefile' ';' -print
+                w="$( \
+                    2>/dev/null find "${kernel_srctree}/arch" \
+                        -mindepth 1 -maxdepth 1 -type d | \
+                        xargs -n 1 basename | \
+                        grep -v -- '[[:space:]]' \
+                )"
+            fi
+
+            # no archs found and no explicit %kernel_srctree?
+            if [[ -z "${w}" ]] && [[ -z "${v}" ]]; then
+                w="${DEFAULT_KERNEL_ARCH_NAMES[*]}"
+            fi
+
+            # in either case, add uname -m
+            COMPREPLY+=( $( compgen -W "$(uname -m) ${w}" -- "${cur}" ) )
         ;;
         -s|--settings)
             # <file> or name
