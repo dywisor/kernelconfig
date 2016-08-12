@@ -301,6 +301,16 @@ kernelconfig accepts a number of options:
     ``/var/tmp`` is used as fallback
     if ``/tmp`` does not have enough free space.
 
+--print-installinfo
+    List the directory paths where kernelconfig looks for settings,
+    include files, configuration sources, cached and data files,
+    alongside with their overall status (exists/missing).
+
+    The paths are grouped (``settings:``, ``include`` a.s.o.),
+    and are printed in descending order of priority.
+
+    No configuration file is generated when this mode is requested.
+
 --list-source-names
     List the names of all known configuration sources.
     The information is based on file-exists checks and may be inaccurate.
