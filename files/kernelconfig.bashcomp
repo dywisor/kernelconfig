@@ -1,6 +1,29 @@
 # kernelconfig -- bash completion
 # -*- coding: utf-8 -*-
 
+# @stdout @nostderr _kernelconfig_confdir_find ( [subdir], *args )
+_kernelconfig_confdir_find() {
+    local -a search_dirs=()
+    local subdir_relpath
+    local iter
+
+    case "${1-}" in
+        "/"|"") subdir_relpath="" ;;
+        *)      subdir_relpath="/${1#/}" ;;
+    esac
+    [[ ${#} -eq 0 ]] || shift
+
+    # COULDFIX: use @sysconfdir@ and sed-edit .in file
+    for iter in \
+        "${HOME}/.config/kernelconfig" \
+        "/etc/kernelconfig"
+    do
+        search_dirs+=( "${iter}${subdir_relpath}" )
+    done
+
+    2>/dev/null find "${search_dirs[@]}" "${@}"
+}
+
 _kernelconfig_comp() {
     local cur
     local prev
@@ -107,8 +130,19 @@ _kernelconfig_comp() {
         ;;
         -s|--settings)
             # <file> or name
-            #  STUB
             _filedir
+            case "${cur}" in
+                */*) true ;;
+                *)
+                    # could be a name
+                    w="$( \
+                        _kernelconfig_confdir_find / -maxdepth 1 -type f | \
+                        xargs -r -n 1 basename | \
+                        grep -v -- '[[:space:]]' \
+                    )"
+                    COMPREPLY+=( $( compgen -W "${w}" -- "${cur}" ) )
+                ;;
+            esac
         ;;
         -m|--modules-dir)
             # <dir> or one of none,auto,optional
@@ -121,8 +155,13 @@ _kernelconfig_comp() {
         ;;
         --help-source)
             # followed by the name of a configuration source
-            #  STUB
-            true
+            w="$( \
+                _kernelconfig_confdir_find /sources \
+                    -maxdepth 1 -type f -not -name skel | \
+                    xargs -r -n 1 -I '{}' basename '{}' .def | \
+                    grep -v -- '[[:space:]]' \
+            )"
+            COMPREPLY+=( $( compgen -W "${w}" -- "${cur}" ) )
         ;;
         *)
             words=()
