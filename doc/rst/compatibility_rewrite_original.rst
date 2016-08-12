@@ -15,7 +15,7 @@ and which command line options changed.
 
 | The evaluation is based on kernelconfig,
 | *v0* as of Aug 2016, commit ``21022840c613919ad3a5fa0e05b6b709710834f2``
-| and *v1* as of Aug 2016, commit ``278f95616088c572d24dfcb25cee2a37daa801b3``.
+| and *v1* as of Aug 2016, commit ``4ea1e57d320c069d250769bf3d91091edf421519``.
 
 Paragraphs marked with ``INTEND-TO-FIX`` denote
 that compatibility with *v0* will be restored,
@@ -124,13 +124,15 @@ and ``source``.
 +++++++++++
 
 The syntax of the ``[options]`` section has undergone
-substantial changes, at present it is **not compatible with v0**:
+substantial changes, it is mostly compatible with *v0*:
 
-* **blocker**: ``enable`` action renamed to ``builtin``
-    ``INTEND-TO-FIX``: reintroduce (as alias to ``builtin``)
+* the ``enable`` action has been renamed to ``builtin``,
+  but it is kept for backwards compatibility
 
-* **blocker**: ``set OPT=VAL`` action replaced by ``set OPT VAL``
-    ``INTEND-TO-FIX``: reintroduce (alternative syntax)
+* the ``set OPT=VAL`` action has been replaced by ``set OPT VAL``,
+  but it is kept for backwards compatibility
+
+  A corner case is ``set OPT=`` (no value), which is an error in *v1*.
 
 * contradicting actions::
 
@@ -165,8 +167,6 @@ substantial changes, at present it is **not compatible with v0**:
 When converting a *v0* ``[options]`` section to *v1*,
 make sure to remove contradicting actions.
 The reduced charset in unquoted words should not be much of an issue.
-
-As for ``enable`` and ``set OPT="VAL"``, wait for a fix.
 
 |
 
