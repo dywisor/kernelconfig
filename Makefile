@@ -178,11 +178,14 @@ install-data:
 	$(DOINS) -- '$(SRC_FILESDIR)/data/scripts/modalias.mk' \
 		'$(DESTDIR)$(PRJ_DATADIR)/scripts/modalias.mk'
 
+	$(call doins_recursive,$(SRC_CONFDIR)/sources,$(DESTDIR)$(PRJ_DATADIR)/sources)
+
 PHONY += install-config
 install-config:
 	$(DODIR) -- '$(DESTDIR)$(PRJ_SYSCONFDIR)'
 
-	$(call doins_recursive,$(SRC_CONFDIR),$(DESTDIR)$(PRJ_SYSCONFDIR))
+	$(call doins_norecur,$(SRC_CONFDIR),$(DESTDIR)$(PRJ_SYSCONFDIR))
+	$(call doins_recursive,$(SRC_CONFDIR)/include,$(DESTDIR)$(PRJ_SYSCONFDIR)/include)
 
 PHONY += install-hwcollect
 install-hwcollect:
