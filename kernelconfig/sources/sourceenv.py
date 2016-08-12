@@ -36,17 +36,12 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
         super().__init__(logger=logger)
         self.install_info = install_info
         self.source_info = source_info
-        self._files_dir = None
         self._tmpdir = None
         self._fmt_vars = None
         self._env_vars = None
 
     def get_files_dir(self):
-        files_dir = self._files_dir
-        if files_dir is None:
-            files_dir = self.install_info.get_config_source_dirs()
-            self._files_dir = files_dir
-        return files_dir
+        return self.install_info.get_config_source_dirs()
 
     def get_file_path(self, name, *additional_relpath_components):
         return self.get_files_dir().get_file_path(
