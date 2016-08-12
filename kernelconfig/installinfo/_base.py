@@ -184,6 +184,8 @@ class DefaultInstallInfo(InstallInfoBase):
     @type settings_dirs:      L{MultiDirEntry}
     @ivar include_file_dirs:  feature set file multi directory
     @type include_file_dirs:  L{MultiDirEntry}
+    @ivar conf_source_dirs:   config sources multi directory
+    @type conf_source_dirs:   L{MultiDirEntry}
     @ivar cache_dirs:         project-specific cache directory
     @type cache_dirs:         L{MultiDirEntry}
     """
@@ -263,6 +265,11 @@ class DefaultInstallInfo(InstallInfoBase):
         # from settings_dirs suffixed with "/include"
         include_file_dirs = settings_dirs.get_child("include")
 
+        # conf_source_dirs:
+        # initially, "sources" subdir in any of the settings and data dirs
+        conf_source_dirs = settings_dirs.get_child("sources")
+        conf_source_dirs.append(data_dirs.get_child("sources"))
+
         return cls(
             sys_config_dirs=sys_config_dirs,
             user_config_dir=user_config_dir,
@@ -270,6 +277,7 @@ class DefaultInstallInfo(InstallInfoBase):
             sys_data_dirs=sys_data_dirs,
             settings_dirs=settings_dirs,
             include_file_dirs=include_file_dirs,
+            conf_source_dirs=conf_source_dirs,
             cache_dirs=cache_dirs,
             data_dirs=data_dirs
         )
@@ -278,7 +286,8 @@ class DefaultInstallInfo(InstallInfoBase):
     def __init__(
         self, *,
         sys_config_dirs, user_config_dir, user_cache_dir, sys_data_dirs,
-        settings_dirs, include_file_dirs, cache_dirs, data_dirs
+        settings_dirs, include_file_dirs, conf_source_dirs,
+        cache_dirs, data_dirs
     ):
         super().__init__()
         self.sys_config_dirs = sys_config_dirs
@@ -288,6 +297,7 @@ class DefaultInstallInfo(InstallInfoBase):
 
         self.settings_dirs = settings_dirs
         self.include_file_dirs = include_file_dirs
+        self.conf_source_dirs = conf_source_dirs
         self.cache_dirs = cache_dirs
         self.data_dirs = data_dirs
     # --- end of __init__ (...) ---
@@ -300,6 +310,7 @@ class DefaultInstallInfo(InstallInfoBase):
             sys_data_dirs=self.sys_data_dirs.copy(),
             settings_dirs=self.settings_dirs.copy(),
             include_file_dirs=self.include_file_dirs.copy(),
+            conf_source_dirs=self.conf_source_dirs.copy(),
             cache_dirs=self.cache_dirs.copy(),
             data_dirs=self.data_dirs.copy()
         )
@@ -316,7 +327,7 @@ class DefaultInstallInfo(InstallInfoBase):
         ))
 
     def get_config_source_dirs(self):
-        return self.settings_dirs.get_child("sources")
+        return self.conf_source_dirs
 
     def get_script_file(self, filename):
         return self.data_dirs.get_file_path(
