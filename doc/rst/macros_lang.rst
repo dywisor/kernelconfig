@@ -72,6 +72,21 @@ which can be used interchangeably, but supports config option names only:
 
 Spaces around the assignment operators are ignored.
 
+For compatibility with the original project,
+the following syntax is also accepted:
+
+.. code:: text
+
+    enable KCONFIG_OPTION [KCONFIG_OPTION...]   # builtin
+
+    set KCONFIG_OPTION=m                        # module
+    set KCONFIG_OPTION=y                        # builtin
+    set KCONFIG_OPTION=ym                       # builtin-or-module
+    set KCONFIG_OPTION=n                        # disable
+
+    set KCONFIG_OPTION="STR"                    # set
+
+
 Additional instructions for loading other files:
 
 .. code:: text
