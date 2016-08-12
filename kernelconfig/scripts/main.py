@@ -136,6 +136,10 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                     )
                 ),
                 (
+                    "print-installinfo", None,
+                    "list data/config directories and their status"
+                ),
+                (
                     "list-source-names", None,
                     "list available curated sources"
                 ),
@@ -653,6 +657,10 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             print(config_check_map)
     # --- end of do_main_script_eval_config_check (...) ---
 
+    def do_main_script_print_installinfo(self, arg_config):
+        print(self.install_info.format_info())
+    # ---
+
     def do_main_script_list_sources(self, arg_config, names_only):
         def any_of(sfiles):
             for item in filter(None, sfiles):
@@ -803,6 +811,9 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         elif script_mode[0] == "eval-config-check":
             return self.do_main_script_eval_config_check(arg_config)
+
+        elif script_mode[0] == "print-installinfo":
+            return self.do_main_script_print_installinfo(arg_config)
 
         else:
             raise NotImplementedError("script mode", script_mode)
