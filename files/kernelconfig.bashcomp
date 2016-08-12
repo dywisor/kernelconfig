@@ -63,6 +63,7 @@ _kernelconfig_comp() {
     SCRIPT_MODES=(
         generate-config
         generate-modalias
+        print-installinfo
         eval-config-check
         list-source-names
         list-sources
