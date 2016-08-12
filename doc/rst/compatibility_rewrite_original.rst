@@ -15,7 +15,7 @@ and which command line options changed.
 
 | The evaluation is based on kernelconfig,
 | *v0* as of Aug 2016, commit ``21022840c613919ad3a5fa0e05b6b709710834f2``
-| and *v1* as of Aug 2016, commit ``4ea1e57d320c069d250769bf3d91091edf421519``.
+| and *v1* as of Aug 2016, commit ``1ad56f25738895b8616a24077391a208fd28a8b7``.
 
 Paragraphs marked with ``INTEND-TO-FIX`` denote
 that compatibility with *v0* will be restored,
@@ -205,14 +205,12 @@ Different search directories:
 
     /usr/share/kernelconfig/sources
 
-*v1* expects to find sources in the ``sources`` subdirectory
-of one of the settings directories::
+*v1* additionally looks for sources in the ``sources`` subdirectory
+of the settings directories::
 
     ~/.config/kernelconfig/sources
     /etc/kernelconfig/sources
-
-``INTEND-TO-FIX``: add ``/usr/share/kernelconfig/sources`` to the list,
-and install system-wide sources to this directory
+    /usr/share/kernelconfig/sources
 
 |
 
