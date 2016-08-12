@@ -779,6 +779,10 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
     def do_main(self, arg_config):
         script_mode = arg_config["script_mode"]
 
+        if isinstance(script_mode, str):
+            script_mode = (script_mode, None)
+        # --
+
         if not script_mode or script_mode[0] == "generate-config":
             return self.do_main_script_genconfig(arg_config)
 
