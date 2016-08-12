@@ -1,11 +1,42 @@
 # kernelconfig -- bash completion
 # -*- coding: utf-8 -*-
 
-# @stdout @nostderr _kernelconfig_confdir_find ( [subdir], *args )
+# @stdout @nostderr _kernelconfig_confdir_find ( -A|-C|-D, [subdir], *args )
+#
+#  -A:      find in config and data dirs
+#  -C:      find in config dirs only
+#  -D:      find in data dirs only
+#  subdir:  find in <subdir>, interpreted relative to config/data dirs
+#  *args.   arbitrary arguments passed to find after the search directories
+#
 _kernelconfig_confdir_find() {
+    local -a search_roots=()
     local -a search_dirs=()
     local subdir_relpath
     local iter
+
+    case "${1-}" in
+        -A|-C|-D) : ;;
+        *) return 1 ;;
+    esac
+
+    search_roots=()
+    if [[ ("${1}" == "-A") || ("${1}" == "-C") ]]; then
+        # COULDFIX: use @sysconfdir@ and sed-edit .in file
+        search_roots+=(
+            "${HOME}/.config/kernelconfig"
+            "/etc/kernelconfig"
+        )
+    fi
+
+    if [[ ("${1}" == "-A") || ("${1}" == "-D") ]]; then
+        # COULDFIX: use @datadir@ and sed-edit .in file
+        search_roots+=(
+            "/usr/share/kernelconfig"
+        )
+    fi
+    # search_roots cannot be empty
+    shift
 
     case "${1-}" in
         "/"|"") subdir_relpath="" ;;
@@ -13,13 +44,12 @@ _kernelconfig_confdir_find() {
     esac
     [[ ${#} -eq 0 ]] || shift
 
-    # COULDFIX: use @sysconfdir@ and sed-edit .in file
-    for iter in \
-        "${HOME}/.config/kernelconfig" \
-        "/etc/kernelconfig"
-    do
+    for iter in "${search_roots[@]}"; do
         search_dirs+=( "${iter}${subdir_relpath}" )
     done
+
+    # search_dirs cannot be empty (<<-- non-empty search_roots)
+    [[ ${#search_dirs[@]} -gt 0 ]] || return 0  # redundant
 
     2>/dev/null find "${search_dirs[@]}" "${@}"
 }
@@ -197,7 +227,7 @@ _kernelconfig_comp() {
                 *)
                     # could be a name
                     w="$( \
-                        _kernelconfig_confdir_find / -maxdepth 1 -type f | \
+                        _kernelconfig_confdir_find -C / -maxdepth 1 -type f | \
                         xargs -r -n 1 basename | \
                         grep -v -- '[[:space:]]' \
                     )"
@@ -217,7 +247,7 @@ _kernelconfig_comp() {
         --help-source)
             # followed by the name of a configuration source
             w="$( \
-                _kernelconfig_confdir_find /sources \
+                _kernelconfig_confdir_find -A /sources \
                     -maxdepth 1 -type f -not -name skel | \
                     xargs -r -n 1 -I '{}' basename '{}' .def | \
                     grep -v -- '[[:space:]]' \
