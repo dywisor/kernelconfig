@@ -40,6 +40,7 @@ class KernelConfigLangLexer(object):
 
         "builtin":           "OP_BUILTIN",
         "y":                 "OP_BUILTIN",
+        "enable":            "OP_BUILTIN",            # v0 compatibility
 
         "builtin-or-module": "OP_BUILTIN_OR_MODULE",
         "ym":                "OP_BUILTIN_OR_MODULE",
