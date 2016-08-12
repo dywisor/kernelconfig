@@ -3,6 +3,9 @@
 
 import abc
 
+import os    # format_info()
+import stat  # format_info()
+
 from ..util import multidir
 from ..util import fspath
 
@@ -130,6 +133,17 @@ class InstallInfoBase(object, metaclass=abc.ABCMeta):
 
         @return: new copy of this object
         @rtype:  subclass of L{InstallInfoBase}
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def format_info(self):
+        """
+        Creates a str describing the various filesystem paths used/referenced
+        by this installation info object.
+
+        @return:  fspath description
+        @rtype:   C{str}
         """
         raise NotImplementedError()
 
@@ -315,6 +329,50 @@ class DefaultInstallInfo(InstallInfoBase):
             data_dirs=self.data_dirs.copy()
         )
     # --- end of copy (...) ---
+
+    def format_info(self):
+        def gen_lines():
+            indent = "  "
+
+            for idx, (name, mdir) in enumerate([
+                ("settings", self.settings_dirs),
+                ("include", self.include_file_dirs),
+                ("configuration sources", self.conf_source_dirs),
+                ("cache", self.cache_dirs),
+                ("data", self.data_dirs)
+            ]):
+                if idx:
+                    yield ""
+
+                yield "{0!s} directories:".format(name)
+                have_any_dirpath = False
+                for dirpath, stat_info in mdir.iter_paths():
+                    have_any_dirpath = True
+                    if not stat_info:
+                        status_desc = "does not exist"
+                    elif not stat.S_ISDIR(stat_info.st_mode):
+                        status_desc = "not a dir"
+                    else:
+                        try:
+                            ls_content = os.listdir(dirpath)
+                        except OSError:
+                            status_desc = "read error"
+                        else:
+                            status_desc = ("found" if ls_content else "empty")
+                    # --
+
+                    yield "{i}{0!s} ({1!s})".format(
+                        dirpath, status_desc, i=indent
+                    )
+                # --
+
+                if not have_any_dirpath:
+                    yield "{i}(none)".format(i=indent)
+            # --
+        # ---
+
+        return "\n".join(gen_lines())
+    # --- end of format_info (...) ---
 
     def get_settings_file(self, filename):
         return self.settings_dirs.get_file_path(filename)
