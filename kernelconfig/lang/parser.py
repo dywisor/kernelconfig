@@ -387,6 +387,8 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
     # OPTION=y
     # OPTION=ym
     # OPTION="..str.."
+    # OPTION|="...str..."
+    # OPTION+="...str..."
     #
 
     def p_command_disable_assignop(self, p):
