@@ -58,6 +58,7 @@ target/
 
 /local
 /doc/epydoc
+/doc/pdf
 
 # bundled executables
 *.pyz

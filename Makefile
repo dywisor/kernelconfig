@@ -7,6 +7,7 @@ __MAIN_MK_FILE := $(realpath $(lastword $(MAKEFILE_LIST)))
 __MAIN_MK_DIR  := $(patsubst %/,%,$(dir $(__MAIN_MK_FILE)))
 
 include $(__MAIN_MK_DIR)/mk/prj.mk
+include $(__MAIN_MK_DIR)/mk/prj_doc.mk
 include $(__MAIN_MK_DIR)/mk/progs.mk
 include $(__MAIN_MK_DIR)/mk/install.mk
 include $(__MAIN_MK_DIR)/mk/installfuncs.mk
