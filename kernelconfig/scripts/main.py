@@ -605,10 +605,6 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         #   2. hwdetect from file
         if hwdetect_suggestions is not None:
-            # TODO/FIXME: better logging, maybe add this to config choices
-            #             (and dedup/reuse related interpreter code)
-            #             in particular,
-            #             error handling differs from ipret - currently
             self.logger.debug("Adding hwdetect-from-file config options")
             conf_choices = config_gen.get_config_choices()
 
