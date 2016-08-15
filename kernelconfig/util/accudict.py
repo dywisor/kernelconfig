@@ -22,7 +22,7 @@ class AccumulatorDict(collections.UserDict):
         try:
             return self.data[key]
         except KeyError:
-            entry = self.CONTAINER_TYPE()
+            entry = self.CONTAINER_TYPE()  # pylint: disable=E1102
             self.data[key] = entry
             return entry
     # ---

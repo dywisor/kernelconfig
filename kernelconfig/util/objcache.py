@@ -16,19 +16,19 @@ class ObjectCache(object):
         """Creates a new object, constructor(*args)."""
         return constructor(*args)
 
-    def _get_object(self, constructor, args):
+    def _get_object(self, constructor, args):  # pylint: disable=E0202
         """Returns a shared object, creates a new one if necessary.
 
         This method gets rebound in __init__().
         """
         return self._create_object(constructor, args)
 
-    def info(self):
+    def info(self):  # pylint: disable=E0202
         """Returns information about the object cache.
 
         This method gets rebound in __init__().
         """
-        return self.get.cache_info()
+        return self.get.cache_info()  # pylint: disable=E1101
 
     def __init__(self, maxsize=32, typed=True):
         """
@@ -42,7 +42,7 @@ class ObjectCache(object):
         super().__init__()
         cache = functools.lru_cache(maxsize=maxsize, typed=typed)
         self._get_object = cache(self._create_object)
-        self.info = self._get_object.cache_info
+        self.info = self._get_object.cache_info  # pylint: disable=E1101
 
     def get(self, constructor, *args):
         """Returns a shared object, creates a new one if necessary."""

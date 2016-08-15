@@ -19,7 +19,7 @@ __all__ = [
 
 if hasattr(os, "cpu_count"):
     # Python >= 3.4
-    get_cpu_count = os.cpu_count
+    get_cpu_count = os.cpu_count  # pylint: disable=E1101
 
 elif hasattr(os, "sched_getaffinity"):
     # Python 3.3

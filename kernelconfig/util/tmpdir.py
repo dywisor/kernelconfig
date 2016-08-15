@@ -210,6 +210,7 @@ if sys.hexversion >= 0x3040000:
         _finalizers = []
 
         def _setup_finalizer(self):
+            # pylint: disable=E1101
             self.__class__._finalizers.append(
                 weakref.finalize(self, _finalize_tmpdir, weakref.ref(self))
             )

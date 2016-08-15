@@ -62,7 +62,7 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
     """
 
     @abc.abstractproperty
-    def PATH_LIST_TYPE(cls):
+    def PATH_LIST_TYPE(cls):  # pylint: disable=E0213
         raise NotImplementedError()
 
     @abc.abstractmethod
