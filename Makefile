@@ -68,7 +68,7 @@ build-py: $(_BUILD_DIR:/=)/installinfo.py
 
 
 PHONY += clean
-clean:
+clean::
 	true
 
 PHONY += epydoc-clean
@@ -83,7 +83,8 @@ pyclean:
 	find $(_PYMOD_DIRS) -name '__pycache__' -type d -delete -print
 
 PHONY += distclean
-distclean: clean pyclean
+distclean:: clean pyclean
+	true
 
 # ~int _f_grep_check_recursive ( pattern, dirlist )
 define _f_grep_check_recursive
