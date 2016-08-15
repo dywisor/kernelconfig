@@ -1,0 +1,545 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
+<title>kernelconfig - Compatibility with the original project</title>
+<style type="text/css">
+
+/*
+:Author: David Goodger (goodger@python.org)
+:Id: $Id: html4css1.css 7614 2013-02-21 15:55:51Z milde $
+:Copyright: This stylesheet has been placed in the public domain.
+
+Default cascading style sheet for the HTML output of Docutils.
+
+See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+customize this style sheet.
+*/
+
+/* used to remove borders from tables and images */
+.borderless, table.borderless td, table.borderless th {
+  border: 0 }
+
+table.borderless td, table.borderless th {
+  /* Override padding for "table.docutils td" with "! important".
+     The right padding separates the table cells. */
+  padding: 0 0.5em 0 0 ! important }
+
+.first {
+  /* Override more specific margin styles with "! important". */
+  margin-top: 0 ! important }
+
+.last, .with-subtitle {
+  margin-bottom: 0 ! important }
+
+.hidden {
+  display: none }
+
+a.toc-backref {
+  text-decoration: none ;
+  color: black }
+
+blockquote.epigraph {
+  margin: 2em 5em ; }
+
+dl.docutils dd {
+  margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
+
+/* Uncomment (and remove this text!) to get bold-faced definition list terms
+dl.docutils dt {
+  font-weight: bold }
+*/
+
+div.abstract {
+  margin: 2em 5em }
+
+div.abstract p.topic-title {
+  font-weight: bold ;
+  text-align: center }
+
+div.admonition, div.attention, div.caution, div.danger, div.error,
+div.hint, div.important, div.note, div.tip, div.warning {
+  margin: 2em ;
+  border: medium outset ;
+  padding: 1em }
+
+div.admonition p.admonition-title, div.hint p.admonition-title,
+div.important p.admonition-title, div.note p.admonition-title,
+div.tip p.admonition-title {
+  font-weight: bold ;
+  font-family: sans-serif }
+
+div.attention p.admonition-title, div.caution p.admonition-title,
+div.danger p.admonition-title, div.error p.admonition-title,
+div.warning p.admonition-title, .code .error {
+  color: red ;
+  font-weight: bold ;
+  font-family: sans-serif }
+
+/* Uncomment (and remove this text!) to get reduced vertical space in
+   compound paragraphs.
+div.compound .compound-first, div.compound .compound-middle {
+  margin-bottom: 0.5em }
+
+div.compound .compound-last, div.compound .compound-middle {
+  margin-top: 0.5em }
+*/
+
+div.dedication {
+  margin: 2em 5em ;
+  text-align: center ;
+  font-style: italic }
+
+div.dedication p.topic-title {
+  font-weight: bold ;
+  font-style: normal }
+
+div.figure {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+div.footer, div.header {
+  clear: both;
+  font-size: smaller }
+
+div.line-block {
+  display: block ;
+  margin-top: 1em ;
+  margin-bottom: 1em }
+
+div.line-block div.line-block {
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+  margin-left: 1.5em }
+
+div.sidebar {
+  margin: 0 0 0.5em 1em ;
+  border: medium outset ;
+  padding: 1em ;
+  background-color: #ffffee ;
+  width: 40% ;
+  float: right ;
+  clear: right }
+
+div.sidebar p.rubric {
+  font-family: sans-serif ;
+  font-size: medium }
+
+div.system-messages {
+  margin: 5em }
+
+div.system-messages h1 {
+  color: red }
+
+div.system-message {
+  border: medium outset ;
+  padding: 1em }
+
+div.system-message p.system-message-title {
+  color: red ;
+  font-weight: bold }
+
+div.topic {
+  margin: 2em }
+
+h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
+h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
+  margin-top: 0.4em }
+
+h1.title {
+  text-align: center }
+
+h2.subtitle {
+  text-align: center }
+
+hr.docutils {
+  width: 75% }
+
+img.align-left, .figure.align-left, object.align-left {
+  clear: left ;
+  float: left ;
+  margin-right: 1em }
+
+img.align-right, .figure.align-right, object.align-right {
+  clear: right ;
+  float: right ;
+  margin-left: 1em }
+
+img.align-center, .figure.align-center, object.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.align-left {
+  text-align: left }
+
+.align-center {
+  clear: both ;
+  text-align: center }
+
+.align-right {
+  text-align: right }
+
+/* reset inner alignment in figures */
+div.align-right {
+  text-align: inherit }
+
+/* div.align-center * { */
+/*   text-align: left } */
+
+ol.simple, ul.simple {
+  margin-bottom: 1em }
+
+ol.arabic {
+  list-style: decimal }
+
+ol.loweralpha {
+  list-style: lower-alpha }
+
+ol.upperalpha {
+  list-style: upper-alpha }
+
+ol.lowerroman {
+  list-style: lower-roman }
+
+ol.upperroman {
+  list-style: upper-roman }
+
+p.attribution {
+  text-align: right ;
+  margin-left: 50% }
+
+p.caption {
+  font-style: italic }
+
+p.credits {
+  font-style: italic ;
+  font-size: smaller }
+
+p.label {
+  white-space: nowrap }
+
+p.rubric {
+  font-weight: bold ;
+  font-size: larger ;
+  color: maroon ;
+  text-align: center }
+
+p.sidebar-title {
+  font-family: sans-serif ;
+  font-weight: bold ;
+  font-size: larger }
+
+p.sidebar-subtitle {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+p.topic-title {
+  font-weight: bold }
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+pre.code .ln { color: grey; } /* line numbers */
+pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment { color: #5C6576 }
+pre.code .keyword, code .keyword { color: #3B0D06; font-weight: bold }
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin { color: #352B84 }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
+
+span.classifier {
+  font-family: sans-serif ;
+  font-style: oblique }
+
+span.classifier-delimiter {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+span.interpreted {
+  font-family: sans-serif }
+
+span.option {
+  white-space: nowrap }
+
+span.pre {
+  white-space: pre }
+
+span.problematic {
+  color: red }
+
+span.section-subtitle {
+  /* font-size relative to parent (h1..h6 element) */
+  font-size: 80% }
+
+table.citation {
+  border-left: solid 1px gray;
+  margin-left: 1px }
+
+table.docinfo {
+  margin: 2em 4em }
+
+table.docutils {
+  margin-top: 0.5em ;
+  margin-bottom: 0.5em }
+
+table.footnote {
+  border-left: solid 1px black;
+  margin-left: 1px }
+
+table.docutils td, table.docutils th,
+table.docinfo td, table.docinfo th {
+  padding-left: 0.5em ;
+  padding-right: 0.5em ;
+  vertical-align: top }
+
+table.docutils th.field-name, table.docinfo th.docinfo-name {
+  font-weight: bold ;
+  text-align: left ;
+  white-space: nowrap ;
+  padding-left: 0 }
+
+/* "booktabs" style (no vertical lines) */
+table.docutils.booktabs {
+  border: 0px;
+  border-top: 2px solid;
+  border-bottom: 2px solid;
+  border-collapse: collapse;
+}
+table.docutils.booktabs * {
+  border: 0px;
+}
+table.docutils.booktabs th {
+  border-bottom: thin solid;
+  text-align: left;
+}
+
+h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
+h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
+  font-size: 100% }
+
+ul.auto-toc {
+  list-style-type: none }
+
+</style>
+</head>
+<body>
+<div class="document" id="discrepancies">
+<h1 class="title">Discrepancies</h1>
+
+<p>This document lists differences in behavior
+between this (further referred to as &quot;v1&quot;) and the <a class="reference external" href="https://github.com/Calchan/kernelconfig">original project</a> (&quot;v0&quot;).
+While it highlights some of the features present in <em>v1</em>,
+it is not meant to be a feature comparison.
+Its purpose is to point out where <em>v1</em> clearly deviates from <em>v0</em>
+despite using the seemingly same files
+and which command line options changed.</p>
+<div class="line-block">
+<div class="line">The evaluation is based on kernelconfig,</div>
+<div class="line"><em>v0</em> as of Aug 2016, commit <tt class="docutils literal">21022840c613919ad3a5fa0e05b6b709710834f2</tt></div>
+<div class="line">and <em>v1</em> as of Aug 2016, commit <tt class="docutils literal">1ad56f25738895b8616a24077391a208fd28a8b7</tt>.</div>
+</div>
+<p>Paragraphs marked with <tt class="docutils literal"><span class="pre">INTEND-TO-FIX</span></tt> denote
+that compatibility with <em>v0</em> will be restored,
+and <tt class="docutils literal"><span class="pre">UNSURE-IF-FIX</span></tt> means that the discrepancy could be fixed.</p>
+<div class="section" id="running-kernelconfig">
+<h1>Running kernelconfig</h1>
+<ul>
+<li><p class="first"><em>v1</em> does not support the <tt class="docutils literal"><span class="pre">-v</span></tt>, <tt class="docutils literal"><span class="pre">--version</span></tt> option.</p>
+<blockquote>
+<p><tt class="docutils literal"><span class="pre">-v</span></tt> is accepted, but it increases the log verbosity.</p>
+<div class="line-block">
+<div class="line"><tt class="docutils literal"><span class="pre">UNSURE-IF-FIX</span></tt>: reintroduce as renamed option: <tt class="docutils literal"><span class="pre">--fake-kver</span></tt>, <tt class="docutils literal"><span class="pre">--source-kver</span></tt>?</div>
+<div class="line">Not all config sources follow the kernel versioning scheme, see e.g. CentOS.</div>
+</div>
+</blockquote>
+</li>
+<li><p class="first">In <em>v0</em>, <tt class="docutils literal"><span class="pre">-a</span></tt>, <tt class="docutils literal"><span class="pre">--arch</span></tt> accepts arbitrary target architectures,
+and is only relevant to curated sources.</p>
+<blockquote>
+<p>In <em>v1</em>, <tt class="docutils literal"><span class="pre">-a</span></tt>, <tt class="docutils literal"><span class="pre">--arch</span></tt> must be a supported kernel architecture,
+either directly or indirectly, and it affects overall config generation,
+e.g. which config options are known.
+<tt class="docutils literal">x86</tt>, <tt class="docutils literal">x86_64</tt> (<tt class="docutils literal"><span class="pre">-&gt;</span> x86</tt>) and <tt class="docutils literal">armv6</tt> (<tt class="docutils literal"><span class="pre">-&gt;</span> arm</tt>) are accepted,
+for instance, but <tt class="docutils literal">amd64</tt> is not.</p>
+<p><tt class="docutils literal"><span class="pre">UNSURE-IF-FIX</span></tt>: introduce &quot;user target arch&quot;,
+translate it to target machine arch</p>
+</blockquote>
+</li>
+<li><p class="first"><em>v1</em> runs <tt class="docutils literal">make oldconfig</tt> as part of config generation,
+there is no need to do it manually.</p>
+</li>
+</ul>
+</div>
+<div class="section" id="installing-kernelconfig">
+<h1>Installing kernelconfig</h1>
+<p>Be aware that <em>v1</em> has different (i.e. more) dependencies.</p>
+<p>Unlike <em>v0</em>, installing with <tt class="docutils literal">pip</tt> alone is not sufficient
+as it will only install the Python-related files.
+The data and config files need to be installed with
+<tt class="docutils literal">make <span class="pre">install-data</span> <span class="pre">install-config</span></tt>.</p>
+<p><strong>v0 and v1 can not be installed at the same time</strong>,
+they use the same Python module namespace (<tt class="docutils literal">kernelconfig</tt>),
+but are not compatible at the source code level.</p>
+<p><em>v1</em> can be run in <em>standalone mode</em> from the cloned project sources' git repo.</p>
+</div>
+<div class="section" id="settings-file">
+<h1>Settings File</h1>
+<p><em>v0</em> and <em>v1</em> settings files have the same overall structure
+and the <em>v1</em> parser is mostly compatible with <em>v0</em>.</p>
+<p>Except for the section headers (<tt class="docutils literal">[section name]</tt>),
+<em>v1</em> settings files are not ini files.
+ini constructs such as nested section headers are not allowed.</p>
+<div class="section" id="settings-directories">
+<h2>Settings Directories</h2>
+<p><em>v0</em> and <em>v1</em> use the same settings directories:</p>
+<pre class="literal-block">
+~/.config/kernelconfig
+/etc/kernelconfig
+</pre>
+<p>Both prefer '~' over '/etc'.</p>
+</div>
+<div class="section" id="source">
+<h2>[source]</h2>
+<p><em>v0</em> reads the first non-empty, non-comment line
+and interprets it as curated source.
+All remaining lines are completely ignored.</p>
+<p>In <em>v1</em>, the first non-empty, non-comment line specifies the source,
+and it can span over multiple lines by means of backslash line continuation.
+All remaining lines are passed as <em>data</em> to the source,
+depending on the type of the source.
+Curated sources do not accept <em>data</em>.</p>
+<p>When converting a <em>v0</em> <tt class="docutils literal">[source]</tt> section to <em>v1</em>,
+drop all non-empty, non-comment lines except for the first one.</p>
+<p>The line needs to be prefixed with <tt class="docutils literal">source</tt>
+if the source has one of the following names:
+<tt class="docutils literal">cmd</tt>,
+<tt class="docutils literal">command</tt>,
+<tt class="docutils literal">defconfig</tt>,
+<tt class="docutils literal">file</tt>,
+<tt class="docutils literal"><span class="pre">local-file</span></tt>,
+<tt class="docutils literal">local_file</tt>,
+<tt class="docutils literal">make</tt>,
+<tt class="docutils literal">mk</tt>,
+<tt class="docutils literal">pym</tt>,
+<tt class="docutils literal">script</tt>,
+<tt class="docutils literal">sh</tt>,
+and <tt class="docutils literal">source</tt>.</p>
+</div>
+<div class="section" id="options">
+<h2>[options]</h2>
+<p>The syntax of the <tt class="docutils literal">[options]</tt> section has undergone
+substantial changes, it is mostly compatible with <em>v0</em>:</p>
+<ul>
+<li><p class="first">the <tt class="docutils literal">enable</tt> action has been renamed to <tt class="docutils literal">builtin</tt>,
+but it is kept for backwards compatibility</p>
+</li>
+<li><p class="first">the <tt class="docutils literal">set OPT=VAL</tt> action has been replaced by <tt class="docutils literal">set OPT VAL</tt>,
+but it is kept for backwards compatibility</p>
+<p>A corner case is <tt class="docutils literal">set OPT=</tt> (no value), which is an error in <em>v1</em>.</p>
+</li>
+<li><p class="first">contradicting actions:</p>
+<pre class="literal-block">
+module A
+disable A
+</pre>
+<p>This is an error in <em>v1</em>, and effectively <tt class="docutils literal">disable A</tt> in <em>v0</em>.</p>
+</li>
+<li><p class="first">Reserved words must be quoted to get their non-reserved meaning,
+enabling the config option &quot;module&quot; as module would have to be written
+as <tt class="docutils literal">module &quot;module&quot;</tt>.</p>
+<p>In <em>v0</em>, there are no reserved words.</p>
+</li>
+<li><p class="first">not all characters are allowed in unquoted words
+and string values should always be quoted.</p>
+<p>In <em>v0</em>, all chars are allowed and string values must be quoted.</p>
+</li>
+<li><p class="first">since the effective kernel configuration gets resolved,
+it is not necessary to specify intermediate config options.</p>
+<p>For example, the <em>v0</em> snippet sets the default kernel command line:</p>
+<pre class="literal-block">
+enable CONFIG_CMDLINE_BOOL
+set CONFIG_CMDLINE=&quot;panic=10&quot;
+</pre>
+<p>In <em>v1</em>, it can be reduced to (note the replaced <tt class="docutils literal">set</tt> action):</p>
+<pre class="literal-block">
+set CONFIG_CMDLINE &quot;panic=10&quot;
+</pre>
+</li>
+</ul>
+<p>When converting a <em>v0</em> <tt class="docutils literal">[options]</tt> section to <em>v1</em>,
+make sure to remove contradicting actions.
+The reduced charset in unquoted words should not be much of an issue.</p>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p>Noteworthy changes, but not relevant for converting <em>v0</em> <tt class="docutils literal">[options]</tt> to <em>v1</em>:</p>
+<ul class="simple">
+<li>config option names can be prefixed with <tt class="docutils literal">CONFIG_</tt>, but do not have to</li>
+<li>actions are case-insensitive (<em>v0</em>: case-sensitive)</li>
+<li>new actions:<ul>
+<li><tt class="docutils literal"><span class="pre">builtin-or-module</span></tt></li>
+<li><tt class="docutils literal">include</tt></li>
+<li><tt class="docutils literal">hwdetect</tt></li>
+<li><tt class="docutils literal">packages</tt></li>
+</ul>
+</li>
+<li>action modifiers:<ul>
+<li><tt class="docutils literal">driver</tt>/<tt class="docutils literal">module</tt></li>
+<li><tt class="docutils literal">modalias</tt></li>
+</ul>
+</li>
+<li>conditional expressions</li>
+</ul>
+</div>
+</div>
+<div class="section" id="curated-sources">
+<h1>Curated Sources</h1>
+<p>Different search directories:</p>
+<p><em>v0</em> searches for curated sources in:</p>
+<pre class="literal-block">
+/usr/share/kernelconfig/sources
+</pre>
+<p><em>v1</em> additionally looks for sources in the <tt class="docutils literal">sources</tt> subdirectory
+of the settings directories:</p>
+<pre class="literal-block">
+~/.config/kernelconfig/sources
+/etc/kernelconfig/sources
+/usr/share/kernelconfig/sources
+</pre>
+<div class="line-block">
+<div class="line"><br /></div>
+</div>
+<p><em>v0</em> curated sources are scripts with a fixed script calling convention.</p>
+<p>When converting a <em>v0</em> curated source to <em>v1</em>, nothing needs to be done,
+the scripts can be used as-is.
+Consider writing a <em>source definition file</em> to benefit
+from target architecture checks and a meaningful help message
+when <tt class="docutils literal">kernelconfig <span class="pre">--help-source</span></tt> is run.
+See <em>Script-Only Curated Sources</em> in the userguide for further advice.</p>
+<p>Be aware that <em>v1</em> adds support for other types of curated sources
+such as (remote) files and Python modules with access to common functionality.
+It also offers argument parsing.</p>
+</div>
+</div>
+<div class="footer">
+<hr class="footer" />
+Generated on: 2016-08-15.
+
+</div>
+</body>
+</html>

@@ -1,0 +1,911 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<meta name="generator" content="Docutils 0.12: http://docutils.sourceforge.net/" />
+<title>kernelconfig - Dev Guide</title>
+<style type="text/css">
+
+/*
+:Author: David Goodger (goodger@python.org)
+:Id: $Id: html4css1.css 7614 2013-02-21 15:55:51Z milde $
+:Copyright: This stylesheet has been placed in the public domain.
+
+Default cascading style sheet for the HTML output of Docutils.
+
+See http://docutils.sf.net/docs/howto/html-stylesheets.html for how to
+customize this style sheet.
+*/
+
+/* used to remove borders from tables and images */
+.borderless, table.borderless td, table.borderless th {
+  border: 0 }
+
+table.borderless td, table.borderless th {
+  /* Override padding for "table.docutils td" with "! important".
+     The right padding separates the table cells. */
+  padding: 0 0.5em 0 0 ! important }
+
+.first {
+  /* Override more specific margin styles with "! important". */
+  margin-top: 0 ! important }
+
+.last, .with-subtitle {
+  margin-bottom: 0 ! important }
+
+.hidden {
+  display: none }
+
+a.toc-backref {
+  text-decoration: none ;
+  color: black }
+
+blockquote.epigraph {
+  margin: 2em 5em ; }
+
+dl.docutils dd {
+  margin-bottom: 0.5em }
+
+object[type="image/svg+xml"], object[type="application/x-shockwave-flash"] {
+  overflow: hidden;
+}
+
+/* Uncomment (and remove this text!) to get bold-faced definition list terms
+dl.docutils dt {
+  font-weight: bold }
+*/
+
+div.abstract {
+  margin: 2em 5em }
+
+div.abstract p.topic-title {
+  font-weight: bold ;
+  text-align: center }
+
+div.admonition, div.attention, div.caution, div.danger, div.error,
+div.hint, div.important, div.note, div.tip, div.warning {
+  margin: 2em ;
+  border: medium outset ;
+  padding: 1em }
+
+div.admonition p.admonition-title, div.hint p.admonition-title,
+div.important p.admonition-title, div.note p.admonition-title,
+div.tip p.admonition-title {
+  font-weight: bold ;
+  font-family: sans-serif }
+
+div.attention p.admonition-title, div.caution p.admonition-title,
+div.danger p.admonition-title, div.error p.admonition-title,
+div.warning p.admonition-title, .code .error {
+  color: red ;
+  font-weight: bold ;
+  font-family: sans-serif }
+
+/* Uncomment (and remove this text!) to get reduced vertical space in
+   compound paragraphs.
+div.compound .compound-first, div.compound .compound-middle {
+  margin-bottom: 0.5em }
+
+div.compound .compound-last, div.compound .compound-middle {
+  margin-top: 0.5em }
+*/
+
+div.dedication {
+  margin: 2em 5em ;
+  text-align: center ;
+  font-style: italic }
+
+div.dedication p.topic-title {
+  font-weight: bold ;
+  font-style: normal }
+
+div.figure {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+div.footer, div.header {
+  clear: both;
+  font-size: smaller }
+
+div.line-block {
+  display: block ;
+  margin-top: 1em ;
+  margin-bottom: 1em }
+
+div.line-block div.line-block {
+  margin-top: 0 ;
+  margin-bottom: 0 ;
+  margin-left: 1.5em }
+
+div.sidebar {
+  margin: 0 0 0.5em 1em ;
+  border: medium outset ;
+  padding: 1em ;
+  background-color: #ffffee ;
+  width: 40% ;
+  float: right ;
+  clear: right }
+
+div.sidebar p.rubric {
+  font-family: sans-serif ;
+  font-size: medium }
+
+div.system-messages {
+  margin: 5em }
+
+div.system-messages h1 {
+  color: red }
+
+div.system-message {
+  border: medium outset ;
+  padding: 1em }
+
+div.system-message p.system-message-title {
+  color: red ;
+  font-weight: bold }
+
+div.topic {
+  margin: 2em }
+
+h1.section-subtitle, h2.section-subtitle, h3.section-subtitle,
+h4.section-subtitle, h5.section-subtitle, h6.section-subtitle {
+  margin-top: 0.4em }
+
+h1.title {
+  text-align: center }
+
+h2.subtitle {
+  text-align: center }
+
+hr.docutils {
+  width: 75% }
+
+img.align-left, .figure.align-left, object.align-left {
+  clear: left ;
+  float: left ;
+  margin-right: 1em }
+
+img.align-right, .figure.align-right, object.align-right {
+  clear: right ;
+  float: right ;
+  margin-left: 1em }
+
+img.align-center, .figure.align-center, object.align-center {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.align-left {
+  text-align: left }
+
+.align-center {
+  clear: both ;
+  text-align: center }
+
+.align-right {
+  text-align: right }
+
+/* reset inner alignment in figures */
+div.align-right {
+  text-align: inherit }
+
+/* div.align-center * { */
+/*   text-align: left } */
+
+ol.simple, ul.simple {
+  margin-bottom: 1em }
+
+ol.arabic {
+  list-style: decimal }
+
+ol.loweralpha {
+  list-style: lower-alpha }
+
+ol.upperalpha {
+  list-style: upper-alpha }
+
+ol.lowerroman {
+  list-style: lower-roman }
+
+ol.upperroman {
+  list-style: upper-roman }
+
+p.attribution {
+  text-align: right ;
+  margin-left: 50% }
+
+p.caption {
+  font-style: italic }
+
+p.credits {
+  font-style: italic ;
+  font-size: smaller }
+
+p.label {
+  white-space: nowrap }
+
+p.rubric {
+  font-weight: bold ;
+  font-size: larger ;
+  color: maroon ;
+  text-align: center }
+
+p.sidebar-title {
+  font-family: sans-serif ;
+  font-weight: bold ;
+  font-size: larger }
+
+p.sidebar-subtitle {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+p.topic-title {
+  font-weight: bold }
+
+pre.address {
+  margin-bottom: 0 ;
+  margin-top: 0 ;
+  font: inherit }
+
+pre.literal-block, pre.doctest-block, pre.math, pre.code {
+  margin-left: 2em ;
+  margin-right: 2em }
+
+pre.code .ln { color: grey; } /* line numbers */
+pre.code, code { background-color: #eeeeee }
+pre.code .comment, code .comment { color: #5C6576 }
+pre.code .keyword, code .keyword { color: #3B0D06; font-weight: bold }
+pre.code .literal.string, code .literal.string { color: #0C5404 }
+pre.code .name.builtin, code .name.builtin { color: #352B84 }
+pre.code .deleted, code .deleted { background-color: #DEB0A1}
+pre.code .inserted, code .inserted { background-color: #A3D289}
+
+span.classifier {
+  font-family: sans-serif ;
+  font-style: oblique }
+
+span.classifier-delimiter {
+  font-family: sans-serif ;
+  font-weight: bold }
+
+span.interpreted {
+  font-family: sans-serif }
+
+span.option {
+  white-space: nowrap }
+
+span.pre {
+  white-space: pre }
+
+span.problematic {
+  color: red }
+
+span.section-subtitle {
+  /* font-size relative to parent (h1..h6 element) */
+  font-size: 80% }
+
+table.citation {
+  border-left: solid 1px gray;
+  margin-left: 1px }
+
+table.docinfo {
+  margin: 2em 4em }
+
+table.docutils {
+  margin-top: 0.5em ;
+  margin-bottom: 0.5em }
+
+table.footnote {
+  border-left: solid 1px black;
+  margin-left: 1px }
+
+table.docutils td, table.docutils th,
+table.docinfo td, table.docinfo th {
+  padding-left: 0.5em ;
+  padding-right: 0.5em ;
+  vertical-align: top }
+
+table.docutils th.field-name, table.docinfo th.docinfo-name {
+  font-weight: bold ;
+  text-align: left ;
+  white-space: nowrap ;
+  padding-left: 0 }
+
+/* "booktabs" style (no vertical lines) */
+table.docutils.booktabs {
+  border: 0px;
+  border-top: 2px solid;
+  border-bottom: 2px solid;
+  border-collapse: collapse;
+}
+table.docutils.booktabs * {
+  border: 0px;
+}
+table.docutils.booktabs th {
+  border-bottom: thin solid;
+  text-align: left;
+}
+
+h1 tt.docutils, h2 tt.docutils, h3 tt.docutils,
+h4 tt.docutils, h5 tt.docutils, h6 tt.docutils {
+  font-size: 100% }
+
+ul.auto-toc {
+  list-style-type: none }
+
+</style>
+</head>
+<body>
+<div class="document">
+
+
+<div class="section" id="config-generation">
+<h1>Config Generation</h1>
+<p>This chapter describes the procedure of generating kernel configurations.
+It starts with an informal characterization of the various data objects
+involved in the process, and the modus operandi,
+followed by a more detailed view on select aspects.</p>
+<div class="section" id="basic-structure">
+<h2>Basic Structure</h2>
+<p><strong>Symbol descriptors</strong> store the name of a Kconfig symbol (if it has one)
+and its dependencies on other symbols, and encode the symbol type
+via the descriptor class.</p>
+<p>They do not store values, because the descriptors can be shared across
+more than one <tt class="docutils literal">Config</tt> object.
+However, they offer value-related functionality such as normalizing,
+checking, and string-formatting.</p>
+<p>All descriptor classes are subclasses of <tt class="docutils literal">AbstractKconfigSymbol</tt>.</p>
+<p>Symbol descriptors are collected in <strong>KconfigSymbols</strong>,
+the set of all Kconfig symbol descriptors,
+which provides dict-like access by symbol name.</p>
+<p>A concrete configuration maps a subset of the descriptors to values,
+which is implemented in the <strong>Config</strong> object.
+It is also responsible for config file I/O,
+and for translating between Kconfig symbol names and config option names.</p>
+<p>The configuration can be modified via a <strong>ConfigChoices</strong> object,
+which wraps the <tt class="docutils literal">Config</tt> object, accepts modification requests
+and stores them in an intermediate <em>decision dict</em>,
+resolves the effective configuration
+and transfers it back to the <tt class="docutils literal">Config</tt> object.</p>
+<p>There is also an <strong>interpreter</strong> that reads commands from text files
+and converts them into method calls to <tt class="docutils literal">ConfigChoices</tt> objects.</p>
+</div>
+<div class="section" id="how-config-generation-works">
+<h2>How Config Generation Works</h2>
+<p>Given a kernel sources directory and an input <tt class="docutils literal">.config</tt> file,
+apply user-requested modifications, determine a working configuration
+and write it to the output <tt class="docutils literal">.config</tt>:</p>
+<ol class="arabic">
+<li><p class="first"><strong>read Kconfig</strong> symbol information</p>
+<p>Read the top-level <tt class="docutils literal">Kconfig</tt> file and create symbol descriptors.</p>
+</li>
+<li><p class="first"><strong>load .config</strong></p>
+<p>Read config options and values from the input <tt class="docutils literal">.config</tt> file,
+translate option names to Kconfig symbols
+and store the configuration as <tt class="docutils literal">symbol <span class="pre">-&gt;</span> value</tt> dict.</p>
+</li>
+<li><p class="first"><strong>modify</strong> the configuration</p>
+<p>Modification requests can be
+read from text files using the &quot;macros&quot; interpreter,
+or made by using the <tt class="docutils literal">ConfigChoices</tt> Python-Level interface.</p>
+<p><strong>Hardware detection</strong> reads hardware identifiers from <tt class="docutils literal">/sys</tt>,
+determines associated kernel modules,
+translates them into config options,
+which are then transformed into modification requests.</p>
+<p><strong>Package management integration</strong> retrieves config recommendations
+from installed packages and transforms them into modification requests.
+<em>static pm-integration</em> queries portage for the package build-time
+value of <tt class="docutils literal">CONFIG_CHECK</tt>, whereas <em>dynamic pm-integration</em> runs the
+relevant ebuild phases for getting recommendations based on the kernel
+sources being processed.</p>
+<p>Modification requests are stored in an intermediate <em>decision</em> object,
+accumulate with other requests, and form a <em>decision dict</em>
+where each Kconfig symbol is mapped to a specific value or a range
+of acceptable values.</p>
+</li>
+<li><p class="first"><strong>resolve</strong></p>
+<p>Resolving the final configuration is split into 3 phases:</p>
+<ul>
+<li><p class="first"><strong>Expand</strong>, upwards-propagate decisions:</p>
+<p>For a given set of config option decisions,
+find out which other config options need to be set
+so that the dependencies of the <em>decision symbols</em> are satisfied.</p>
+</li>
+<li><p class="first"><strong>Apply</strong>:</p>
+<p>Set config options to the decided values.
+If there is more than one <em>decision value</em>
+available for a specific symbol, pick one.</p>
+</li>
+<li><p class="first"><strong>Reduce/Expand</strong>, downwards-propagate decisions:</p>
+<p>Find Kconfig symbols that are visible but have no value
+and set them to their default value while taking the <em>decisions</em>
+into account, which is mainly relevant for <tt class="docutils literal">disable</tt> decisions
+(<tt class="docutils literal"># option is not set</tt>).</p>
+<p>Similarly, disable config options that are no longer visible
+due to the <em>decisions</em>.</p>
+<p>The code for this phase is based on the oldconfig code
+from the Linux Kernel sources,
+and can be summarized as an <em>informed oldconfig</em>.</p>
+</li>
+</ul>
+</li>
+<li><p class="first"><strong>write .config</strong></p>
+<p>If an intermediate <tt class="docutils literal">.config</tt> file has been created during the
+reduce/expand phase of resolving, then that file is copied to the
+output <tt class="docutils literal">.config</tt> file.
+Otherwise, a new file will be created.</p>
+<p>The advantage of using the intermediate file is that its format is
+exactly that of a conventional Linux Kernel configuration file.
+That is, running <tt class="docutils literal">make oldconfig</tt> on it will produce no diff,
+provided that the kernel versions match.</p>
+<p>In constrast, the newly generated file is equivalent
+in terms of config options, but has no comments
+and the options may be ordered differently.</p>
+</li>
+</ol>
+</div>
+<div class="section" id="symbol-descriptor-creation">
+<h2>Symbol Descriptor Creation</h2>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Input:</th><td class="field-body">sources info</td>
+</tr>
+<tr class="field"><th class="field-name">Output:</th><td class="field-body"><tt class="docutils literal">KconfigSymbols</tt></td>
+</tr>
+</tbody>
+</table>
+<p><em>Symbol descriptors</em> are created at runtime
+from the sources being processed.</p>
+<p>In case of Linux Kernel sources, the top-level <tt class="docutils literal">Kconfig</tt> file
+is read after setting up relevant environment variables
+(<tt class="docutils literal">srctree</tt>, <tt class="docutils literal">ARCH</tt>, <tt class="docutils literal">KERNELVERSION</tt>).</p>
+<p>The reading itself is handled by the Python/C API
+<tt class="docutils literal">lkconfig</tt> module, which uses a copy of the
+<tt class="docutils literal">zconf</tt> parser from the Linux Kernel sources,
+and exposes the symbols as <tt class="docutils literal">SymbolView</tt> objects.</p>
+<p>On the Python side, <tt class="docutils literal">KconfigSymbolGenerator</tt> is responsible
+for converting the view objects into symbol descriptors,
+which contain the following information:</p>
+<ul>
+<li><p class="first">symbol name, if available</p>
+</li>
+<li><p class="first">dependencies on other symbols,
+as <tt class="docutils literal">Expr</tt> object,
+a boolean expression data structure
+referencing other symbols</p>
+</li>
+<li><p class="first">symbol type via the descriptor's class, which is one of</p>
+<ul class="simple">
+<li>TristateKconfigSymbol</li>
+<li>BooleanKconfigSymbol</li>
+<li>StringKconfigSymbol</li>
+<li>IntKconfigSymbol</li>
+<li>HexKconfigSymbol</li>
+</ul>
+<div class="note">
+<p class="first admonition-title">Note</p>
+<p class="last">The descriptor types do not mirror the
+Kconfig type hierarchy strictly.
+In Kconfig, <tt class="docutils literal">int</tt> and <tt class="docutils literal">hex</tt> are based on <tt class="docutils literal">string</tt>,
+in <em>kernelconfig</em>, they are not.</p>
+</div>
+</li>
+</ul>
+<p><tt class="docutils literal">KconfigSymbolGenerator</tt> creates a <tt class="docutils literal">KconfigSymbols</tt> object,
+which can then be used to instantiate <tt class="docutils literal">Config</tt> objects.</p>
+</div>
+<div class="section" id="choices-and-decisions">
+<h2>Choices and Decisions</h2>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Input:</th><td class="field-body"><tt class="docutils literal">Config</tt>, user input in form of files, cmdline</td>
+</tr>
+<tr class="field"><th class="field-name">Output:</th><td class="field-body">decisions dict</td>
+</tr>
+</tbody>
+</table>
+<p><tt class="docutils literal">ConfigChoices</tt> is the Python-level interface for modifying kernel
+configurations. It receives a number of modification requests
+and stores them in a temporary <em>decisions dict</em>.</p>
+<p>A request is of the form <tt class="docutils literal">want &lt;value&gt; for &lt;config option&gt;</tt> or
+<tt class="docutils literal">want any of &lt;values&gt; for &lt;config option&gt;</tt>.</p>
+<p>Generally, each request must be a restriction of previous
+requests, and initially, there are no restrictions.
+An exception to that are <tt class="docutils literal">discard previous decisions on &lt;config option&gt;</tt>
+and <tt class="docutils literal">add/append value</tt>.</p>
+<p>A request can be made by calling the appropriate <tt class="docutils literal">ConfigChoices</tt> method:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="32%" />
+<col width="11%" />
+<col width="7%" />
+<col width="6%" />
+<col width="6%" />
+<col width="6%" />
+<col width="30%" />
+</colgroup>
+<thead valign="bottom">
+<tr><th class="head" rowspan="2">modification request
+method</th>
+<th class="head" colspan="5">supported for symbol type</th>
+<th class="head" rowspan="2">description</th>
+</tr>
+<tr><th class="head">tristate</th>
+<th class="head">bool</th>
+<th class="head">str</th>
+<th class="head">int</th>
+<th class="head">hex</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr><td><tt class="docutils literal">option_disable(opt)</tt></td>
+<td colspan="5">yes</td>
+<td>decide <tt class="docutils literal">&lt;opt&gt; := {n}</tt></td>
+</tr>
+<tr><td><tt class="docutils literal">option_module(opt)</tt></td>
+<td>yes</td>
+<td colspan="4">no</td>
+<td>decide <tt class="docutils literal">&lt;opt&gt; := {m}</tt></td>
+</tr>
+<tr><td><tt class="docutils literal">option_builtin(opt)</tt></td>
+<td>yes</td>
+<td>yes</td>
+<td colspan="3">no</td>
+<td>decide <tt class="docutils literal">&lt;opt&gt; := {y}</tt></td>
+</tr>
+<tr><td><tt class="docutils literal">option_builtin_or_module(opt)</tt></td>
+<td>yes</td>
+<td>yes</td>
+<td colspan="3">no</td>
+<td>decide <tt class="docutils literal">&lt;opt&gt; := {m, y}</tt></td>
+</tr>
+<tr><td><tt class="docutils literal">option_set_to(opt, val)</tt></td>
+<td colspan="5">yes</td>
+<td>decide <tt class="docutils literal">&lt;opt&gt; := {&lt;val&gt;}</tt></td>
+</tr>
+<tr><td><tt class="docutils literal">option_append(opt, val)</tt></td>
+<td colspan="2">no</td>
+<td>yes</td>
+<td colspan="2">no</td>
+<td><p class="first">extend decision on <tt class="docutils literal">&lt;opt&gt;</tt>:</p>
+<p class="last"><strong>str</strong>: add <tt class="docutils literal">&lt;val&gt;</tt> to the
+end of the existing value,
+preceeded by whitespace</p>
+</td>
+</tr>
+<tr><td><tt class="docutils literal">option_add(opt, val)</tt></td>
+<td colspan="2">no</td>
+<td colspan="3">yes</td>
+<td><p class="first">extend decision on <tt class="docutils literal">&lt;opt&gt;</tt>:</p>
+<p><strong>str</strong>: add <tt class="docutils literal">&lt;val&gt;</tt> to the
+end of the existing value,
+preceeded by whitespace,
+if it does not already appear
+in there</p>
+<p class="last"><strong>int</strong>, <strong>hex</strong>:
+change value by the
+specified amount</p>
+</td>
+</tr>
+<tr><td><tt class="docutils literal">discard(opt)</tt></td>
+<td colspan="5">yes</td>
+<td>reset <tt class="docutils literal">&lt;opt&gt;</tt> to undecided</td>
+</tr>
+</tbody>
+</table>
+<p>The decision status and the requested values for each symbol are stored in
+<tt class="docutils literal">ConfigDecision</tt> objects.</p>
+<p>Once there are no further modification requests, the <em>decisions dict</em>
+is created, which maps each decided Kconfig symbol to a set of acceptable
+values. For <em>tristate</em> symbols, the set may contain one or two values,
+and for all other symbol types, it contains one value.</p>
+</div>
+<div class="section" id="config-resolving">
+<h2>Config Resolving</h2>
+<table class="docutils field-list" frame="void" rules="none">
+<col class="field-name" />
+<col class="field-body" />
+<tbody valign="top">
+<tr class="field"><th class="field-name">Input:</th><td class="field-body"><tt class="docutils literal">Config</tt>, decisions dict</td>
+</tr>
+<tr class="field"><th class="field-name">Output:</th><td class="field-body">resolved <tt class="docutils literal">Config</tt></td>
+</tr>
+</tbody>
+</table>
+<div class="note">
+<p class="first admonition-title">Note</p>
+<p class="last">The pseudo-code examples in this section are not an exact transcript
+of the actual code, but rather give an idea of how it generally works.</p>
+</div>
+<p>Resolving a working configuration is split into several phases.</p>
+<p>At first, a graph is created where the vertices are Kconfig symbols
+that appear in <tt class="docutils literal">Config</tt> or the <em>decisions dict</em>,
+either directly or indirectly via dependencies,
+and the edges represent a &quot;possibly depends on&quot; relationship.</p>
+<p>This graph is then topologically sorted into groups,
+where each symbol can only depend on symbols from upper-level groups.</p>
+<p>Then, the <em>decisions dict</em> gets expanded: starting at the
+lowest symbol group level,
+determine which upper-level symbols need to be set as well,
+and repeat that for each upper level:</p>
+<pre class="code text literal-block">
+expand-decisions(input_decisions):
+     decisions_solution := empty dict {};
+     need_expansion     := input_decisions;
+
+     FOR each symbol_group IN reversed order LOOP
+         -- the set of symbols from symbol_group that need to be expanded
+         symbols_to_expand := symbol_group &amp; need_expansion;
+
+         -- at this point, symbols_to_expand have already been decided
+         --  (the solution finding below affects upper-level symbols only)
+         --
+         merge symbols_to_expand with decisions_solution;
+
+         --  list of solutions for the current symbol group
+         --
+         --    Each solution is a dict that maps symbols from
+         --    upper-level groups to acceptable values
+         --
+         --    Initially there is only one solution,
+         --    which contains all symbols from need_expansion
+         --    except for symbols that are also in symbol_group
+         --    (need_expansion - symbol_group)
+         --    This solution may be empty, which simply means &quot;no change&quot;.
+         --
+         --    If the list of solutions itself is empty,
+         --    then there are no solutions and expand-decisions fails.
+         --
+         --    Similarily, if any symbol in a solutions dict is mapped
+         --    to any empty value set, then the solution is invalid.
+         --
+         group_solutions := list of dict [need_expansion];
+
+         FOR symbol in symbols_to_expand LOOP
+             IF requested symbol value is not tristate &quot;n&quot; THEN
+                 -- otherwise, there are no dependencies to be expanded
+
+                 IF symbol is a tristate symbol THEN
+                     symbol_solutions := get solutions for the symbol's
+                                         dependencies so that the
+                                         symbol's dir_dep evaluates to
+                                         any true value (&quot;m&quot;, &quot;y&quot;)
+                                         and the symbol's vis_dep evaluates
+                                         to &gt;= requested symbol value
+                 ELSE
+                     symbol_solutions := get solutions for the symbol's
+                                         dependencies so that the
+                                         symbol's dir_dep evaluates to
+                                         any true value (&quot;m&quot;, &quot;y&quot;)
+                                         and the symbol's vis_dep evaluates
+                                         to &gt;= tristate &quot;m&quot;;
+                 END IF;
+
+                 IF there are no symbol_solutions THEN
+                     error;
+                 END IF;
+
+                 merge symbol_solutions with group_solutions,
+                 elimininate invalid solutions
+
+                 IF there are no group_solutions THEN
+                     error;
+                 END IF;
+
+             END IF;
+         END FOR LOOP;
+
+         -- pick one solution from group_solutions that
+         --  appears to have the least impact on the configuration
+         group_solution := pick one out of group_solutions;
+
+         --  update need_expansion with symbols/values from group_solution
+         need_expansion := group_solution;
+
+     END FOR LOOP;
+
+     RETURN decisions_solution;
+</pre>
+<p>In a second iteration, the symbols get set to their decided values:</p>
+<pre class="code text literal-block">
+set-decisions(decisions):
+    partial_config := empty dict {};
+
+    FOR each symbol_group LOOP
+
+        FOR each symbol IN symbol_group LOOP
+
+            IF there is a decision for symbol THEN
+                verify that decision can be applied;
+                partial_config[symbol] = value from decisions[symbol];
+            END IF;
+
+        END FOR LOOP;
+
+    END FOR LOOP;
+
+    RETURN partial_config;
+</pre>
+<p>The existing configuration is then updated with <tt class="docutils literal">partial_config</tt>,
+and expanded again in an oldconfig-like procedure:</p>
+<pre class="code text literal-block">
+informed-oldconfig(config, decisions)
+    changed := TRUE;
+    WHILE changed LOOP
+        changed := FALSE;
+
+        --  find symbols that have become visibile, but have no value
+        new_symbols := find NEW symbols;
+
+        FOR each symbol IN new_symbols LOOP
+            IF there is a decision for symbol THEN
+                --  decision value is tristate &quot;n&quot;
+                config[symbol] := decision value;
+            ELSE
+                config[symbol] := default value;
+            END IF;
+
+            changed := TRUE;
+        END FOR LOOP;
+
+    END WHILE LOOP;
+
+    RETURN config;
+</pre>
+</div>
+</div>
+<div class="section" id="package-management-integration">
+<h1>Package Management Integration</h1>
+<p><em>pm integration</em> is about getting config modification requests
+from the package manager.</p>
+<p>Only <tt class="docutils literal">portage</tt> is supported, and the implementation
+reuses the <tt class="docutils literal">CONFIG_CHECK</tt> mechanism from <tt class="docutils literal"><span class="pre">linux-info.eclass</span></tt>.
+Two variants exist, a <strong>static</strong> and a <strong>dynamic</strong> one.
+The <em>static</em> variant retrieves the build-time value of <tt class="docutils literal">CONFIG_CHECK</tt>,
+and the <em>dynamic</em> variant re-evaluates <tt class="docutils literal">CONFIG_CHECK</tt>
+by running the <tt class="docutils literal">pkg_pretend()</tt> and <tt class="docutils literal">pkg_setup()</tt> ebuild phases.</p>
+<div class="note">
+<p class="first admonition-title">Note</p>
+<p class="last">The code examples in this chapter are not an exact transcript
+of the actual code, but rather give an idea of how it generally works.</p>
+</div>
+<div class="section" id="static-package-management-integration">
+<h2>Static Package Management Integration</h2>
+<p>The <em>static pm-integration</em> variant uses portage's Python API.</p>
+<p>After initializing the vdb,</p>
+<blockquote>
+<pre class="code Python literal-block">
+<span class="keyword namespace">import</span> <span class="name namespace">portage</span>
+<span class="name">vdb</span> <span class="operator">=</span> <span class="name">portage</span><span class="operator">.</span><span class="name">db</span><span class="punctuation">[</span><span class="name">portage</span><span class="operator">.</span><span class="name">root</span><span class="punctuation">][</span><span class="literal string double">&quot;vartree&quot;</span><span class="punctuation">]</span><span class="operator">.</span><span class="name">dbapi</span>
+</pre>
+</blockquote>
+<p>it starts with identifying which of the installed packages
+inherit <tt class="docutils literal"><span class="pre">linux-info.eclass</span></tt>,</p>
+<blockquote>
+<pre class="code Python literal-block">
+<span class="name">packages</span> <span class="operator">=</span> <span class="punctuation">[]</span>
+<span class="keyword">for</span> <span class="name">cpv</span> <span class="operator word">in</span> <span class="name">vdb</span><span class="operator">.</span><span class="name">cpv_all</span><span class="punctuation">():</span>
+    <span class="name">inherited</span> <span class="operator">=</span> <span class="name">vdb</span><span class="operator">.</span><span class="name">aux_get</span><span class="punctuation">(</span><span class="name">cpv</span><span class="punctuation">,</span> <span class="punctuation">[</span><span class="literal string double">&quot;INHERITED&quot;</span><span class="punctuation">])[</span><span class="literal number integer">0</span><span class="punctuation">]</span>
+
+    <span class="keyword">if</span> <span class="literal string double">&quot;linux-info&quot;</span> <span class="operator word">in</span> <span class="name">inherited</span><span class="punctuation">:</span>
+        <span class="name">packages</span><span class="operator">.</span><span class="name">append</span><span class="punctuation">(</span><span class="name">cpv</span><span class="punctuation">)</span>
+</pre>
+</blockquote>
+<p>and retrieves their package build-time <tt class="docutils literal">CONFIG_CHECK</tt> value.</p>
+<blockquote>
+<pre class="code Python literal-block">
+<span class="name">config_check</span> <span class="operator">=</span> <span class="name builtin">set</span><span class="punctuation">()</span>
+<span class="keyword">for</span> <span class="name">cpv</span> <span class="operator word">in</span> <span class="name">packages</span><span class="punctuation">:</span>
+    <span class="name">pkg_config_check</span> <span class="operator">=</span> <span class="name">vdb</span><span class="operator">.</span><span class="name">aux_get</span><span class="punctuation">(</span><span class="name">cpv</span><span class="punctuation">,</span> <span class="punctuation">[</span><span class="literal string double">&quot;CONFIG_CHECK&quot;</span><span class="punctuation">])[</span><span class="literal number integer">0</span><span class="punctuation">]</span>
+    <span class="name">config_check</span><span class="operator">.</span><span class="name">update</span><span class="punctuation">(</span><span class="name">pkg_config_check</span><span class="operator">.</span><span class="name">split</span><span class="punctuation">())</span>
+</pre>
+</blockquote>
+<p>The <tt class="docutils literal">CONFIG_CHECK</tt> recommendations are then transformed
+into config option modification requests:</p>
+<table border="1" class="docutils">
+<colgroup>
+<col width="58%" />
+<col width="42%" />
+</colgroup>
+<thead valign="bottom">
+<tr><th class="head"><tt class="docutils literal">CONFIG_CHECK</tt> recommendation</th>
+<th class="head">modification request</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr><td><tt class="docutils literal">OPT</tt>, <tt class="docutils literal">~OPT</tt></td>
+<td>enabled <tt class="docutils literal">OPT</tt>
+as builtin or module</td>
+</tr>
+<tr><td><tt class="docutils literal">!OPT</tt>, <tt class="docutils literal">~!OPT</tt></td>
+<td>disable <tt class="docutils literal">OPT</tt></td>
+</tr>
+<tr><td><tt class="docutils literal">&#64;A</tt>, <tt class="docutils literal">&#64;!A</tt></td>
+<td><em>ignored</em>,
+no documentation on
+<tt class="docutils literal">reworkmodulenames</tt>
+found.</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="dynamic-package-management-integration">
+<h2>Dynamic Package Management Integration</h2>
+<p><em>Dynamic pm-integration</em> is similar to the <em>static</em> variant,
+but instead of retrieving the package build-time <tt class="docutils literal">CONFIG_CHECK</tt> value,
+it creates temporary overlays hosting ebuilds for installed packages
+inheriting <tt class="docutils literal"><span class="pre">linux-info.eclass</span></tt>,
+creates a modified <tt class="docutils literal"><span class="pre">linux-info</span></tt> eclass that captures <tt class="docutils literal">CONFIG_CHECK</tt>
+by intercepting calls to <tt class="docutils literal">check_extra_config()</tt>,
+and runs <tt class="docutils literal">ebuild(1)</tt> in a specially prepared environment.</p>
+<p>Multiple, per-repo overlays are created in order to get proper <em>masters</em> lookup.
+If a package's original repo cannot be found, <tt class="docutils literal">gentoo</tt> is used as fallback.</p>
+<p>Each temporary overlay consists of the following files:</p>
+<pre class="literal-block">
+&lt;overlay&gt;
+&lt;overlay&gt;/eclass
+&lt;overlay&gt;/eclass/linux-info.eclass
+&lt;overlay&gt;/metadata
+&lt;overlay&gt;/metadata/layout.conf
+&lt;overlay&gt;/profiles
+&lt;overlay&gt;/profiles/categories
+&lt;overlay&gt;/profiles/repo_name
+
+&lt;overlay&gt;/$CATEGORY/$PN/$PF.ebuild ...
+</pre>
+<p>Ebuilds are created as symbolic links to <tt class="docutils literal">/var/db/pkg/</tt>
+if the filesystem supports it, and are copied otherwise.</p>
+<p>The <tt class="docutils literal"><span class="pre">linux-info</span></tt> eclass is a copy from the original repo,
+but with a few extra lines appended
+that make calls to <tt class="docutils literal">check_extra_config()</tt> write to a temporary file
+instead of checking the kernel configuration:</p>
+<pre class="code bash literal-block">
+&lt;original eclass EOF&gt;
+
+
+<span class="comment single"># KERNELCONFIG MODIFICATIONS START HERE
+</span><span class="name builtin">unset</span> -f check_extra_config
+check_extra_config<span class="operator">()</span> <span class="operator">{</span>
+    <span class="name builtin">printf</span> <span class="literal string single">'%s\n'</span> <span class="literal string double">&quot;</span><span class="literal string interpol">${</span><span class="name variable">CONFIG_CHECK</span><span class="literal string interpol">}</span><span class="literal string double">&quot;</span> &gt;&gt; &lt;config_check_tmpfile&gt;
+<span class="operator">}</span>
+</pre>
+<p>After creating the temporary overlays,
+kernelconfig sets up the environment for running <tt class="docutils literal">ebuild(1)</tt>:</p>
+<ul class="simple">
+<li><tt class="docutils literal">KERNEL_DIR</tt> gets set to the kernel sources for which a configuration
+is about to be created, so that <tt class="docutils literal"><span class="pre">linux-info</span></tt> uses the correct sources
+when comparing e.g. the kernel version</li>
+<li>a dummy <tt class="docutils literal">KBUILD_OUTPUT</tt> directory is created,
+so that unintercepted <tt class="docutils literal"><span class="pre">linux-info</span></tt> functions have a base <tt class="docutils literal">.config</tt>
+for comparisons (without having to touch files in <tt class="docutils literal">KERNEL_DIR</tt>)</li>
+<li>fetching of <tt class="docutils literal">SRC_URI</tt> is disabled by setting <tt class="docutils literal">FETCHCOMMAND</tt>
+and <tt class="docutils literal">RESUMECOMMAND</tt> to <tt class="docutils literal">/bin/true</tt></li>
+<li>a separate <tt class="docutils literal">PORTAGE_TMPDIR</tt> is created
+so that the ebuild re-evaluation does not interfere with other
+portage processes</li>
+</ul>
+<p>Then, <tt class="docutils literal">ebuild <span class="pre">--skip-manifest</span> &lt;ebuild&gt; setup</tt> is run
+for each ebuild in the temporary overlays,
+and <tt class="docutils literal">CONFIG_CHECK</tt> is read from the <tt class="docutils literal">&lt;config_check_tmpfile&gt;</tt> files.
+Ebuilds that do not create a <tt class="docutils literal">&lt;config_check_tmpfile&gt;</tt> file are ignored.</p>
+<p>If <tt class="docutils literal">pkg_setup</tt> does not complete successfully,
+kernelconfig logs a warning and processes the <tt class="docutils literal">&lt;config_check_tmpfile&gt;</tt> file
+as described above.
+This allows to process ebuilds that check for config options,
+but fail later on due to <tt class="docutils literal">enewuser</tt>.</p>
+</div>
+</div>
+</div>
+<div class="footer">
+<hr class="footer" />
+Generated on: 2016-08-15.
+
+</div>
+</body>
+</html>
