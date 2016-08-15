@@ -339,10 +339,13 @@ endif
 	@echo  '                                 (PYTHON: $(PYTHON))'
 	@echo  ''
 	@echo  'Cleanup Targets:'
-	@echo  '  clean                      - does nothing'
+	@echo  '  clean                      - all clean targets marked with [C]'
+	@echo  '  distclean                  - all clean targets marked with [C] or [D]'
 	@echo  '  epydoc-clean               - remove generated epydoc files'
-	@echo  '  pyclean                    - remove pyc files'
-	@echo  '  distclean                  - all clean targets'
+	@echo  'D pyclean                    - remove pyc files'
+	@echo  'D clean-doc                  - remove generated documentation'
+	@echo  'D clean-htmldoc              - remove generated html documentation'
+	@echo  'D clean-pdfdoc               - remove generated pdf documentation'
 	@echo  ''
 	@echo  'lkc Targets:'
 	@echo  '  print-lkc-files            - print a list of required lkc files'
@@ -361,6 +364,19 @@ endif
 	@echo  '  check-pyflakes             - run pyflakes code check'
 	@echo  ''
 	@echo  'File Generation Targets:'
+	@echo  '  htmldoc                    - generate HTML documentation in doc/html'
+	@echo  '  pdfdoc                     - generate PDF documentation in doc/pdf'
+	@echo  '  htmldoc-<name>             - generate individual HTML/PDF doc files,'
+	@echo  '  pdfdoc-<name>                 known names:'
+# foreach <name> in PRJ_DOCS:
+# * <name>
+#   (title of <name>)
+# (and whitespace-indent)
+	@printf \
+		'%33s* %s\n%35s(%s)\n' \
+		$(foreach name,$(PRJ_DOCS),\
+			'' '$(name)' '' '$(call f_get_doc_title,$(name))')
+
 	@echo  '  epydoc                     - generate epydoc documentation'
 	@echo  '                               (does not complete warning-free)'
 	@echo  '  uml                        - generate packages and classes uml diagrams'
@@ -381,6 +397,12 @@ endif
 	@echo  '                               [$(call f_subst_srcdir,$(PRJ_LKC_SRC_BUNDLED))]'
 	@echo  '* LK_SRC_URI                 - uri for "fetch-lkc"'
 	@echo  '                               [$(LK_SRC_URI)]'
+	@echo  '* X_RST2HTML                 - name of/path to rst2html [$(X_RST2HTML)]'
+	@echo  '* RST2HTML_OPTS              - options passed to rst2html'
+	@echo  '                               [$(RST2HTML_OPTS)]'
+	@echo  '* X_RST2PDF                  - name of/path to rst2pdf [$(X_RST2PDF)]'
+	@echo  '* RST2PDF_OPTS               - options passed to rst2pdf'
+	@echo  '                               [$(RST2PDF_OPTS)]'
 	@echo  ''
 	@echo  'Install-related Variables:'
 	@echo  '* DESTDIR                    - [$(DESTDIR:/=)/]'
