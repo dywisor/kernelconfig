@@ -285,18 +285,28 @@ $(PRJ_LKC_SRC_BUNDLED): FORCE | $(filter import-lkc fetch-lkc,$(MAKECMDGOALS))
 	}
 
 
-PHONY += commit-bundle-lkc
-commit-bundle-lkc: bundle-lkc
-	$(X_GIT) $(GIT_OPTS) add -A -- '$(PRJ_LKC_SRC_BUNDLED)/'
+# f_rule_git_commit_dir (dir, commit title)
+define _f_rule_git_commit_dir
+	$(X_GIT) $(GIT_OPTS) add -A -- '$(1)'
 
 	if $(X_GIT) $(GIT_OPTS) status --porcelain \
-		-- '$(PRJ_LKC_SRC_BUNDLED)/' | $(X_GREP) -q -- '^[MADRCU]'; \
+		-- '$(1)' | $(X_GREP) -q -- '^[MADRCU]'; \
 	then \
 		$(X_GIT) $(GIT_OPTS) commit $(GIT_COMMIT_OPTS) \
-			-m "update bundled lkc files" \
-			-m "Automated commit." \
-			-- "$(PRJ_LKC_SRC_BUNDLED)/" || exit 5; \
+			-m "$(2)" -m "Automated commit." -- "$(1)" || exit 5; \
 	fi
+endef
+
+f_rule_git_commit_dir = $(call \
+	_f_rule_git_commit_dir,$(patsubst %/,%,$(strip $(1)))/,$(strip $(2)))
+
+PHONY += commit-bundle-lkc
+commit-bundle-lkc: bundle-lkc
+	$(call f_rule_git_commit_dir,$(PRJ_LKC_SRC_BUNDLED),update bundled lkc files)
+
+PHONY += commit-htmldoc
+commit-htmldoc: htmldoc
+	$(call f_rule_git_commit_dir,$(SRC_DOCDIR_HTML),update html documentation)
 
 
 PHONY += help
@@ -377,6 +387,8 @@ endif
 		$(foreach name,$(PRJ_DOCS),\
 			'' '$(name)' '' '$(call f_get_doc_title,$(name))')
 
+	@echo  '  commit-htmldoc             - update HTML documentation and git-commit'
+	@echo  '                               (release/devel helper target)'
 	@echo  '  epydoc                     - generate epydoc documentation'
 	@echo  '                               (does not complete warning-free)'
 	@echo  '  uml                        - generate packages and classes uml diagrams'
