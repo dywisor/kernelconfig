@@ -32,6 +32,8 @@ class PortageInterface(loggable.AbstractLoggable):
         # At the time an object this class (PortageInterface) is created,
         # it should have already been decided to do some portage queries.
         #
+
+        # pylint: disable=E1101
         self.settings = portage.settings
         self.port_db = portage.db[portage.root]
         self.vartree = self.port_db["vartree"]

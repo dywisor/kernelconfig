@@ -58,7 +58,7 @@ class PackageInfo(object):
         )
 
     def _set_cpv(self, cpv):
-        splitv = portage.catpkgsplit(cpv)
+        splitv = portage.catpkgsplit(cpv)  # pylint: disable=E1101
 
         if splitv is None:
             # this is super unlikely since all cpvs processed by

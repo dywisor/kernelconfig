@@ -304,6 +304,7 @@ class TemporaryOverlay(_TemporaryOverlay):
     # --- end of __init__ (...) ---
 
     def assign_repo_config(self, port_iface, fallback_repo_config=True):
+        # pylint: disable=E1101
         if fallback_repo_config is True:
             fallback_repo_config = self.get_fallback_repo_config(port_iface)
 
@@ -438,6 +439,7 @@ class TemporaryOverlayUnion(AbstractTemporaryOverlayBase):
             fallback_repo_config = self.get_fallback_repo_config(port_iface)
 
         for ov in self.iter_overlays():
+            # pylint: disable=E1101
             ov.assign_repo_config(port_iface, fallback_repo_config)
     # --- end of assign_repo_config (...) ---
 
