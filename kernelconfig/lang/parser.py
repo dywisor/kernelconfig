@@ -579,6 +579,7 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
         self._lexobj = lexer.KernelConfigLangLexer()
         self.parser = None
         self.lexer = None
+        self.parse_error = 0
         self.infile = None
         self.filename = None
 
