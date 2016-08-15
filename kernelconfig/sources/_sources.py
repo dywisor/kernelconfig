@@ -213,10 +213,6 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
     # ---
 
     def get_configuration_source_from_settings(self, settings):
-        def join_subtype_and_args(subtype, args):
-            return args if subtype is None else ([subtype] + args)
-        # ---
-
         def read_settings():
             source_def = []
 
