@@ -181,18 +181,6 @@ class ModulesDir(AbstractModulesDir):
     # ---
 
     def _create_from_tarball(self, filepath):
-        def open_tarfile(filepath):
-            tarfile_fh = None
-            try:
-                tarfile_fh = tarfile.open(filepath, "r")
-                yield tarfile_fh
-            except tarfile.TarError:
-                yield None
-            finally:
-                if tarfile_fh is not None:
-                    tarfile_fh.close()
-        # ---
-
         assert self._tmpdir is None
         unpack_tmpdir = tmpdir.Tmpdir(suffix=".kernelconfig")
         tmp_path = unpack_tmpdir.get_path()
