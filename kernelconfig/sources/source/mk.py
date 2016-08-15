@@ -106,6 +106,7 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         return False
 
     def do_parse_source_argv(self, argv):
+        # pylint: disable=E1101
         arg_config = super().do_parse_source_argv(argv)
 
         arg_config.out_of_tree = (  # new attr

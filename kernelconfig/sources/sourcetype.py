@@ -25,7 +25,7 @@ class ConfigurationSourceTypeIdentifier(enum.IntEnum):
     ) = range(7)
 
     def get_name(self):
-        return self.name[2:]
+        return self.name[2:]  # pylint: disable=E1101
 
     __str__ = get_name
 

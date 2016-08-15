@@ -331,8 +331,8 @@ class ConfigurationSourceArgConfig(object):
         """
         @raises AttributeError:  if tmpdir requested but not assigned
 
-        @return:  None or path to tmpdir
-        @rtype:   C{None} or C{str}
+        @return:  None or tmpdir object
+        @rtype:   C{None} or [sub-of] L{TmpdirView}
         """
         if self._tmpdir is True:
             raise AttributeError("referencing tmpdir=True is not allowed")
@@ -343,7 +343,14 @@ class ConfigurationSourceArgConfig(object):
     tmpdir = property(get_tmpdir)
 
     def get_tmpdir_path(self):
-        return self.get_tmpdir().get_path()
+        """
+        @raises AttributeError:  if tmpdir requested but not assigned,
+                                 or if tmpdir not requested
+
+        @return:  path to tmpdir
+        @rtype:   C{str}
+        """
+        self.get_tmpdir().get_path()  # pylint: disable=E1101
     # ---
 
     tmpdir_path = property(get_tmpdir_path)
