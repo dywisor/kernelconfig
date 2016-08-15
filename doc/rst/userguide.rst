@@ -27,6 +27,11 @@
 .. _macros file format:
     macros_lang.rst
 
+.. sectnum::
+
+.. contents::
+   :backlinks: top
+
 
 kernelconfig
 ============
