@@ -549,6 +549,7 @@ class ConfigGraph(loggable.AbstractLoggable):
                 )
             # --
 
+            # pylint: disable=E1101
             if accumulated_solutions is True:
                 accumulated_solutions = dep_solutions
 

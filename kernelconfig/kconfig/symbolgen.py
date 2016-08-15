@@ -285,6 +285,7 @@ class KconfigSymbolGenerator(informed.AbstractSourceInformed):
 
         @return: None (implicit)
         """
+        # pylint: disable=W0212
         if not self.__class__._did_read_lkc_symbols:
             self.__class__._did_read_lkc_symbols = True
             self._read_lkc_symbols()

@@ -44,7 +44,7 @@ class _ValueConfigDecision(_choices_abc.AbstractValueConfigDecision):
     __slots__ = []
 
     @abc.abstractproperty
-    def EXTEND_VALUE_TYPES(cls):
+    def EXTEND_VALUE_TYPES(cls):  # pylint: disable=E0213
         raise NotImplementedError()
 
     def disable(self, source=None):

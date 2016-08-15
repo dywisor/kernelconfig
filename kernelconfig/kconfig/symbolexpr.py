@@ -266,6 +266,7 @@ class _UnaryExpr(Expr):
     @ivar expr: subexpression
     @type expr: undefined, must support C{__str__}
     """
+    # pylint: disable=W0223
     __slots__ = ["expr"]
 
     @abc.abstractproperty
@@ -305,6 +306,7 @@ class _MultiExpr(Expr):
     @ivar exprv:   list of subexpressions
     @type exprv:   subclass of L{Expr}
     """
+    # pylint: disable=W0223
     __slots__ = ["exprv", "static_hash"]
 
     @abc.abstractproperty
@@ -466,6 +468,7 @@ class _SelfConsumingMultiExpr(_MultiExpr):
     with a variable count of subexpressions,
     that also consume subordinate expressions of the same type.
     """
+    # pylint: disable=W0223
     __slots__ = []
 
     def add_expr(self, expr):
@@ -489,6 +492,7 @@ class _UnaryValueExpr(_UnaryExpr):
     @ivar expr:  Kconfig symbol or constant value
     @type expr:  L{AbstractKconfigSymbol} or undef a, a.__hash__ != None
     """
+    # pylint: disable=W0223
     __slots__ = []
     EXPR_FMT = "{0!s}"
 
@@ -698,6 +702,7 @@ class _Expr_SymbolValueComparison(Expr):
     @ivar rsym:  symbol or value (right operand)
     @type rsym:  L{Expr_SymbolName}|L{Expr_Symbol}|L{Expr_Constant}|C{None}
     """
+    # pylint: disable=W0223
     __slots__ = ["lsym", "rsym"]
 
     @abc.abstractproperty

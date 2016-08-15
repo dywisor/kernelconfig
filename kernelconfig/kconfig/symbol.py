@@ -35,11 +35,13 @@ class TristateKconfigSymbolValue(enum.IntEnum):
         return max(self, other) if isinstance(other, int) else NotImplemented
 
     def __neg__(self):
+        # pylint: disable=E1101
         return self.__class__(2 - self.value)
 
     __invert__ = __neg__
 
     def __str__(self):
+        # pylint: disable=E1101
         return self.name
 
 # --- end of TristateKconfigSymbolValue ---
@@ -64,6 +66,7 @@ class KconfigSymbolDefault(_symbol_abc.AbstractKconfigDepObject):
 
 
 class _KconfigSymbol(_symbol_abc.AbstractKconfigSymbol):
+    # pylint: disable=W0223
     __slots__ = []
 
     VALUE_FMT_STR = "{name}={value!s}"
@@ -92,6 +95,7 @@ class _KconfigSymbol(_symbol_abc.AbstractKconfigSymbol):
     # --- end of evaluate_vis_dep (...) ---
 
     def get_visible_default_expr(self, symbol_value_map):
+        # pylint: disable=E1133
         if not self.defaults:
             return (None, None)
 
