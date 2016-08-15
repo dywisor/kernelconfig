@@ -370,7 +370,6 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     # --- end of get_config (...) ---
 
     def get_config_check_value(self, key, fallback=None, fcheck=bool):
-        self.exc_types.ConfigurationSourceInvalidError
         value = self.get_config(key, fallback=fallback)
         if fcheck(value):
             return value
