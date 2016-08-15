@@ -969,7 +969,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     # --- end of git_get_text_file_content (...) ---
 
     def get_git_remote_branch_regexp(
-        self, branch_name_pattern=None, remote_pattern=None, do_compile=True
+        self, branch_name_pattern=None, remote_pattern=None
     ):
         """
         Returns a regular expression string that can be used for filtering
