@@ -19,7 +19,7 @@ class AbstractModaliasLookup(loggable.AbstractLoggable):
     __slots__ = []
 
     @abc.abstractproperty
-    def AVAILABLE(cls):
+    def AVAILABLE(cls):  # pylint: disable=E0213
         """
         This class-wide variable should indicate whether
         the lookup implementation provided by the class is available,
