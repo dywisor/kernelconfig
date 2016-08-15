@@ -163,6 +163,78 @@ except that the names are in uppercase.
 See ``mk/install.mk`` for a list of variables.
 
 
+.. _standalone mode:
+
+Running kernelconfig without installing it
+++++++++++++++++++++++++++++++++++++++++++
+
+kernelconfig can be run in *standalone* mode from the project's sources.
+For this purpose, it offers a wrapper script named ``kernelconfig.py``
+that takes care of running ``setup.py`` and invoking the main script.
+
+First, get the sources by cloning the `git repo`_::
+
+    $ mkdir -p ~/git
+    $ git clone git://github.com/dywisor/kernelconfig.git ~/git/kernelconfig
+
+
+The wrapper can be run directly::
+
+    $ ~/git/kernelconfig/kernelconfig.py
+
+
+It can also be *installed* by creating a symlink to it in one of the
+``PATH`` directories.
+
+For example, if ``~/bin`` is in your ``PATH``::
+
+    $ ln -s ~/git/kernelconfig/kernelconfig.py ~/bin/kernelconfig
+    $ kernelconfig
+
+
+Throughout the following sections,
+``<prjroot>`` will be used to refer to the project's source directory.
+
+It accepts all of the `usual options`_, and additionally:
+
+--wrapper-help
+
+    Prints a help message describing the wrapper's options.
+
+--wrapper-prjroot <PRJROOT>
+
+    Path to the project's sources.
+
+    If not specified, defaults to the directory containing the wrapper script.
+
+--wrapper-build-base <BUILD_BASE>
+
+    Root directory for build files, can also be specified via the
+    ``PY_BUILDDIR`` environment variable.
+
+    Defaults to ``<PRJROOT>/build``.
+
+    The wrapper creates per-Python version subdirectories in
+    ``<BUILD_BASE>/kernelconfig-standalone``.
+
+--wrapper-lkc <LKC_SRC>
+
+    Alternate path to lkc files from the Linux kernel sources.
+    Must point to ``<linux srctree>/scripts/kconfig``
+    and not just ``<linux srctree>``.
+    Can also be specified via the ``LKCONFIG_LKC`` environment variable.
+
+    Defaults to ``<PRJROOT>/src/lkc``,
+    which contains a bundled copy of the necessary files.
+
+--wrapper-rebuild
+
+    Instructs the wrapper to rebuild Python modules
+    by passing ``--force`` to ``setup.py build``.
+    The wrapper tries to reuse existing modules
+    if this option is not given.
+
+
 
 Running kernelconfig
 --------------------
@@ -443,78 +515,6 @@ kernelconfig accepts a number of options:
 
     ``help-source`` can not be specified with this option.
 
-
-
-.. _standalone mode:
-
-Running kernelconfig from the source directory
-++++++++++++++++++++++++++++++++++++++++++++++
-
-kernelconfig can be run in *standalone* mode from the project's sources.
-For this purpose, it offers a wrapper script named ``kernelconfig.py``
-that takes care of running ``setup.py`` and invoking the main script.
-
-First, get the sources by cloning the `git repo`_::
-
-    $ mkdir -p ~/git
-    $ git clone git://github.com/dywisor/kernelconfig.git ~/git/kernelconfig
-
-
-The wrapper can be run directly::
-
-    $ ~/git/kernelconfig/kernelconfig.py
-
-
-It can also be *installed* by creating a symlink to it in one of the
-``PATH`` directories.
-
-For example, if ``~/bin`` is in your ``PATH``::
-
-    $ ln -s ~/git/kernelconfig/kernelconfig.py ~/bin/kernelconfig
-    $ kernelconfig
-
-
-Throughout the following sections,
-``<prjroot>`` will be used to refer to the project's source directory.
-
-It accepts all of the `usual options`_, and additionally:
-
---wrapper-help
-
-    Prints a help message describing the wrapper's options.
-
---wrapper-prjroot <PRJROOT>
-
-    Path to the project's sources.
-
-    If not specified, defaults to the directory containing the wrapper script.
-
---wrapper-build-base <BUILD_BASE>
-
-    Root directory for build files, can also be specified via the
-    ``PY_BUILDDIR`` environment variable.
-
-    Defaults to ``<PRJROOT>/build``.
-
-    The wrapper creates per-Python version subdirectories in
-    ``<BUILD_BASE>/kernelconfig-standalone``.
-
---wrapper-lkc <LKC_SRC>
-
-    Alternate path to lkc files from the Linux kernel sources.
-    Must point to ``<linux srctree>/scripts/kconfig``
-    and not just ``<linux srctree>``.
-    Can also be specified via the ``LKCONFIG_LKC`` environment variable.
-
-    Defaults to ``<PRJROOT>/src/lkc``,
-    which contains a bundled copy of the necessary files.
-
---wrapper-rebuild
-
-    Instructs the wrapper to rebuild Python modules
-    by passing ``--force`` to ``setup.py build``.
-    The wrapper tries to reuse existing modules
-    if this option is not given.
 
 
 .. _settings:
