@@ -378,6 +378,10 @@ that modify the value of kernel config options:
    | hardware-\ | *n/a*         | *n/a*       | scan ``/sys`` for hardware identifiers and  |
    | detect     |               |             | enable config options accordingly           |
    +------------+---------------+-------------+---------------------------------------------+
+   | packages   | *n/a*         | *n/a*       | scan portage's vdb for installed packages,  |
+   |            |               |             | get their ``CONFIG_CHECK`` value            |
+   |            |               |             | and enable config options accordingly       |
+   +------------+---------------+-------------+---------------------------------------------+
 
 
 Load-File Instructions
