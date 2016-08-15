@@ -561,7 +561,7 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         stdout=subprocess.PIPE, universal_newlines=True, **kwargs
     ):
         return self._run_command(
-            cmdv, nofail=False,
+            cmdv, nofail=nofail,
             stdout=stdout, universal_newlines=universal_newlines, **kwargs
         ).stdout
     # --- end of run_command_get_stdout (...) ---
