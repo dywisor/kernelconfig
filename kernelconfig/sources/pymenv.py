@@ -784,7 +784,6 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
                         )
                 else:
                     raise
-                pass
             else:
                 cache_dir_need_init = True
             # --
