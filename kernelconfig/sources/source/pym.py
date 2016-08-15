@@ -228,7 +228,7 @@ class PymConfigurationSourceModule(loggable.AbstractLoggable):
             func = getattr(self._pym, name)
         except AttributeError:
             if self._pym is None:
-                self.warning("module has not been loaded")
+                self.logger.warning("module has not been loaded")
             self.logger.debug("has no %s() function", name)
             return None
 
