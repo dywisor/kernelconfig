@@ -24,7 +24,7 @@ X_GIT = git
 GIT_OPTS = --no-pager
 GIT_COMMIT_OPTS =
 
-PRJ_LKC_SRC = $(_PRJROOT)/src/lkc
+PRJ_LKC_SRC = $(S)/src/lkc
 PRJ_LKC_SRC_BUNDLED = $(PRJ_LKC_SRC)-bundled
 LK_SRC_URI = https://raw.githubusercontent.com/torvalds/linux/master
 
@@ -56,7 +56,7 @@ f_list_pym_conf_sources = $(call _f_list_conf_sources_with_type,pym)
 
 PHONY += all
 all:
-	false
+	true
 
 
 PHONY += clean
@@ -154,6 +154,7 @@ PHONY += check
 check: $(addprefix check-,typo pep8 pyflakes)
 
 
+PHONY += prepare-installinfo
 prepare-installinfo: $(_BUILD_DIR:/=)/installinfo.py
 
 $(_BUILD_DIR:/=)/installinfo.py:
