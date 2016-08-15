@@ -21,3 +21,5 @@ _BUILD_DIR := $(O:/=)/build
 _PYMOD_DIRS := $(addprefix $(S:/=)/,$(_PRJNAME))
 _SETUP_PY := $(S:/=)/setup.py
 _EPYDOC_DIR = $(SRC_DOCDIR:/=)/epydoc
+
+PYSETUP_RECORD_FILE := $(_BUILD_DIR)/$(PN)_pysetup_files.list

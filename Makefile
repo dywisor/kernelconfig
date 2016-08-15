@@ -6,6 +6,8 @@ include $(__MAIN_MK_DIR)/mk/progs.mk
 include $(__MAIN_MK_DIR)/mk/install.mk
 include $(__MAIN_MK_DIR)/mk/installfuncs.mk
 
+PYTHON = python
+
 X_PEP8 = pep8
 PEP8_EXCLUDE = parsetab.py
 X_PYFLAKES = pyflakes
@@ -57,6 +59,11 @@ f_list_pym_conf_sources = $(call _f_list_conf_sources_with_type,pym)
 PHONY += all
 all:
 	true
+
+
+PHONY += build-py
+build-py: $(_BUILD_DIR:/=)/installinfo.py
+	$(PYTHON) $(_SETUP_PY) build
 
 
 PHONY += clean
@@ -171,6 +178,14 @@ $(_BUILD_DIR:/=)/installinfo.py:
 
 	$(MV) -- '$(@).make_tmp' '$(@)'
 
+PHONY += install-py
+install-py: | $(dir $(PYSETUP_RECORD_FILE))
+	$(PYTHON) $(_SETUP_PY) install \
+		--skip-build \
+		--root '/$(DESTDIR:/=)' \
+		--prefix '$(PREFIX)' \
+		--exec-prefix '$(EXEC_PREFIX)' \
+		--record '$(PYSETUP_RECORD_FILE)'
 
 PHONY += install-data
 install-data:
