@@ -17,7 +17,7 @@ __all__ = [
 class BaseConditionContext(collections.abc.Mapping):
 
     @abc.abstractproperty
-    def COND_OPS(cls):
+    def COND_OPS(cls):  # pylint: disable=E0213
         """
         A list of conditional operations that are supported by this context
         (as condop opcodes).

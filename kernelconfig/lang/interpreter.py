@@ -133,7 +133,7 @@ class AbstractKernelConfigLangInterpreter(loggable.AbstractLoggable):
         else:
             opcode_value = parser.KernelConfigOp(opcode_arg)
 
-        if not opcode_value.name.startswith("op_"):
+        if not opcode_value.name.startswith("op_"):  # pylint: disable=E1101
             raise ValueError("not an opcode: {!r}".format(opcode_value))
 
         return opcode_value
