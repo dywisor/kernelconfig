@@ -47,9 +47,9 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
                            initially None, see add_auto_var_outconfig()
     @type auto_outconfig:  C{None} or C{dict} :: C{str} => L{TmpOutfile}
 
-    @ivar auto_outfiles:   mapping of "outfile" auto format vars,
+    @ivar auto_tmpfiles:   mapping of "outfile" auto format vars,
                            initially None, see add_auto_var_tmpfile()
-    @type auto_outfiles:   C{None} or C{dict} :: C{str} => L{TmpOutfile}
+    @type auto_tmpfiles:   C{None} or C{dict} :: C{str} => L{TmpOutfile}
 
     @ivar auto_tmpdirs:    mapping of "tmpdir" auto format vars,
                            initially None, see add_auto_var_tmpdir()
@@ -157,7 +157,7 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     # --- end of _get_init_auto_outconfig_vars (...) ---
 
     def _get_init_auto_tmpfile_vars(self):
-        auto_tmpfile_vars = self.auto_outfiles
+        auto_tmpfile_vars = self.auto_tmpfiles
         if auto_tmpfile_vars is None:
             auto_tmpfile_vars = (
                 _formatvar.ConfigurationSourceAutoTmpOutfileVarMapping()
