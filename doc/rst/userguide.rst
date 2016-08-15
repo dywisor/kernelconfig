@@ -10,6 +10,20 @@
 .. _Gentoo Bug \#217042:
     https://bugs.gentoo.org/show_bug.cgi?id=217042
 
+.. _layman:
+    https://wiki.gentoo.org/wiki/Layman
+
+.. _kernelconfig:
+.. _kernelconfig git repo:
+.. _git repo:
+    https://github.com/dywisor/kernelconfig
+
+.. _kernelconfig\-portage:
+    https://github.com/dywisor/tlp-portage
+
+.. _GNU Coding Standards\: Directory Variables:
+    https://www.gnu.org/prep/standards/html_node/Directory-Variables.html
+
 .. _macros file format:
     macros_lang.rst
 
@@ -28,9 +42,6 @@ Introduction
 
 Installing kernelconfig
 -----------------------
-
-This is not possible yet,
-kernelconfig can only be run in `standalone mode`_ for now.
 
 
 Dependencies
@@ -69,6 +80,88 @@ Optional:
 
 * Linux kernel sources for copying certain files from ``scripts/kconfig``,
   a bundled copy is used otherwise
+
+
+via emerge (Gentoo)
++++++++++++++++++++
+
+A live ebuild for ``sys-kernel/kernelconfig``
+is available in the `kernelconfig-portage`_ overlay.
+
+To add it with `layman`_, run::
+
+    $ layman -o "https://raw.githubusercontent.com/dywisor/kernelconfig-portage/master/layman.xml" -f -a kernelconfig
+
+The live ebuild needs to be ``KEYWORDS``-unmasked::
+
+    $ mkdir -p /etc/portage/package.accept_keywords
+    $ echo "~sys-kernel/kernelconfig-9999 **" >> /etc/portage/package.accept_keywords/kernelconfig
+
+It can then be installed with::
+
+    $ emerge -a sys-kernel/kernelconfig
+
+
+Manual Installation
++++++++++++++++++++
+
+First, make sure to install the `dependencies`_.
+
+After that, clone the `git repo`_ and
+change to working directory to kernelconfig's sources::
+
+    git clone git://github.com/dywisor/kernelconfig.git
+
+    cd kernelconfig
+
+Then, prepare the build by creating an *installinfo* file,
+which tells kernelconfig where to find its config and data files, once installed.
+This can be done with ``make prepare-installinfo``,
+it should receive the same variables as ``setup.py install``
+and ``make install`` later on (except for ``DESTDIR``)::
+
+    PREFIX=/usr/local   # default: /usr/local
+    SYSCONFDIR=/etc     # default: /usr/local/etc
+
+    make prepare-installinfo PREFIX="${PREFIX}" SYSCONFDIR="${SYSCONFDIR}"
+
+Building requires a copy of some files from the Linux kernel sources.
+At this point, it is necessary to decide whether to use the bundled copy
+distributed with kernelconfig, which is recommended,
+or to import the files from a kernel source tree.
+
+To use the bundled lkc files, export ``LKCONFIG_LKC``::
+
+    export LKCONFIG_LKC="src/lkc-bundled"
+
+Alternatively, to import the lkc files from a kernel source tree, run::
+
+    make import-lkc LK_SRC=/usr/src/linux
+    #export LKCONFIG_LKC="src/lkc"  # not necessary
+
+
+After preparing *installinfo* and the lkc files,
+build kernelconfig with ``setup.py``::
+
+    python ./setup.py build
+
+This step can be repeated in case of multiple Python versions.
+
+
+Finally, kernelconfig can be installed.
+The python files are installed with ``setup.py``,
+and the data and config files with ``make``::
+
+    # install
+    DESTDIR=/
+    python ./setup.py install --root "${DESTDIR}" --prefix "${PREFIX}"
+    make install-data install-config DESTDIR="${DESTDIR}" PREFIX="${PREFIX}" SYSCONFDIR="${SYSCONFDIR}"
+
+The install-related ``make`` variables
+follow the `GNU Coding Standards\: Directory Variables`_,
+except that the names are in uppercase.
+See ``mk/install.mk`` for a list of variables.
+
 
 
 Running kernelconfig
@@ -361,7 +454,7 @@ kernelconfig can be run in *standalone* mode from the project's sources.
 For this purpose, it offers a wrapper script named ``kernelconfig.py``
 that takes care of running ``setup.py`` and invoking the main script.
 
-First, get the sources::
+First, get the sources by cloning the `git repo`_::
 
     $ mkdir -p ~/git
     $ git clone git://github.com/dywisor/kernelconfig.git ~/git/kernelconfig
