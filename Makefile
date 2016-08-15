@@ -1,3 +1,8 @@
+PHONY += all
+all:
+	true
+
+
 __MAIN_MK_FILE := $(realpath $(lastword $(MAKEFILE_LIST)))
 __MAIN_MK_DIR  := $(patsubst %/,%,$(dir $(__MAIN_MK_FILE)))
 
@@ -55,10 +60,6 @@ _f_list_conf_sources_with_type = $(shell \
 
 f_list_pym_conf_sources = $(call _f_list_conf_sources_with_type,pym)
 
-
-PHONY += all
-all:
-	true
 
 
 PHONY += build-py
