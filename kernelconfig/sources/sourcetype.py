@@ -297,9 +297,7 @@ class ConfigurationSourceTypes(collections.abc.Mapping):
 
         @return:  None (implicit)
         """
-        lname = self.normalize_key(name)
-
-        self._register_source_type_object(lname, source_type_obj)
+        self._register_source_type_object(name, source_type_obj)
         if aliases:
             for alias_name in aliases:
                 self._register_source_type_object(alias_name, source_type_obj)
