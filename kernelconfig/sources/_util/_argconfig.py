@@ -30,6 +30,7 @@ class ConfigurationSourceArgConfig(object):
     @type env_vars:    C{dict} :: C{str} => C{str}
 
     @ivar _outfiles:   an unordered mapping of to-be-created files/dirs
+                       each entry is a 2-tuple (is dir, outfile object)
     @type _outfiles:   C{dict} :: C{str}
                           => 2-tuple(C{bool}, sub-of L{AbstractOutfile})
     @ivar _outconfig:  an ordered mapping of output config files
@@ -57,6 +58,21 @@ class ConfigurationSourceArgConfig(object):
     # ---
 
     def set_params(self, params_namespace):
+        """
+        Assigns argparse parameters to this config object,
+        by storing them in self._params
+        and adding them as format and environment variables.
+
+        This method can only be called once, subsequent calls will raise an
+        exception.
+        @raises AssertionError:  method called more than once
+
+        @param params_namespace:  parsed args as returned by
+                                  e.g. argparse.ArgumentParser.parse_args()
+        @type  params_namespace:  namespace object
+
+        @return:  None (implicit)
+        """
         if self._params is not None:
             raise AssertionError("params are already set!")
 
@@ -78,29 +94,48 @@ class ConfigurationSourceArgConfig(object):
     # --- end of set_params (...) ---
 
     def get_params(self):
+        """Returns the stored argparse parameters or None."""
         return self._params or None
 
     def _iter_outfiles(self, outfile_type):
+        """
+        Generator that iterates over all outfile entries (self._outfiles)
+        and returns those who match the given outfile type,
+        which can be True for "is a directory" and False for "is a file".
+
+        @param outfile_type:  "is dir?"
+        @type  outfile_type:  C{bool}
+
+        @return:  outfile object(s)
+        @rtype:   subclass of L{AbstractOutfile}
+        """
         for of_type, outfile in self._outfiles.values():
             if of_type is outfile_type:
                 yield outfile
     # ---
 
     def iter_all_outfiles(self):
+        """Generator that returns all outfiles, regardless of their type.
+
+        @return:  outfile object(s)
+        @rtype:   subclass of L{AbstractOutfile}
+        """
         for of_type, outfile in self._outfiles.values():
             yield outfile
     # ---
 
     def iter_outfiles(self):
         """
-        @return:  iterator over all outfile objects
+        Generator that returns all file-type outfiles.
+
+        @return:  iterator over all file-type outfile objects
         """
         return self._iter_outfiles(False)
     # ---
 
     def iter_outfile_paths(self):
         """
-        @return:  iterator over all outfile paths
+        @return:  iterator over all file-type outfile paths
         """
         for outfile in self.iter_outfiles():
             yield outfile.get_path()
@@ -114,6 +149,9 @@ class ConfigurationSourceArgConfig(object):
     # ---
 
     def iter_outdir_paths(self):
+        """
+        @return:  iterator over all outdir paths
+        """
         for outfile in self.iter_outdirs():
             yield outfile.get_path()
     # ---
@@ -171,6 +209,33 @@ class ConfigurationSourceArgConfig(object):
     # ---
 
     def _register_outfile(self, outfile_type, outfile, is_outconfig):
+        """
+        Note:  adding an outfile of type directory as outconfig does not
+               make any sense and will lead to errors later on,
+               so it gets catched here and raises an exception
+
+        @raises AssertionError:  if outfile is a directory
+                                 but also an outconfig
+
+        @raises KeyError:  outfile key already registered
+
+        @param outfile_type:   the type of the outfile,
+                               True for directory,
+                               False for regular file
+        @type  outfile_type:   C{bool}
+        @param outfile:        outfile object
+        @param is_outconfig:   whether the outfile object is also a outconfig
+                               (True) or just a file (False)
+        @type  is_outconfig:   C{bool}
+
+        @return:  outfile
+        """
+        if outfile_type and is_outconfig:
+            raise AssertionError(
+                "outdir w/ is_outconfig does not make any sense"
+            )
+        # --
+
         key = outfile.get_key()
 
         if key in self._outfiles:
@@ -205,6 +270,14 @@ class ConfigurationSourceArgConfig(object):
     # ---
 
     def register_outdir(self, outfile):
+        """Registers an outdir.
+
+        @raises KeyError:  if file is already registered
+
+        @param   outfile:  outfile object
+
+        @return:  outfile
+        """
         return self._register_outfile(True, outfile, False)
     # ---
 
