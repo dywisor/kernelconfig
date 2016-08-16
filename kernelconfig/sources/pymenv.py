@@ -27,6 +27,18 @@ _RunCommandResult = collections.namedtuple(
 
 
 class RunCommandResult(_RunCommandResult):
+    """
+    The 'result' of running a command - status, exit code and output.
+
+    @ivar success:     whether the command succeeded or not
+    @type success:     C{bool}
+    @ivar returncode:  the command's exit code
+    @ivar returncode:  C{int}
+    @ivar stdout:      None or captured stdout
+    @ivar stdout:      C{None} | C{str} | C{bytes}
+    @ivar stderr:      None or captured stderr
+    @ivar stderr:      C{None} | C{str} | C{bytes}
+    """
 
     def __bool__(self):
         return bool(self.success)
@@ -349,15 +361,55 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         raise exc_type(message)
 
     def str_format(self, fmt_str, *args, **kwargs):
+        """
+        Formats a string using the given args/kwargs as well as the
+        pymenv-supplied vars.
+
+        @param fmt_str:  string to be formatted
+        @type  fmt_str:  C{str}
+        @param args:     format args
+        @type  args:     sequence of C{str}
+        @param kwargs:   format vars
+        @type  kwargs:   C{dict} :: C{str} => _
+
+        @return:  formatted string
+        @rtype:   C{str}
+        """
         return self._str_formatter.vformat(fmt_str, args, kwargs)
 
     def str_vformat(self, fmt_str, args=(), kwargs={}):
+        """
+        Formats a string using pymenv-supplied vars.
+        Additional format variables can be given via args and kwargs.
+
+        Calling this method with out args/kwargs behaves identical to
+        to calling str_format(fmt_str).
+
+        @param   fmt_str:  string to be formatted
+        @type    fmt_str:  C{str}
+        @keyword args:     format args, defaults to <empty>
+        @type    args:     sequence of C{str}
+        @keyword kwargs:   format vars, defaults to <empty>
+        @type    kwargs:   C{dict} :: C{str} => _
+
+        @return:  formatted string
+        @rtype:   C{str}
+        """
         return self._str_formatter.vformat(fmt_str, args, kwargs)
 
     def get_config(self, key, fallback=None):
         """
         Returns the value of an option in the
         [config] section of the source definition file.
+
+        @param   key:       [config] option name
+        @type    key:       C{str}
+        @keyword fallback:  fallback value that is returned if the requested
+                            [config] option is not set
+        @type    fallback:  usually C{None} or C{str}
+
+        @return:  [config] option value if set, fallback otherwise
+        @rtype:   usually C{None} or C{str}
         """
         if not key:
             raise ValueError(key)
@@ -370,6 +422,27 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     # --- end of get_config (...) ---
 
     def get_config_check_value(self, key, fallback=None, fcheck=bool):
+        """
+        Returns the value of an option in the
+        [config] section of the source definition file,
+        and checks its value before returning it, possibly raising an error.
+
+        @raises ConfigurationSourceExecError:  if value check failed
+
+        Note: if the fallback value is to be returned,
+              it must also pass the value check
+
+        @param   key:       [config] option name
+        @type    key:       C{str}
+        @keyword fallback:  fallback value that is returned if the requested
+                            [config] option is not set
+        @type    fallback:  usually C{None} or C{str}
+        @keyword fcheck:    function :: value -> "value ok?"
+        @type    fcheck:    callable f :: _ -> C{bool}
+
+        @return:  [config] option value if set, fallback otherwise
+        @rtype:   usually C{None} or C{str}
+        """
         value = self.get_config(key, fallback=fallback)
         if fcheck(value):
             return value
@@ -419,6 +492,9 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
 
         Calling this method more than once instructs kernelconfig
         to load *all* files in the order they have been added.
+
+        @param path:  output .config path, relative or absolute
+        @type  path:  C{str}
 
         @return:  None (implicit)
         """
@@ -522,6 +598,33 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     def _run_command(
         self, cmdv, *, nofail, timeout=None, exit_codes_ok=None, **kwargs
     ):
+        """Runs a command as subprocess and returns its result,
+        a RunCommandResult object.
+
+        Identical to run_command_get_result(),
+        except that the nofail keyword has no default value.
+
+        @raises ConfigurationSourceExecError;
+
+        @param cmdv:             command to run, either as list or string
+        @type  cmdv:             C{list} of C{str} or C{str}
+        @keyword nofail:         whether to raise an error if the command
+                                 does not complete successfully (False)
+                                 or not (True)
+                                 No default, mandatory kw.
+        @type    nofail:         C{bool}
+        @keyword timeout:        command timeout in seconds,
+                                 or None for no timeout. Defaults to None.
+        @tpye    timeout:        C{None} or C{int}|C{float}
+        @keyword exit_codes_ok:  set of exit codes that indicate success,
+                                 may be None for os.EX_OK.
+                                 Defaults to None.
+        @type    exit_codes_ok:  C{None} or C{set} of C{int}
+        @param   kwargs:         additional keyword args for create_subproc()
+
+        @return:  subprocess result
+        @rtype:   L{RunCommandResult}
+        """
         with self.create_subproc(cmdv, **kwargs) as proc:
             result = proc.join(
                 nofail=nofail, exit_codes_ok=exit_codes_ok, timeout=timeout
@@ -531,6 +634,30 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     # --- end of _run_command (...) ---
 
     def run_command_get_result(self, cmdv, *, nofail=False, **kwargs):
+        """Runs a command as subprocess and returns its result,
+        a RunCommandResult object.
+
+        @raises ConfigurationSourceExecError;
+
+        @param cmdv:             command to run, either as list or string
+        @type  cmdv:             C{list} of C{str} or C{str}
+        @keyword nofail:         whether to raise an error if the command
+                                 does not complete successfully (False)
+                                 or not (True)
+                                 Defaults to False (-> raise error).
+        @type    nofail:         C{bool}
+        @keyword timeout:        command timeout in seconds,
+                                 or None for no timeout. Defaults to None.
+        @tpye    timeout:        C{None} or C{int}|C{float}
+        @keyword exit_codes_ok:  set of exit codes that indicate success,
+                                 may be None for os.EX_OK.
+                                 Defaults to None.
+        @type    exit_codes_ok:  C{None} or C{set} of C{int}
+        @param   kwargs:         additional keyword args for create_subproc()
+
+        @return:  subprocess result
+        @rtype:   L{RunCommandResult}
+        """
         return self._run_command(cmdv, nofail=nofail, **kwargs)
     # --- end of run_command_get_result (...) ---
 
@@ -544,7 +671,8 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         of acceptable exit codes to override this behavior.
         (In that case, it should include os.EX_OK if desired.)
 
-        See create_subproc() for details.
+        See run_command_get_result() for details,
+        note that the nofail keyword arg is False and cannot be set here.
 
         @return: None
         """
@@ -552,6 +680,16 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     # --- end of run_command (...) ---
 
     def run_command_get_returncode(self, cmdv, return_success=True, **kwargs):
+        """
+        Runs a command and returns its exit code.
+
+        See run_command_get_result() for details,
+        note that the nofail keyword arg is True and cannot be set here,
+        and exit_codes_ok has no effect.
+
+        @return:  exit code
+        @rtype:   C{int}
+        """
         result = self._run_command(cmdv, nofail=True, **kwargs)
         return result.success if return_success else result.returncode
     # --- end of run_command_get_returncode (...) ---
@@ -560,6 +698,21 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         self, cmdv, *, nofail=False,
         stdout=subprocess.PIPE, universal_newlines=True, **kwargs
     ):
+        """Runs a command and returns its output (stdout).
+
+        See run_command_get_result() for details.
+
+        Two keyword arguments for create_subproc() that affect capturing
+        of stdout are accepted here, but are set a usable default and
+        should not be modified.
+        @keyword stdout:              Defaults to subprocess.PIPE.
+        @type    stdout:
+        @keyword universal_newlines:  Defaults to True.
+        @type    universal_newlines:
+
+        @return:  exit code
+        @rtype:   C{int}
+        """
         return self._run_command(
             cmdv, nofail=nofail,
             stdout=stdout, universal_newlines=universal_newlines, **kwargs
@@ -654,6 +807,23 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     # --- end of create_kernelversion (...) ---
 
     def create_kernelversion_from_vtuple(self, vtuple, rclevel=None):
+        """
+        Creates a kernel version object from its version parts,
+        given as tuple of int version components, e.g. (4, 6, 2),
+        plus optionally a "-rc" level.
+        Missing int version components are assumed to be 0,
+        a version tuple of (4, 6) is interpreted identical to (4, 6, 0).
+
+        @raises ConfigurationSourceExecError:  empty version tuple
+
+        @param   vtuple:   sequence of int version components
+        @type    vtuple:   [1..n]-tuple of C{int}
+        @keyword rclevel:  either None or a "-rc" level
+        @type    rclevel:  C{None} or C{int}
+
+        @return:  new kernel version object
+        @rtype:   L{KernelVersion}
+        """
         numparts = len(vtuple)
         if not numparts:
             raise self.exc_types.ConfigurationSourceExecError("empty vtuple")
@@ -670,6 +840,37 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     def create_kernelversion_from_vtuple_str(
         self, vtuple_str, rclevel_str=None, *, vsep="."
     ):
+        """
+        Creates a kernel version object from a preparsed string,
+        given as string containing a dot-separated list of version components
+        that will be converted to int,
+        plus optionally an int or a string containing the rclevel,
+        without the "-rc" prefix.
+
+        Example usage:
+
+           >>> create_kernelversion_from_vtuple_str("4.6", "5")
+           KernelVersion('4.6.0-rc5')
+
+           >>> create_kernelversion_from_vtuple_str("4.6.2")
+           KernelVersion('4.6.2')
+
+        @raises ConfigurationSourceExecError:  empty version
+        @raises ValueError:                    invalid int version component
+
+        @param   vtuple_str:   dot-separated version compoonents str,
+                               e.g. "4.6.2"
+        @type    vtuple_str:   C{str}
+        @keyword rclevel_str:  optional rc level str, e.g. "5",
+                               Defaults to None.
+        @type    rclevel_str:  C{None} | C{str} | C{int}
+        @keyword vsep:         version compoonents str separator,
+                               defaults to "."
+        @type    vsep:         C{str}
+
+        @return:  new kernel version object
+        @rtype:   L{KernelVersion}
+        """
         return self.create_kernelversion_from_vtuple(
             [int(w, 10) for w in vtuple_str.split(vsep)] if vtuple_str else [],
             int(rclevel_str) if rclevel_str else None
@@ -677,6 +878,15 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     # --- end of create_kernelversion_from_vtuple_str (...) ---
 
     def _run_git_in(self, git_dir, argv, *, nofail=False, kwargs={}):
+        """Runs a 'git' command in git_dir.
+
+        See run_git() for details.
+
+        @raises ConfigurationSourceExecError:
+
+        @return:  command result object
+        @rtype:   L{RunCommandResult}
+        """
         if not argv or not argv[0]:
             self.error("empty git command")
 
@@ -692,6 +902,14 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     def _run_git_in_capture_stdout(
         self, git_dir, argv, *, nofail=False, **kwargs
     ):
+        """Runs a 'git' command in git_dir and instruccts _run_git_in()
+        to capture the command's output by supplying the correct keyword args.
+
+        @raises ConfigurationSourceExecError:
+
+        @return:  command result object
+        @rtype:   L{RunCommandResult}
+        """
         kwargs["stdout"] = subprocess.PIPE
         kwargs["universal_newlines"] = True
         return self._run_git_in(git_dir, argv, nofail=nofail, kwargs=kwargs)
@@ -699,6 +917,8 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
 
     def run_git(self, argv, *, git_dir=None, nofail=False, **kwargs):
         """Runs a 'git' command.
+
+        @raises ConfigurationSourceExecError:
 
         @param   argv:     arguments
         @keyword git_dir:  git directory. Defaults to None (use cwd)
@@ -721,6 +941,8 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     def git_clone(self, repo_url, *, name=None, chdir=False):
         """
         Clones a git repo and makes use of the per-confsource cache.
+
+        @raises ConfigurationSourceExecError:
 
         @param   repo_url:   url to clone from
         @keyword name:       name of the remote repo.
@@ -833,6 +1055,8 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     def git_checkout_branch(self, branch, git_dir=None):
         """Switches the git branch.
 
+        @raises ConfigurationSourceExecError:
+
         @param   branch:   branch to switch to
         @keyword git_dir:  path to git repo directory
 
@@ -850,7 +1074,45 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         self, repo_url, *refs,
         opts=["-q", "--refs"], allow_empty=False, nofail=False
     ):
+        """
+        Retrieves a list of git refs and symbolic names from the given url.
+        If a list of ref patterns is given, restricts the returned items
+        to those that match any of the pattern.
+
+        @raises ConfigurationSourceExecError:
+
+        @param   repo_url:     git remote url
+        @type    repo_url:     C{str}
+        @param   refs:         var-args tuple of git ref patterns
+        @typ     refs:         C{tuple} of C{str}
+        @keyword opts:         options passed to "git ls-remote",
+                               defaults to ["-q", "--refs"].
+        @type    opts:         C{list} of C{str}
+        @keyword allow_empty:  whether to allow an empty list of matching refs
+                               or to treat it as error (depending on nofail)
+        @type    allow_empty:  C{bool}
+        @keyword nofail:       whether to raise an error if the git command
+                               does not succeed (False) or not (True).
+                               Defaults to False.
+        @type    nofail:       C{bool}
+
+        @return: list of 2-tuples (sha ref, symbolic name)
+        @rtype:  C{list} of 2-tuple (C{str}, C{str})
+        """
         def parse_git_list_remote(proc_output):
+            """
+            Generator that converts the output of a "git ls-remote" command
+            to a sequence of 2-tuples (sha ref, symbolic name).
+            """
+
+            # Example git ls-remote output:
+            #  $ git ls-remote -q --refs git://github.com/dywisor/kernelconfig
+            #  bdfb41...   refs/heads/feature/hwdetection
+            #  f26535...   refs/heads/feature/pm
+            #  31d6c3...   refs/heads/history/depgraph
+            #  bb92b9...   refs/heads/history/feature/sources
+            #  c12e3f...   refs/heads/master
+            #  949189...   refs/heads/tmp
             for line in filter(
                 None, (l.strip() for l in proc_output.splitlines())
             ):
@@ -889,6 +1151,8 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         Relevant config fields are currently only "Repo=",
         which sets the repo's remote url.
 
+        @raises ConfigurationSourceExecError:
+
         @keyword fallback_repo_url:  passed as fallback to
                                      get_config_check_value
 
@@ -912,6 +1176,9 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         Returns the git identifier for a blob-type object,
         which can be used to retrieve the file's content,
         e.g. with git show or git cat-file.
+
+        @raises ValueError:  empty file path
+        @raises ConfigurationSourceExecError:
 
         @param filepath:  path of the file
                           (relative to the git_dir
@@ -955,6 +1222,39 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     def git_get_text_file_content(
         self, filepath, branch="HEAD", *, git_dir=None, nofail=False
     ):
+        """
+        Retrieves the contents of a file managed by git.
+
+        This is essentially the same as running the following shell snippet:
+
+           $ object_id=$(git rev-parse --verify --quiet <branch>:<filepath>)
+           $ git cat-file blob "${object_id}"
+
+        Example:
+           >>> git_get_text_file_content("README")
+
+        @raises ConfigurationSourceExecError:
+
+        @param   filepath:  the file's path relative to the git repo
+                            paths starting with "./" and ../" have a special
+                            meaning, see "man git-rev-parse" for details
+        @type    filepath:  C{str}
+        @keyword branch:    branch, e.g. "HEAD" or "master",
+                            can also be sha ref
+        @type    branch:    C{str}
+        @keyword git_dir:   git repo directory or None or os.getcwd().
+                            Defaults to None.
+        @type    git_dir:   C{None} or C{str}
+        @keyword nofail:    whether to tolerate command failure or not
+                            Defaults to False (-> error out).
+                            Set nofail to True if you are unsure whether
+                            the requested file actually exists.
+        @type    nofail:    C{bool}
+
+        @return:  file contents as string or bytes,
+                  None on errors (nofail mode only)
+        @rtype:   C{str} | C{bytes} | C{None}
+        """
         object_id = self.git_rev_parse_object(
             filepath, branch=branch, git_dir=git_dir, nofail=nofail
         )
@@ -1038,6 +1338,10 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
 
 
 class PymConfigurationSourceRunEnvSubProc(subproc.SubProc):
+    """
+    A subclass of L{subproc.SubProc} that raises configuration source
+    exceptions on errors.
+    """
 
     def join(self, *, nofail, timeout=None, exit_codes_ok=None, **kwargs):
         """
