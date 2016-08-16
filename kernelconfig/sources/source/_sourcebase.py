@@ -26,6 +26,12 @@ __all__ = [
 
 class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     """
+    Base class for configuration sources.
+    Compared to AbstractConfigurationSource,
+    it defines how to create configuration sources
+    and adds more concrete functionality such as str formatting,
+    arg parsing and automatic temporary files/directories.
+
     @cvar AUTO_OUTCONFIG_REGEXP:
 
     @cvar AUTO_TMPFILE_REGEXP:
@@ -54,6 +60,12 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     @ivar auto_tmpdirs:    mapping of "tmpdir" auto format vars,
                            initially None, see add_auto_var_tmpdir()
     @type auto_tmpdirs:    C{None} or C{dict} :: C{str} => undef
+
+    @ivar arg_parser:      argument parser used for parsing args
+                           passed to get_configuration_basis()
+                           (see do_parse_source_argv()),
+                           and also used for creating the source's help message
+    @type arg_parser:      C{None} or NonExitingArgumentParser
     """
 
     _id_expr = r'(?P<id>[0-9]+)'
@@ -74,6 +86,33 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
 
     @classmethod
     def new_from_settings(cls, conf_source_env, subtype, args, data, **kwargs):
+        """
+        Creates a new configuration source with information
+        from the [source] section of a settings file.
+
+        The settings-specific initialization of the config source
+        is handled in init_from_settings(), this class method creates
+        a new object from conf_source_env and **kwargs
+        and redirects the remaining args to the init_from_*() method.
+
+        @param conf_source_env:  configuration source environment
+        @type  conf_source_env:  L{ConfigurationSourcesEnv}
+        @param subtype:          source subtype,
+                                 only meaningful for certain conf sources,
+                                 e.g. "script"
+        @type  subtype:          usually C{None} or C{str}
+        @param args:             mixed constructor/get_configuration_basis()
+                                 arguments
+        @type  args:             C{list}|C{tuple} of C{str}
+        @param data:             configuration source data
+                                 (all lines in [source] after the first one)
+        @type  data:             usually C{None} or C{list} of C{str}
+        @param kwargs:           additional subclass-specific keyword arguments
+                                 passed to __init__()
+
+        @return:  2-tuple (configuration source, unused args)
+        @rtype:   2-tuple (sub-of L{CommandConfigurationSourceBase}, iterable)
+        """
         obj = cls(
             name=None,
             conf_source_env=conf_source_env,
@@ -86,11 +125,61 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
 
     @abc.abstractmethod
     def init_from_settings(self, subtype, args, data):
-        pass
+        """
+        Initializes a newly created configuration source with information
+        from the [source] section of a settings file.
+
+        See also new_from_settings().
+
+        Derived classes must implement this method.
+        They may call super(), but the abstract implementation does not
+        provide any functionality and returns the input args unmodified.
+
+        @param subtype:          source subtype,
+                                 only meaningful for certain conf sources,
+                                 e.g. "script"
+        @type  subtype:          usually C{None} or C{str}
+        @param args:             mixed constructor/get_configuration_basis()
+                                 arguments
+        @type  args:             C{list}|C{tuple} of C{str}
+        @param data:             configuration source data
+                                 (all lines in [source] after the first one)
+        @type  data:             usually C{None} or C{list} of C{str}
+
+        @return:  unused args
+        @rtype:   C{list}|C{tuple} of C{str}
+        """
+        return args
     # --- end of init_from_settings (...) ---
 
     @classmethod
     def new_from_def(cls, conf_source_env, name, source_def, **kwargs):
+        """
+        Creates a new configuration source with information
+        from an already parsed and preprocessed source definition file.
+
+        Source definition data can be created from ".ini"-like files with
+        kernelconfig.sources.sourcedef.CuratedSourceDef.new_from_ini(),
+        which is done in ../_sources.py (kernelconfig.sources._sources).
+
+        The sourcedef-specific initialization of the config source
+        is handled in init_from_def(), this class method creates
+        a new object from conf_source_env and **kwargs
+        and redirects the remaining args to the init_from_*() method.
+
+        @param conf_source_env:  configuration source environment
+        @type  conf_source_env:  L{ConfigurationSourcesEnv}
+        @param name:             name of the configuration source
+        @type  name:             C{str} or C{None}
+        @param source_def:       config source definition data,
+                                 a dict-like object
+        @type  source_def:       L{CuratedSourceDef}
+        @param kwargs:           additional subclass-specific keyword arguments
+                                 passed to __init__()
+
+        @return:  configuration source
+        @rtype:   sub-of L{ConfigurationSourceBase}
+        """
         obj = cls(
             name=name,
             conf_source_env=conf_source_env,
@@ -103,6 +192,19 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
 
     @abc.abstractmethod
     def init_from_def(self, source_def):
+        """
+        Initializes a newly created configuration source with information
+        from an already parsed and preprocessed source definition file.
+
+        Derived classes must implement this method.
+        They may call super(), the implementation of the abstract base class
+        creates the argument parser and attaches it to self.arg_parser.
+
+        @param source_def:  config source definition data, a dict-like object
+        @type  source_def:  L{CuratedSourceDef}
+
+        @return:  None (implicit)
+        """
         self.arg_parser = source_def.build_parser()
     # --- end of init_from_def (...) ---
 
@@ -120,6 +222,15 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         raise NotImplementedError()
 
     def format_help(self):
+        """Formats the help message of this configuration source.
+
+        This method relies on having an argument parser,
+        if there is none (e.g. created from settings [source] and not from
+        a source def), None will be returned.
+
+        @return:  formatted help string or None
+        @rtype:   C{str} or C{None}
+        """
         if self.arg_parser is None:
             return None
 
@@ -136,6 +247,9 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
 
     @property
     def fmt_vars(self):
+        """
+        The 'static' string-format variables of this configuration source.
+        """
         return self.get_str_formatter().fmt_vars
 
     # The thing with "getattr() || setattr(_, _, new())" methods is that
@@ -146,6 +260,10 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     #
 
     def _get_init_auto_outconfig_vars(self):
+        """
+        @return:  auto outconfig vars
+        @rtype:   L{ConfigurationSourceAutoTmpOutfileVarMapping}
+        """
         auto_outconfig_vars = self.auto_outconfig
         if auto_outconfig_vars is None:
             auto_outconfig_vars = (
@@ -157,6 +275,10 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     # --- end of _get_init_auto_outconfig_vars (...) ---
 
     def _get_init_auto_tmpfile_vars(self):
+        """
+        @return:  auto tmpfile vars
+        @rtype:   L{ConfigurationSourceAutoTmpOutfileVarMapping}
+        """
         auto_tmpfile_vars = self.auto_tmpfiles
         if auto_tmpfile_vars is None:
             auto_tmpfile_vars = (
@@ -168,6 +290,10 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     # --- end of _get_init_auto_tmpfile_vars (...) ---
 
     def _get_init_auto_tmpdir_vars(self):
+        """
+        @return:  auto tmpdir vars
+        @rtype:   L{ConfigurationSourceAutoTmpdirVarMapping}
+        """
         auto_tmpdir_vars = self.auto_tmpdirs
         if auto_tmpdir_vars is None:
             auto_tmpdir_vars = (
@@ -179,8 +305,19 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     # --- end of _get_init_auto_tmpdir_vars (...) ---
 
     def create_conf_basis_for_file(self, filepath):
-        # FIXME: temporary helper method
-        #         replace w/ plain str ret or ConfigurationBasis obj
+        """
+        Creates a "configuration basis" that consists of a single file.
+        The file must exist and be a "normal" file
+        (as determined with os.path.isfile()).
+
+        @raises ConfigurationSourceNotFound:  if filepath missing or not a file
+
+        @param filepath:
+        @type  filepath:  C{str}
+
+        @return:  configuration basis
+        @rtype:   C{list} of C{str}
+        """
         if os.path.isfile(filepath):
             return [filepath]
         else:
@@ -188,6 +325,18 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     # ---
 
     def create_conf_basis_for_files(self, filepaths):
+        """
+        Creates a "configuration basis" that consists of several files
+        that should be read in the given order (later on).
+
+        @raises ConfigurationSourceNotFound:  if any file missing or not a file
+
+        @param filepaths:
+        @type  filepaths:  iterable of C{str} (e.g. list, genexpr)
+
+        @return:  configuration basis
+        @rtype:   C{list} of C{str}
+        """
         retv = []
         miss = []
         for filepath in filepaths:
@@ -279,6 +428,7 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     # --- end of add_auto_var (...) ---
 
     def add_auto_var_outconfig(self, varname, varkey):
+        """See add_auto_var()."""
         match = self.AUTO_OUTCONFIG_REGEXP.match(varkey)
         if match is None:
             return False
@@ -289,6 +439,7 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     # --- end of add_auto_var_outconfig (...) ---
 
     def add_auto_var_tmpfile(self, varname, varkey):
+        """See add_auto_var()."""
         match = self.AUTO_TMPFILE_REGEXP.match(varkey)
         if match is None:
             return False
@@ -299,6 +450,7 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
     # --- end of add_auto_var_tmpfile (...) ---
 
     def add_auto_var_tmpdir(self, varname, varkey):
+        """See add_auto_var()."""
         match = self.AUTO_TMPDIR_REGEXP.match(varkey)
         if match is None:
             return False
@@ -450,7 +602,11 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         """Parses argv and creates an arg config object.
 
         Derives classes must implement this method.
+        They may call super() to get the default implementation,
+        which uses self.arg_parser to parse argv, and raises an error
+        if argv is not empty, but no parser has been created.
 
+        @raises ConfigurationSourceFeatureUsageError:  argv, but no parser
         @raises ConfigurationSourceError:
         @raises ConfigurationSourceInvalidError:
         @raises ConfigurationSourceExecError:
@@ -483,6 +639,22 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
     # --- end of do_parse_source_argv (...) ---
 
     def do_init_auto_vars(self, arg_config):
+        """
+        Creates the automatic temporary files/directories
+        for the current get_configuration_basis() cycle
+        and adds them to the given arg_config object,
+        by registering them as outfiles/outconfig/outdirs
+        and by adding them as format variables.
+
+        After calling this method, arg_config knows about all auto files/dirs,
+        but a temporary directory must be assigned to arg_config before
+        dynamic str-formatting can be used (see do_init_tmpdir()).
+
+        @param arg_config:  (will be modified)
+        @type  arg_config:  L{ConfigurationSourceArgConfig}
+
+        @return:  None (implicit)
+        """
         if self.auto_outconfig:
             arg_config.set_need_tmpdir()
             outfiles, fmt_vars = self.auto_outconfig.get_vars()
@@ -507,6 +679,16 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
     # --- end of do_init_auto_vars (...) ---
 
     def do_init_tmpdir(self, arg_config):
+        """
+        Creates a temporary directory for arg_config if necessary
+        and assigns it to arg_config, which triggers fs-initialization
+        of all temporay files/dirs, including auto vars.
+
+        @param arg_config:  (will be modified)
+        @type  arg_config:  L{ConfigurationSourceArgConfig}
+
+        @return:  None (implicit)
+        """
         if arg_config.check_need_tmpdir():
             arg_config.assign_tmpdir(
                 self.senv.get_tmpdir().get_new_subdir()
@@ -514,6 +696,18 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
     # --- end of do_init_tmpdir (...) ---
 
     def do_init_env(self, arg_config):
+        """
+        Initializes the environment variables of arg_config (env_vars attr).
+
+        They are only meaningful to configuration sources that involve running
+        subprocesses, and therefore the base class implementation is a no-op.
+        See CommandConfigurationSourceBase.do_init_env() for an example.
+
+        @param arg_config:  (will be modified)
+        @type  arg_config:  L{ConfigurationSourceArgConfig}
+
+        @return:  None (implicit)
+        """
         pass
     # --- end of do_init_env (...) ---
 
@@ -524,12 +718,26 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
             fs.rmfile(outfile)
 
     def do_prepare_outfiles(self, arg_config):
+        """
+        Backup-moves all output files and creates directories as needed.
+        For temporary files, this is usually a no-op.
+
+        After calling this method,
+        no outfile exists and it is likely that they can be created
+        (without having to call mkdir()).
+
+        @param arg_config:
+        @type  arg_config:  L{ConfigurationSourceArgConfig}
+
+        @return:  None (implicit)
+        """
         self._prepare_outfiles(arg_config.iter_outfile_paths())
 
     def do_prepare(self, arg_config):
         """Pre-"get conf basis" actions.
 
-        The default implementation backup-moves all output files.
+        The default implementation backup-moves all output files,
+        which is implemented in do_prepare_outfiles().
         For tmpdir outfiles, this may be a no-op.
 
         @raises ConfigurationSourceError:
@@ -560,6 +768,7 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         @type  arg_config:  L{ConfigurationSourceArgConfig}
 
         @return:  conf basis
+        @rtype:   C{list} of C{str}
         """
         raise NotImplementedError()
     # ---
@@ -575,9 +784,10 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         @param arg_config:  arg config
         @type  arg_config:  L{ConfigurationSourceArgConfig}
         @param conf_basis:  conf basis
-        @type  conf_basis:
+        @type  conf_basis:  C{list} of C{str}
 
         @return:  conf basis
+        @rtype:   C{list} of C{str}
         """
         return conf_basis
 
@@ -593,7 +803,7 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         @type  argv:  C{list} of C{str}
 
         @return:  conf basis
-        @rtype:
+        @rtype:   C{list} of C{str}
         """
         self.do_reset()
 
@@ -611,6 +821,18 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
     # --- end of get_configuration_basis (...) ---
 
     def create_conf_basis_for_arg_config(self, arg_config):
+        """
+        Creates a "configuration basis" from arg_config's outconfig files.
+
+        @raises NotImplementedError:  if arg_config does not provide
+                                      a configuration basis
+
+        @param arg_config:
+        @type  arg_config:  L{ConfigurationSourceArgConfig}
+
+        @return:  configuration basis
+        @rtype:   C{list} of C{str}
+        """
         outconfig_v = list(arg_config.iter_outconfig_paths())
         if not outconfig_v:
             raise NotImplementedError("no outconfig")
@@ -643,6 +865,36 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
 
 
 class CommandConfigurationSourceBase(PhasedConfigurationSourceBase):
+    """
+    A phased configuration source base class specialized
+    for running a single command that creates the configuration basis.
+
+    Derived classes must implement the following methods:
+
+    * init_from_def()
+    * init_from_settings()
+    * check_source_valid()
+    * do_parse_source_argv()  --  may return from super() here
+    * create_cmdv()           --  create the command to be run
+
+    In particular, do_get_conf_basis() and add_auto_var() are provided.
+    do_get_conf_basis() is split into two subphases,
+    command execution and config basis creation.
+
+    (Phases may of course be overridden or extended where meaningful.)
+
+    Additionally, this class offers helper methods for str-formatting commands.
+
+    @ivar proc_timeout:  command timeout in seconds, or None for no timeout
+                         Defaults to None,
+                         the attr can be (re-)set after __init__().
+    @type proc_timeout:  C{None} or C[int}|C{float}
+
+    @ivar return_codes_success:  set of exit codes that indicate success
+                                 Defaults to {os.EX_OK},
+                                 the attr can be (re-)set after __init__().
+    @type return_codes_success:  C{set} of C{int}
+    """
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -650,6 +902,13 @@ class CommandConfigurationSourceBase(PhasedConfigurationSourceBase):
         self.return_codes_success = {os.EX_OK, }
 
     def add_auto_var(self, varname, varkey):
+        """
+        command-running configuration sources support the full range
+        of automatic variables - outconfig, tmpfile, tmpdir.
+
+        @return:  "varname references an auto var?"
+        @rtype:   C{bool}
+        """
         if self.add_auto_var_outconfig(varname, varkey):
             return True
 
@@ -664,6 +923,23 @@ class CommandConfigurationSourceBase(PhasedConfigurationSourceBase):
     # --- end of add_auto_var (...) ---
 
     def format_cmdv(self, arg_config, cmdv, *, str_formatter=None):
+        """Formats a command using the dynamic string formatter.
+
+        @param   arg_config
+        @type    arg_config:       L{ConfigurationSourceArgConfig}
+        @param   cmdv:             command to be formatted
+        @type    cmdv:             C{list} of C{str}
+
+        @keyword str_formatter:    in order to avoid unnecessary instantiation
+                                   of a new str formatter, an existing one
+                                   may be passed via this keyword.
+                                   Otherwise, a new one is created.
+
+        @type    str_formatter:    C{None} | L{ConfigurationSourceStrFormatter}
+
+        @return:  formatted command
+        @rtype:   C{list} of C{str}
+        """
         if str_formatter is None:
             str_formatter = self.get_dynamic_str_formatter(arg_config)
         return str_formatter.format_list(cmdv)
@@ -671,17 +947,35 @@ class CommandConfigurationSourceBase(PhasedConfigurationSourceBase):
 
     @abc.abstractmethod
     def create_cmdv(self, arg_config):
+        """
+        Creates the command that will be run to get the configuration basis.
+
+        Derived classes must implement this method.
+        The returned should be a string or a list of strings (or tuple),
+        in either case it should already be formatted.
+        str-lists can be formatted with format_cmdv().
+
+        @param arg_config:
+        @type  arg_config:  L{ConfigurationSourceArgConfig}
+
+        @return:  command
+        @rtype:   C{list} of C{str}, or C{str}
+        """
         raise NotImplementedError()
 
-    def do_init_env(self, arg_config):
-        arg_config.env_vars.update(self.senv.get_env_vars())
-        if arg_config.has_tmpdir():
-            arg_config.env_vars["T"] = arg_config.tmpdir_path
-        else:
-            arg_config.env_vars["T"] = None  # deletes "T"
-    # ---
-
     def create_subproc(self, arg_config):
+        """
+        Creates the subprocess that produces the configuration basis.
+
+        Derived classes may override this, but implementing the create_cmdv()
+        method should be sufficient in most cases.
+
+        @param arg_config:
+        @type  arg_config:  L{ConfigurationSourceArgConfig}
+
+        @return:  subprocess (not started yet)
+        @rtype:   L{subproc.SubProc}
+        """
         return subproc.SubProc(
             self.create_cmdv(arg_config),
             logger=self.logger,
@@ -689,10 +983,64 @@ class CommandConfigurationSourceBase(PhasedConfigurationSourceBase):
             extra_env=arg_config.env_vars
         )
 
+    def do_init_env(self, arg_config):
+        """
+        Initializes the environment variables of arg_config as follows:
+
+        * adds all source env related environment variables
+          (e.g. SRCTREE, ARCH, KV)
+
+        * T: if a temporary dir has been requested for arg_config (likely),
+          sets T to its path. Otherwise, unsets T.
+
+        @param arg_config:  (will be modified)
+        @type  arg_config:  L{ConfigurationSourceArgConfig}
+
+        @return:  None (implicit)
+        """
+        arg_config.env_vars.update(self.senv.get_env_vars())
+        if arg_config.has_tmpdir():
+            arg_config.env_vars["T"] = arg_config.tmpdir_path
+        else:
+            arg_config.env_vars["T"] = None  # deletes "T"
+    # ---
+
     def create_conf_basis(self, arg_config, proc):
+        """
+        This method creates the configuration basis,
+        it is called after running the subprocess
+        (if it completed successfully).
+
+        Derived classes may override this method,
+        the default implementation redirects to
+        create_conf_basis_for_arg_config().
+
+        @param arg_config:
+        @type  arg_config:  L{ConfigurationSourceArgConfig}
+        @param proc:        subprocess  (completed successfully)
+        @type  proc:        L{subproc.SubProc}
+
+        @return:  configuration basis
+        @rtype:   C{list} of C{str}
+        """
         return self.create_conf_basis_for_arg_config(arg_config)
 
     def do_get_conf_basis(self, arg_config):
+        """
+        Gets the "configuration basis".
+
+        Runs a subprocess created with create_subproc() (--> create_cmdv()),
+        and calls create_conf_basis() to create the conf basis.
+
+        Subprocess errors raise an exception.
+        @raises ConfigurationSourceExecError:  subprocess error (or timeout)
+
+        @param arg_config:
+        @type  arg_config:  L{ConfigurationSourceArgConfig}
+
+        @return:  configuration basis
+        @rtype:   C{list} of C{str}
+        """
         with self.create_subproc(arg_config) as proc:
             try:
                 retcode = proc.join(
