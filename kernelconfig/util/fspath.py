@@ -29,7 +29,7 @@ def strip_relpath(relpath, *, _osp_sep=os.path.sep):
 
 
 def normalize_relpath(relpath, *, _osp_normpath=os.path.normpath):
-    """Remvoes "/" chars from the beginning and end of a relative path,
+    """Removes "/" chars from the beginning and end of a relative path,
     and normalizes it.
     """
     return _osp_normpath(strip_relpath(relpath))
