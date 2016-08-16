@@ -12,7 +12,7 @@ __all__ = ["Outfile", "TmpOutfile"]
 
 
 class AbstractOutfile(object, metaclass=abc.ABCMeta):
-    """An output file whose path is known at initialization time.
+    """Base class for output files.
 
     @param path:  path to the file (None if unknown, which should only
                   be used by subclasses)
@@ -90,6 +90,7 @@ class AbstractOutfile(object, metaclass=abc.ABCMeta):
 
 
 class Outfile(AbstractOutfile):
+    """An output file whose path is known at initialization time."""
     __slots__ = []
 
     def get_key(self):
