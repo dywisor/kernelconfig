@@ -572,6 +572,11 @@ It uses the <tt class="docutils literal">default</tt> <a class="reference intern
 <!-- N.B:
 
 ==comment== only works if $PWD is the top-level kernel source directory -->
+<p>It is <strong>not advised to run kernelconfig as root</strong>.
+Certain features involve execution of arbitrary code,
+namely configuration sources and package management integration.
+Write access to the kernel sources directory is not required,
+provided that <tt class="docutils literal"><span class="pre">--outconfig</span></tt> points to another location.</p>
 <p>It is also possible to specify the kernel sources directory by hand,
 creating the <tt class="docutils literal">.config</tt> file in this directory:</p>
 <pre class="literal-block">
