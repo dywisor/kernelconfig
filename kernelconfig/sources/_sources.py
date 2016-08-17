@@ -189,7 +189,7 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
             raise exc.ConfigurationSourceNotFound(source_key)
     # --- end of create_source_by_name (...) ---
 
-    def create_source_by_name_from_settings(self, subtype, args, data):
+    def get_source_from_settings(self, subtype, args, data):
         if data:
             raise exc.ConfigurationSourceInvalidError(
                 "curated source does not accept data"
@@ -208,7 +208,7 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
             )
         # --
 
-        conf_source = self.create_source_by_name(source_name)
+        conf_source = self.get_source(source_name)
         return (conf_source, conf_args)
     # ---
 
@@ -303,7 +303,12 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
 
         if source_type.is_source():
             # calling convention different from source_cls.new_from*
-            return self.create_source_by_name_from_settings(
+            #
+            # Note that already loaded sources will be re-used here,
+            # possibly ignoring the file search results from the
+            # guess-type block above.
+            #
+            return self.get_source_from_settings(
                 source_type.source_subtype, source_args, source_data
             )
 
