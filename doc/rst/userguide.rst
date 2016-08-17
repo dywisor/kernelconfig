@@ -516,6 +516,7 @@ kernelconfig accepts a number of options:
     ``<mode>`` must be either
     ``generate-config``,
     ``generate-modalias``,
+    ``print-installinfo``,
     ``list-source-names``, ``list-sources``, or ``help-sources``.
 
     ``help-source`` can not be specified with this option.
