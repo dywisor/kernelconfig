@@ -7,9 +7,7 @@ import collections.abc
 from ...abc import loggable
 
 
-__all__ = [
-    "AbstractConfigurationSource",
-]
+__all__ = ["AbstractConfigurationSource"]
 
 
 class AbstractConfigurationSource(
@@ -38,13 +36,12 @@ class AbstractConfigurationSource(
     # --- end of __hash__ (...) ---
 
     @abc.abstractmethod
-    def get_configuration_basis(self, *args, **kwargs):
+    def get_configuration_basis(self, argv):
         """
         Returns a configuration basis for the requested input parameters.
 
-        @param args:     unspecified for now
-        @param kwargs:   unspecified for now
-
+        @param argv:  argument list or None
+        @type  argv:  C{None} or C{list} of C{str}
 
         @return:  configuration basis (a list of config files)
         @rtype:   C{list} of C{str}

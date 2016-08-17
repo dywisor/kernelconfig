@@ -302,22 +302,25 @@ class AbstractConfigurationSources(
         return source
     # --- end of get_source (...) ---
 
-    def get_configuration_basis(self, source_name, *args, **kwargs):
+    def get_configuration_basis(self, source_name, source_argv=None):
         """
         Returns a configuration basis
         for the given configuration source and requested input parameters.
 
-        @param source_name:  configuration source name
-        @type  source_name:  C{str}
+        @param   source_name:  configuration source name
+        @type    source_name:  C{str}
 
-        @param args:         unspecified for now
-        @param kwargs:       unspecified for now
+        @keyword source_argv:  optional arguments passed to the source
+                               (get_configuration_basis())
+                               May be None for no args, defaults to None.
+        @type    source_argv:  C{None} or C{list} of C{str}
+
 
         @return:  configuration basis (a list of config files)
         @rtype:   C{list} of C{str}
         """
         source = self.get_source(source_name)
-        return source.get_configuration_basis(*args, **kwargs)
+        return source.get_configuration_basis(source_argv)
     # --- end of get_configuration_basis (...) ---
 
 # --- end of AbstractConfigurationSources ---
