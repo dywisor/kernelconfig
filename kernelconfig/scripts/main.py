@@ -781,34 +781,41 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
     # --- end of do_main_script_genmodalias (...) ---
 
     def do_main(self, arg_config):
-        script_mode = arg_config["script_mode"]
+        script_mode_config = arg_config["script_mode"]
 
-        if isinstance(script_mode, str):
-            script_mode = (script_mode, None)
+        if not script_mode_config:
+            # redundant branch, could or with isinstance(_, str)
+            script_mode = None
+            script_arg = None
+        elif isinstance(script_mode_config, str):
+            script_mode = script_mode_config
+            script_arg = None
+        else:
+            script_mode, script_arg = script_mode_config
         # --
 
-        if not script_mode or script_mode[0] == "generate-config":
+        if not script_mode or script_mode == "generate-config":
             return self.do_main_script_genconfig(arg_config)
 
-        elif script_mode[0] == "list-source-names":
+        elif script_mode == "list-source-names":
             return self.do_main_script_list_sources(arg_config, True)
 
-        elif script_mode[0] == "list-sources":
+        elif script_mode == "list-sources":
             return self.do_main_script_list_sources(arg_config, False)
 
-        elif script_mode[0] == "help-sources":
+        elif script_mode == "help-sources":
             return self.do_main_script_help_sources(arg_config)
 
-        elif script_mode[0] == "help-source":
-            return self.do_main_script_help_source(arg_config, script_mode[1])
+        elif script_mode == "help-source":
+            return self.do_main_script_help_source(arg_config, script_arg)
 
-        elif script_mode[0] == "generate-modalias":
+        elif script_mode == "generate-modalias":
             return self.do_main_script_genmodalias(arg_config)
 
-        elif script_mode[0] == "eval-config-check":
+        elif script_mode == "eval-config-check":
             return self.do_main_script_eval_config_check(arg_config)
 
-        elif script_mode[0] == "print-installinfo":
+        elif script_mode == "print-installinfo":
             return self.do_main_script_print_installinfo(arg_config)
 
         else:
