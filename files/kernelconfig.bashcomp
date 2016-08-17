@@ -116,6 +116,7 @@ _kernelconfig_comp() {
     # script modes that can be specified with --script-mode
     SCRIPT_MODES=(
         generate-config
+        get-config
         generate-modalias
         print-installinfo
         eval-config-check
