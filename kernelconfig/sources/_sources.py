@@ -4,6 +4,8 @@
 import os.path
 import shlex
 
+from ..util import fs
+
 from .abc import sources as _sources_abc
 from .abc import exc
 from . import sourcedef
@@ -311,7 +313,19 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
         source_def_str, source_data = read_settings()
         if not source_def_str:
             assert not source_data
-            return self.senv.source_info.get_filepath(".config")
+            return (True, None)
+            # alternatively, set source_def_str and continue:
+            #   source_def_str = "file \"{!s}\"".format(
+            #       self.senv.source_info.get_filepath(".config")
+            #   )
+            #
+            # or create a "default" source with an arbitrary type.
+            # Currently, <srctree>/.config is loaded if no source is
+            # configured, so simply return a dummy value here
+            # and let get_configuration_basis_from_settings() handle this
+            # without involving conf source objects.
+            #
+        # --
 
         source_def = shlex.split(source_def_str)
 
@@ -415,7 +429,20 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
             self.get_configuration_source_from_settings(settings)
         )
 
-        return conf_source.get_configuration_basis(conf_args)
+        if conf_source is True:
+            assert conf_args is None
+
+            default_input_config = (
+                self.senv.source_info.get_filepath(".config")
+            )
+
+            if not fs.is_readable_file(default_input_config):
+                raise exc.ConfigurationSourceNotFound(default_input_config)
+
+            return [default_input_config]
+
+        else:
+            return conf_source.get_configuration_basis(conf_args)
     # --- end of get_configuration_basis_from_settings (...) ---
 
 # --- end of ConfigurationSources ---
