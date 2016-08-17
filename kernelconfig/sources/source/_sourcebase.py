@@ -605,6 +605,20 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         """
         pass
 
+    def create_arg_config(self):
+        """
+        Creates a new conf source runtime config/environment
+        for a get_configuration_basis() cycle,
+        which is passed around to the various phase methods.
+
+        No parameters are accepted, this method should be "self"-sufficient.
+        The default implementation creates a ConfigurationSourceArgConfig.
+
+        @return:  configuration source "arg config"
+        @rtype:   [sub-of] L{ConfigurationSourceArgConfig}
+        """
+        return _argconfig.ConfigurationSourceArgConfig()
+
     @abc.abstractmethod
     def do_parse_source_argv(self, argv):
         """Parses argv and creates an arg config object.
@@ -626,7 +640,7 @@ class PhasedConfigurationSourceBase(ConfigurationSourceBase):
         @return:  arg config
         @rtype:   L{ConfigurationSourceArgConfig}
         """
-        arg_config = _argconfig.ConfigurationSourceArgConfig()
+        arg_config = self.create_arg_config()
 
         if self.arg_parser is not None:
             # allow None argv
