@@ -54,6 +54,30 @@ _kernelconfig_confdir_find() {
     2>/dev/null find "${search_dirs[@]}" "${@}"
 }
 
+
+# @stdout _kernelconfig_find_source_names()
+#
+#   Prints a list of all "curated source" names to stdout.
+#
+_kernelconfig_find_source_names() {
+    # sort -u is omitted here, compgen takes care of deduplicating
+    _kernelconfig_confdir_find -A /sources \
+        -maxdepth 1 -type f -not -name skel | \
+        xargs -r -n 1 -I '{}' basename '{}' .def | \
+        grep -v -- '[[:space:]]'
+}
+
+
+# @stdout _kernelconfig_find_source_names_inconfig()
+#
+#  Prints a list of all "curated source" names to stdout,
+#  each name is prefixed with a "@".
+#
+_kernelconfig_find_source_names_inconfig() {
+    _kernelconfig_find_source_names | sed -e 's=^=@='
+}
+
+
 _kernelconfig_comp() {
     local cur
     local prev
@@ -176,13 +200,43 @@ _kernelconfig_comp() {
             # <dir>
             _filedir -d
         ;;
-        --config|-I|-O|--outconfig|-H|--hwdetect)
+        -I|-O|--outconfig|-H|--hwdetect)
             # various options followed by a <file> arg
             _filedir
         ;;
         -j|--jobs)
             # <int>
             true
+        ;;
+        --config)
+            # <file> or "@<name> [<arg>...]",  name of a curated source
+
+            # distinction of cases,
+            #  try to avoid _kernelconfig_find_source_names()
+            case "${cur}" in
+                "@"*" "*)
+                    # @<name> {<arg>}
+                    #         ^^^^^^^
+                    # -- no completion for curated source (sub) parsers
+                    :
+                ;;
+                "@"*)
+                    # @<name>
+                    #  ^^^^^^
+                    w="$(_kernelconfig_find_source_names_inconfig)"
+                    COMPREPLY=( $( compgen -W "${w}" -- "${cur}" ) )
+                ;;
+                "")
+                    # <file> or @<name>
+                    _filedir
+                    w="$(_kernelconfig_find_source_names_inconfig)"
+                    COMPREPLY+=( $( compgen -W "${w}" -- "${cur}" ) )
+                ;;
+                *)
+                    # <file> only
+                    _filedir
+                ;;
+            esac
         ;;
         -a|--arch)
             # target architecture
@@ -246,12 +300,7 @@ _kernelconfig_comp() {
         ;;
         --help-source)
             # followed by the name of a configuration source
-            w="$( \
-                _kernelconfig_confdir_find -A /sources \
-                    -maxdepth 1 -type f -not -name skel | \
-                    xargs -r -n 1 -I '{}' basename '{}' .def | \
-                    grep -v -- '[[:space:]]' \
-            )"
+            w="$( _kernelconfig_find_source_names )"
             COMPREPLY+=( $( compgen -W "${w}" -- "${cur}" ) )
         ;;
         *)
