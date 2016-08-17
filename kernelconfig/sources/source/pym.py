@@ -8,7 +8,7 @@ import string
 import sys
 
 from ...abc import loggable
-# from ...util import fs
+from ...util import osmisc
 
 from ..abc import exc
 from .. import pymenv
@@ -150,13 +150,8 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
         )
 
         # not really necessary, but enforce cwd=tmpdir for the module
-        old_working_dir = os.getcwd()
-        try:
-            os.chdir(run_env.get_tmpdir_path())
+        with osmisc.Pushd(run_env.get_tmpdir_path()):
             ret = arg_config.pym.call("run", env=run_env)
-
-        finally:
-            os.chdir(old_working_dir)
 
         if not ret and ret is not None:
             raise exc.ConfigurationSourceExecError()
