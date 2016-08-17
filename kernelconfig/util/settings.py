@@ -11,6 +11,13 @@ __all__ = ["SettingsFileReader"]
 
 
 class SettingsFileReader(collections.abc.Mapping):
+    """
+    The settings file reader, provides dict-like access to the
+    various sections after reading the file(s).
+
+    @ivar data:  parsed sections,  section name => text lines mapping
+    @type data:  C{dict} :: C{str} => C{list} of C{str}
+    """
 
     # ^"["<name>"]" ["#"...]$
     SECTION_REGEXP = re.compile(

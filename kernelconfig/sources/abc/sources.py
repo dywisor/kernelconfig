@@ -3,6 +3,7 @@
 
 import abc
 import collections.abc
+import sys
 
 from ...abc import loggable
 from . import exc
@@ -18,7 +19,9 @@ class AbstractConfigurationSources(
     A collection of 'dynamic' sources providing configuration basis objects.
 
     Usually, only a subset of all sources is required at runtime,
-    and this class takes care of lazy-loading the sources.
+    and this class takes care of lazy-loading the sources,
+    derived classes must be implement the actual creation
+    (but not the lazy-load logic).
 
     @ivar _sources:  a mapping of already loaded configuration sources
     @type _sources:  dict :: C{str} => sub-of L{AbstractConfigurationSource}
@@ -54,7 +57,6 @@ class AbstractConfigurationSources(
         raise NotImplementedError()
     # --- end of create_source_by_name (...) ---
 
-    @abc.abstractmethod
     def load_available_sources(self):
         """
         Tries to construct and add all available configuration sources.
@@ -75,7 +77,26 @@ class AbstractConfigurationSources(
                      C{dict} :: C{str} => None | exc_info 3-tuple
                   )
         """
-        raise NotImplementedError()
+        sources_loaded = []
+        sources_failed = {}
+
+        for source_name, source_info in self.iter_available_sources_info():
+            #  source_info discarded
+            source, source_exc_info = self.load_source(source_name)
+
+            if source_exc_info is not None:
+                assert source_name not in sources_failed
+                sources_failed[source_name] = source_exc_info
+
+            elif source is None:
+                # false positive
+                pass
+
+            else:
+                sources_loaded.append(source.name)
+        # --
+
+        return (sources_loaded, sources_failed)
     # --- end of load_available_sources (...) ---
 
     @abc.abstractmethod
@@ -301,6 +322,45 @@ class AbstractConfigurationSources(
         self.register_source(source, source_key)
         return source
     # --- end of get_source (...) ---
+
+    def load_source(self, source_name):
+        """Tries to return a configuration source, referenced by name.
+
+        Mostly identical to get_source(),
+        but catches errors and returns a 2-tuple (conf_source, exc_info).
+        conf_source is always None on errors,
+        and exc_info may be None even on errors.
+
+        The following result tuples are possible:
+        * (None,   None)    --  error: source not found
+        * (None,  <obj>)    --  error: source failed to load
+        * (<obj>,  None)    --  success: source loaded
+
+        This method is named "load_source" because of its intended use case,
+        load_available_sources().
+
+        @param source_name:  configuration source name
+        @type  source_name:  C{str}
+
+        @return:  2-tuple (configuration source object, exc_info),
+                  not-None exc_info implies None configuration source object
+        @rtype:   2-tuple (
+                    C{None} or subclass of L{AbstractConfigurationSource},
+                    C{None} or exc_info 3-tuple
+                  )
+        """
+        try:
+            source = self.get_source(source_name)
+
+        except exc.ConfigurationSourceNotFound:
+            return (None, None)
+
+        except exc.ConfigurationSourceError:
+            return (None, sys.exc_info())
+
+        else:
+            return (source, None)
+    # --- end of load_source (...) ---
 
     def get_configuration_basis(self, source_name, source_argv=None):
         """

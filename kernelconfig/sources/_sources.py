@@ -3,7 +3,6 @@
 
 import os.path
 import shlex
-import sys
 
 from .abc import sources as _sources_abc
 from .abc import exc
@@ -16,6 +15,30 @@ __all__ = ["ConfigurationSources"]
 
 
 class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
+    """
+    A collection of configuration sources.
+
+    From the configuration sources container perspective,
+    a configuration source has two (three) states:
+
+    * loaded      -- configuration source has been loaded
+                     (or, conf source object has been registered
+                     with register_source())
+    * available   -- configuration could be loaded
+                     The necessary information (i.e. files) exists, but it
+                     is unknown whether the source would load successfully
+                     and whether it is supported (e.g. target architecture)
+    * unavailable -- configuration source does exist
+
+    Initially, no conf sources are loaded, but this class
+    has enough information to create 'available' sources on demand.
+
+    See also abc.sources.AbstractConfigurationSources.
+
+    @ivar senv:  configuration source environment,
+                 shared with all configuration sources
+    @type senv:  L{ConfigurationSourcesEnv}
+    """
 
     def __init__(self, install_info, source_info, **kwargs):
         super().__init__(**kwargs)
@@ -29,47 +52,30 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
         # fs lookup is done sources env, dispatch
         return self.senv.iter_available_sources_info()
 
-    def load_source(self, source_name):
-        # FIXME: missing in abc
-        try:
-            source = self.get_source(source_name)
-
-        except exc.ConfigurationSourceNotFound:
-            return (None, None)
-
-        except exc.ConfigurationSourceError:
-            return (None, sys.exc_info())
-
-        else:
-            return (source, None)
-    # ---
-
-    def load_available_sources(self):
-        sources_loaded = []
-        sources_failed = {}
-
-        for source_name, source_info in self.iter_available_sources_info():
-            #  source_info discarded
-            source, source_exc_info = self.load_source(source_name)
-
-            if source_exc_info is not None:
-                assert source_name not in sources_failed
-                sources_failed[source_name] = source_exc_info
-
-            elif source is None:
-                # false positive
-                pass
-
-            else:
-                sources_loaded.append(source.name)
-        # --
-
-        return (sources_loaded, sources_failed)
-    # --- end of load_available_sources (...) ---
-
     def _create_curated_source_def_by_name_from_files(
         self, source_key, source_def_file, source_script_file
     ):
+        """
+        This method should only be used by _create_source_by_name_from_files().
+        It creates the source definition data from def_file/script_file
+        and returns a 2-tuple (source def data, source type descriptor).
+
+        At least one of source_def_file, source_script_file must be set
+        to a not-None value. All not-None files should exist.
+
+        @raises ConfigurationSourceNotFound:
+        @raises ConfigurationSourceInvalidError:
+        @raises ConfigurationSourceMissingType:
+        @raises ConfigurationSourceError:
+
+        @param source_key:          normalized source name
+                                    (get_source_name_key())
+        @param source_def_file:     source definition file or None
+        @param source_script_file:  source script file or None
+
+        @return:  2-tuple (def data, source type descriptor)
+        @rtype:   2-tuple (L{CuratedSourceDef}, L{ConfigurationSourceType})
+        """
         self.logger.debug("Initializing curated source %s", source_key)
 
         source_def = sourcedef.CuratedSourceDef.new_from_ini(
@@ -138,6 +144,28 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
     def _create_source_by_name_from_files(
         self, source_key, source_def_file, source_script_file
     ):
+        """
+        This method should only be used by create_source_by_name().
+        It loads the source definition data
+        (see _create_curated_source_def_by_name_from_files()),
+        and creates a configuration source object.
+
+        At least one of source_def_file, source_script_file must be set
+        to a not-None value. All not-None files should exist.
+
+        @raises ConfigurationSourceNotFound:
+        @raises ConfigurationSourceInvalidError:
+        @raises ConfigurationSourceMissingType:
+        @raises ConfigurationSourceError:
+
+        @param source_key:          normalized source name
+                                    (get_source_name_key())
+        @param source_def_file:     source definition file or None
+        @param source_script_file:  source script file or None
+
+        @return:  configuration source object
+        @rtype:   subclass of L{AbstractConfigurationSource}
+        """
         source_def, source_type = (
             self._create_curated_source_def_by_name_from_files(
                 source_key, source_def_file, source_script_file
@@ -189,7 +217,20 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
             raise exc.ConfigurationSourceNotFound(source_key)
     # --- end of create_source_by_name (...) ---
 
-    def get_source_from_settings(self, subtype, args, data):
+    def _get_curated_source_from_settings(self, subtype, args, data):
+        """
+        Condition: subtype||args -- subtype and args cannot be both empty
+
+        @param subtype:  either None or name of the config source
+        @param args:     mixed init_from_def(), get_configuration_basis() args
+                         If subtype is empty, the first arg is used as
+                         name of the curated source
+        @param data:     data for init_from_def()
+                         Note that sources-from-def usually do not accept data
+
+        @return:  2-tuple (configuration source object, args remainder)
+        @rtype:   2-tuple (L{AbstractConfigurationSource}, C{list} of C{str})
+        """
         if data:
             raise exc.ConfigurationSourceInvalidError(
                 "curated source does not accept data"
@@ -213,11 +254,46 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
     # ---
 
     def get_configuration_source_from_settings(self, settings):
+        """Returns a configuration source.
+        Its name and related information is read from the [source] section
+        of the given pre-parsed settings file.
+
+        Already loaded sources are considered,
+        and newly created sources may be added to this container.
+        ("curated sources" are added, but "settings-only" sources are not.)
+
+        @param settings:  pre-parsed settings file
+        @type  settings:  L{SettingsFileReader}
+                          or C{dict} :: C{str} => C{list} of C{str}
+
+        @return:  2-tuple (configuration source object, args)
+                  or 2-tuple (True, None) if no source configured
+        """
         def read_settings():
+            """
+            @return:  2-tuple (source definition line, source data)
+            @rtype:   2-tuple (C{str}, C{list} of C{str})
+            """
+            # format of the settings file, [source] section:
+            #
+            #   [source]
+            #   [<type>] <arg> [<arg>...]
+            #   [<data line 1>]
+            #   ...
+            #   [<data line N>]
+            #
+            # * comment lines are ignored
+            # * the first line may span over multiple lines,
+            #   separated with a backslash char (line cont.)
+            #
+            # So basically, the non-comment, non-empty first line is the
+            # "source definition" line, and all remaining lines are "data".
+            #
             source_def = []
 
             data_gen = settings.iter_section("source", skip_comments=True)
 
+            # handle backslash line continuation
             for line in data_gen:
                 assert line
                 if line[-1] == "\\":
@@ -317,7 +393,7 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
             # possibly ignoring the file search results from the
             # guess-type block above.
             #
-            return self.get_source_from_settings(
+            return self._get_curated_source_from_settings(
                 source_type.source_subtype, source_args, source_data
             )
 
@@ -342,4 +418,4 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
         return conf_source.get_configuration_basis(conf_args)
     # --- end of get_configuration_basis_from_settings (...) ---
 
-# --- end of ConfigurationSourcesBase ---
+# --- end of ConfigurationSources ---
