@@ -19,6 +19,7 @@ import kernelconfig.kernel.hwdetection.modalias.cachedir
 import kernelconfig.kernel.hwdetection.modalias.modulesdir
 import kernelconfig.kconfig.config.gen
 import kernelconfig.pm.portagevdb
+import kernelconfig.util.fileio
 import kernelconfig.util.fs
 import kernelconfig.util.misc
 import kernelconfig.util.multidir
@@ -132,6 +133,10 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                 (
                     "generate-config", None,
                     "generate a .config file (default mode)"
+                ),
+                (
+                    "get-config", None,
+                    "get the .config from the configuration source only"
                 ),
                 (
                     "generate-modalias", None,
@@ -669,6 +674,43 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
     # --- end of do_main_script_genconfig (...) ---
 
+    def do_main_script_getconfig(self, arg_config):
+        read_text_file_lines = kernelconfig.util.fileio.read_text_file_lines
+
+        self.do_main_setup_logging(arg_config)
+        self.do_main_load_settings(arg_config)
+        if self.settings is None:
+            raise AssertionError("settings not loaded!")
+        self.do_main_setup_source_info(arg_config)
+
+        # default output config
+        if not arg_config.get("outconfig"):
+            arg_config["outconfig"] = self.source_info.get_filepath(".config")
+        # --
+
+        #  the output config file must be backed up
+        #  before loading the input config
+        #
+        #  Otherwise, the wrong file could get copied,
+        #  e.g. when running in-source "make defconfig"
+        #  with outfile <srctree>/.config
+        #
+        kernelconfig.util.fs.prepare_output_file(arg_config["outconfig"])
+
+        # get the input configuration file(s)
+        input_config_files = self.do_main_get_configuration_basis(arg_config)
+        assert input_config_files  # get_conf_basis() guarantees this
+
+        # now write the outconfig file,
+        #  using fileio.read_text_file_lines() here,
+        #  since it handles compressed files (as would read_config_files())
+        with open(arg_config["outconfig"], "wt") as outfh:
+            for inconfig in input_config_files:
+                for lino, line in read_text_file_lines(inconfig, rstrip=False):
+                    outfh.write(line)
+        # --
+    # --- end of do_main_script_getconfig (...) ---
+
     def do_main_script_eval_config_check(self, arg_config):
         self.do_main_setup_logging(arg_config)
         self.do_main_setup_source_info(arg_config)
@@ -835,6 +877,9 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         if not script_mode or script_mode == "generate-config":
             return self.do_main_script_genconfig(arg_config)
+
+        elif script_mode == "get-config":
+            return self.do_main_script_getconfig(arg_config)
 
         elif script_mode == "list-source-names":
             return self.do_main_script_list_sources(arg_config, True)
