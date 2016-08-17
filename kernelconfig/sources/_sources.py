@@ -264,12 +264,21 @@ class ConfigurationSources(_sources_abc.AbstractConfigurationSources):
                 #
                 # (a) is source_def[0] the name of a curated source?
                 source_key = self.get_source_name_key(source_def[0])
-                try:
-                    sfiles = self.senv.get_source_def_files(source_key)
-                except ValueError:
-                    sfiles = None
+                if source_key in self:
+                    # (a1) ... that is maybe already loaded?
+                    is_curated_source = True
 
-                if sfiles and any(sfiles):
+                else:
+                    # (a2) ... for which def/script files can be found?
+                    try:
+                        sfiles = self.senv.get_source_def_files(source_key)
+                    except ValueError:
+                        is_curated_source = False
+                    else:
+                        is_curated_source = any(sfiles)
+                # --
+
+                if is_curated_source:
                     self.logger.debug("%s is a curated source", source_def[0])
 
                     # could return directly from
