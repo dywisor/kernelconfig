@@ -129,44 +129,68 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         )
 
         def add_script_mode_args():
+            ScriptMode = collections.namedtuple(
+                "ScriptMode", "name opts help kwargs"
+            )
+            # and "type" in <script mode>.kwargs indicates that
+            # it requires an arg and cannot be specified with --script-mode
+
             script_modes = [
-                (
+                ScriptMode(
                     "generate-config", None,
-                    "generate a .config file (default mode)"
+                    "generate a .config file (default mode)",
+                    None
                 ),
-                (
+                ScriptMode(
                     "get-config", None,
-                    "get the .config from the configuration source only"
+                    "get the .config from the configuration source only",
+                    None
                 ),
-                (
+                ScriptMode(
+                    "list-source-names", None,
+                    "list available curated sources",
+                    None
+                ),
+                ScriptMode(
+                    "list-sources", None,
+                    "list available curated sources and their paths",
+                    None
+                ),
+                ScriptMode(
+                    "help-sources", None,
+                    "list available curated sources and their usage",
+                    None
+                ),
+                ScriptMode(
+                    "help-source", None,
+                    "print the help message of a curated source",
+                    {
+                        "metavar": "<name>",
+                        "type": lambda w: (
+                            ("help-source", arg_types.arg_nonempty(w))
+                        ),
+                    }
+                ),
+                ScriptMode(
                     "generate-modalias", None,
                     (
                         "create files for modalias-based hardware-detection\n"
                         "WARNING: this takes a lot of time!"
-                    )
+                    ),
+                    None
                 ),
-                (
+                ScriptMode(
+                    "print-installinfo", None,
+                    "list data/config directories and their status",
+                    None
+                ),
+                ScriptMode(
                     "eval-config-check", None,
                     (
                         "TESTING ONLY: re-evaluate CONFIG_CHECK,\n"
                         "comparing it against <srctree>"
-                    )
-                ),
-                (
-                    "print-installinfo", None,
-                    "list data/config directories and their status"
-                ),
-                (
-                    "list-source-names", None,
-                    "list available curated sources"
-                ),
-                (
-                    "list-sources", None,
-                    "list available curated sources and their paths"
-                ),
-                (
-                    "help-sources", None,
-                    "list available curated sources and their usage"
+                    ),
+                    None
                 ),
             ]
 
@@ -178,28 +202,29 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             script_mode_mut_group.add_argument(
                 "--script-mode",
                 dest="script_mode", default=None,
-                choices=[xv[0] for xv in script_modes],
+                choices=[
+                    xv.name
+                    for xv in script_modes
+                    if (not xv.kwargs or "type" not in xv.kwargs)
+                ],
                 help="set script mode"
             )
 
-            for mode_name, mode_opts, mode_help in script_modes:
-                mode_args = mode_opts or ["--{}".format(mode_name)]
-                mode_kwargs = {
+            for mode in script_modes:
+                mode_args = mode.opts or ["--{}".format(mode.name)]
+                mode_kwargs = (mode.kwargs.copy() if mode.kwargs else {})
+                mode_kwargs.update({
                     "dest": "script_mode",
                     "default": argparse.SUPPRESS,
-                    "action": "store_const",
-                    "const": (mode_name, None),
-                    "help": mode_help
-                }
+                    "help": mode.help
+                })
+
+                if "type" not in mode_kwargs:
+                    mode_kwargs["action"] = "store_const"
+                    mode_kwargs["const"] = (mode.name, None)
+
                 script_mode_mut_group.add_argument(*mode_args, **mode_kwargs)
             # --
-
-            script_mode_mut_group.add_argument(
-                "--help-source", metavar="<name>",
-                dest="script_mode", default=argparse.SUPPRESS,
-                type=lambda w: ("help-source", arg_types.arg_nonempty(w)),
-                help="print help of the given curated source"
-            )
         # ---
 
         kernelconfig.util.argutil.UsageAction.attach_to(parser)
