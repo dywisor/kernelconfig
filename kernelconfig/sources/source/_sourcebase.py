@@ -135,6 +135,10 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         They may call super(), but the abstract implementation does not
         provide any functionality and returns the input args unmodified.
 
+        This method does not have to raise exceptions for all errors cases,
+        check_source_valid() will always be called after init_from_*(),
+        which should then raise the exception.
+
         @param subtype:          source subtype,
                                  only meaningful for certain conf sources,
                                  e.g. "script"
@@ -199,6 +203,10 @@ class ConfigurationSourceBase(_source_abc.AbstractConfigurationSource):
         Derived classes must implement this method.
         They may call super(), the implementation of the abstract base class
         creates the argument parser and attaches it to self.arg_parser.
+
+        This method does not have to raise exceptions for all errors cases,
+        check_source_valid() will always be called after init_from_*(),
+        which should then raise the exception.
 
         @param source_def:  config source definition data, a dict-like object
         @type  source_def:  L{CuratedSourceDef}
