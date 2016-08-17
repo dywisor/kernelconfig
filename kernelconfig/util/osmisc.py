@@ -14,6 +14,7 @@ __all__ = [
     "which",
     "which_sbin",
     "envbool_nonempty",
+    "Pushd",
 ]
 
 
@@ -96,3 +97,58 @@ def envbool_nonempty(env_varname, fallback=None, *, env=None):
     else:
         return bool(value)
 # --- end of envbool_nonempty (...) ---
+
+
+class Pushd(object):
+    """
+    Temporarily changes the working directory,
+    meant to be used with with-statements:
+
+       >>> with Pushd("/some/where"):
+       >>>     do_something()
+
+    The working directory is changed when __enter__() is called (i.e. with <>),
+    and restored when __exit__() is called ("end of with").
+
+    Can be used multiple times, but not recursively
+    (that is, some Pushd object __enter__-ed multiple times).
+    The following example is OK:
+
+       >>> pushd_a = Pushd("/some/where/a")
+       >>>
+       >>> with pushd_a:
+       >>>     with Pushd("/some/where/b"):
+       >>>         do_something()
+       >>>
+       >>> with pushd_a:
+       >>>     do_something()
+       >>>
+
+    @ivar _dirpath:
+    @ivar _oldcwd:
+    """
+    __slots__ = ["_dirpath", "_oldcwd"]
+
+    def __init__(self, dirpath):
+        super().__init__()
+        self._oldcwd = None
+        self._dirpath = dirpath
+
+    def _chdir(self):
+        if self._oldcwd is None:
+            self._oldcwd = os.getcwd()
+        else:
+            raise AssertionError("cannot chdir recursively")
+        os.chdir(self._dirpath)
+
+    def __enter__(self):
+        self._chdir()
+        return self
+
+    def __exit__(self, exc_type, exc_value, exc_traceback):
+        oldcwd = self._oldcwd
+        if oldcwd:
+            os.chdir(oldcwd)
+        self._oldcwd = None
+
+# --- end of Pushd ---
