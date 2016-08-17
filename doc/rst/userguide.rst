@@ -370,6 +370,24 @@ kernelconfig accepts a number of options:
 
     Not set by default.
 
+--config <source>
+
+    Instead of a file, the `name of a curated source`_ prefixed
+    with an at-sign ``@`` may also be given, optionally followed
+    by parameters separated with whitespace,
+    that are passed as-is to the configuration source.
+
+    If parameters are specified, the ``<source>`` must be quoted.
+
+    Examples::
+
+            --config @ubuntu
+            --config "@fedora --pae --release f23"
+
+    See ``--list-sources`` for a complete list of available configuration
+    sources, and ``--help-source <name>`` for parameters supported by
+    a particular source.
+
 -I <file>
 
     File with additional kernel configuration modifications.
@@ -433,6 +451,17 @@ kernelconfig accepts a number of options:
 
 --generate-config
     Generate a kernel configuration. This is the default mode.
+
+--get-config
+
+    Retrieve the input configuration, but do not generate a configuration.
+    Instead, write the input configuration to ``--outfile`` directly.
+
+    This mode is only meaningful for configuration sources
+    that are not local files.
+
+    Together with ``--config @<name>``,
+    it can be used for testing out configuration sources.
 
 .. _\-\-generate\-modalias:
 
@@ -515,6 +544,7 @@ kernelconfig accepts a number of options:
 
     ``<mode>`` must be either
     ``generate-config``,
+    ``get-config``,
     ``generate-modalias``,
     ``print-installinfo``,
     ``list-source-names``, ``list-sources``, or ``help-sources``.
@@ -650,6 +680,8 @@ Run ``kernelconfig --list-sources``
 to get a list of potential curated source names.
 and ``kernelconfig --help-source <name>``
 provides information about a particular source, including its parameters.
+
+.. _name of a curated source:
 
 Currently, the following curated sources are available:
 
