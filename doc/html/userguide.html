@@ -672,6 +672,23 @@ or a relative path starting with <tt class="docutils literal">./</tt>.</p>
 instead of the source configured in the settings file.</p>
 <p class="last">Not set by default.</p>
 </td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">--config <var>&lt;source&gt;</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td><p class="first">Instead of a file, the <a class="reference internal" href="#name-of-a-curated-source">name of a curated source</a> prefixed
+with an at-sign <tt class="docutils literal">&#64;</tt> may also be given, optionally followed
+by parameters separated with whitespace,
+that are passed as-is to the configuration source.</p>
+<p>If parameters are specified, the <tt class="docutils literal">&lt;source&gt;</tt> must be quoted.</p>
+<p>Examples:</p>
+<pre class="literal-block">
+--config &#64;ubuntu
+--config &quot;&#64;fedora --pae --release f23&quot;
+</pre>
+<p class="last">See <tt class="docutils literal"><span class="pre">--list-sources</span></tt> for a complete list of available configuration
+sources, and <tt class="docutils literal"><span class="pre">--help-source</span> &lt;name&gt;</tt> for parameters supported by
+a particular source.</p>
+</td></tr>
 <tr><td class="option-group">
 <kbd><span class="option">-I <var>&lt;file&gt;</var></span></kbd></td>
 <td><p class="first">File with additional kernel configuration modifications.
@@ -732,6 +749,15 @@ are allowed if no better candidates exist.</p>
 <kbd><span class="option">--generate-config</span></kbd></td>
 </tr>
 <tr><td>&nbsp;</td><td>Generate a kernel configuration. This is the default mode.</td></tr>
+<tr><td class="option-group">
+<kbd><span class="option">--get-config</span></kbd></td>
+<td><p class="first">Retrieve the input configuration, but do not generate a configuration.
+Instead, write the input configuration to <tt class="docutils literal"><span class="pre">--outfile</span></tt> directly.</p>
+<p>This mode is only meaningful for configuration sources
+that are not local files.</p>
+<p class="last">Together with <tt class="docutils literal"><span class="pre">--config</span> &#64;&lt;name&gt;</tt>,
+it can be used for testing out configuration sources.</p>
+</td></tr>
 </tbody>
 </table>
 <table class="docutils option-list" frame="void" id="generate-modalias" rules="none">
@@ -820,7 +846,9 @@ Otherwise, print out why it is unavailable.</p>
 the script mode can be given via this option.</p>
 <p><tt class="docutils literal">&lt;mode&gt;</tt> must be either
 <tt class="docutils literal"><span class="pre">generate-config</span></tt>,
+<tt class="docutils literal"><span class="pre">get-config</span></tt>,
 <tt class="docutils literal"><span class="pre">generate-modalias</span></tt>,
+<tt class="docutils literal"><span class="pre">print-installinfo</span></tt>,
 <tt class="docutils literal"><span class="pre">list-source-names</span></tt>, <tt class="docutils literal"><span class="pre">list-sources</span></tt>, or <tt class="docutils literal"><span class="pre">help-sources</span></tt>.</p>
 <p class="last"><tt class="docutils literal"><span class="pre">help-source</span></tt> can not be specified with this option.</p>
 </td></tr>
@@ -946,7 +974,7 @@ supported by the source, and refuses to continue if not.</p>
 to get a list of potential curated source names.
 and <tt class="docutils literal">kernelconfig <span class="pre">--help-source</span> &lt;name&gt;</tt>
 provides information about a particular source, including its parameters.</p>
-<p>Currently, the following curated sources are available:</p>
+<p id="name-of-a-curated-source">Currently, the following curated sources are available:</p>
 <p>CentOS</p>
 <blockquote>
 <p>Supported architectures: ppc64, ppc64le, s390x, x86, x86_64</p>
@@ -2074,7 +2102,7 @@ which can be read with <tt class="docutils literal">pydoc kernelconfig.sources.p
 </div>
 <div class="footer">
 <hr class="footer" />
-Generated on: 2016-08-15.
+Generated on: 2016-08-17.
 
 </div>
 </body>
