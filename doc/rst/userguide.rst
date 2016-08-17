@@ -253,6 +253,11 @@ It uses the ``default`` `settings`_ and creates a ``.config`` file.
 
     ==comment== only works if $PWD is the top-level kernel source directory
 
+It is **not advised to run kernelconfig as root**.
+Certain features involve execution of arbitrary code,
+namely configuration sources and package management integration.
+Write access to the kernel sources directory is not required,
+provided that ``--outconfig`` points to another location.
 
 It is also possible to specify the kernel sources directory by hand,
 creating the ``.config`` file in this directory::
