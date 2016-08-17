@@ -5,6 +5,7 @@ import argparse
 import collections
 import logging
 import os.path
+import shlex
 import sys
 
 
@@ -40,10 +41,21 @@ ModulesDirArgConfig = collections.namedtuple(
     "ModulesDirArgConfig", "path is_optional"
 )
 
+InconfigArgConfig = collections.namedtuple(
+    "InconfigArgConfig", "is_curated_source path"
+)
+
 
 class KernelConfigArgTypes(kernelconfig.util.argutil.ArgTypes):
 
     NONE_WORDS = frozenset({"none", "_"})
+
+    def arg_inconfig(self, arg):
+        argval = self.arg_nonempty(arg)
+        if argval[0] == "@":
+            return InconfigArgConfig(True, shlex.split(argval[1:]))
+        else:
+            return InconfigArgConfig(False, self.arg_existing_file(argval))
 
     def arg_modules_dir(self, arg):
         if not arg:
@@ -246,7 +258,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         #
         genconfig_arg_group.add_argument(
             "--config", dest="inconfig", metavar="<file>",
-            type=arg_types.arg_existing_file,
+            type=arg_types.arg_inconfig,
             default=argparse.SUPPRESS,
             help=with_default(
                 "input kernel configuration file", "\"<srctree>/.config\""
@@ -431,9 +443,30 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         self.source_info = source_info
     # --- end of do_main_setup_source_info (...) ---
 
-    def do_main_load_input_config(self, arg_config, config):
-        if arg_config.get("inconfig"):
-            input_config_files = [arg_config["inconfig"]]
+    def do_main_get_configuration_basis(self, arg_config):
+        """
+        @raises AssertionError:  settings not loaded, no --config on cmdline
+        @raises SystemExit:      no configuration basis (no files)
+
+        @param arg_config:  parsed args
+
+        @return:  configuration basis, a non-empty list of input files
+        @rtype:   C{list} of C{str}, len(L) >= 1
+        """
+
+        inconfig_arg = arg_config.get("inconfig")
+
+        if inconfig_arg:
+            if inconfig_arg.is_curated_source:
+                conf_sources = self.get_conf_sources()
+
+                input_config_files = (
+                    conf_sources.get_configuration_basis(
+                        inconfig_arg.path[0], inconfig_arg.path[1:]
+                    )
+                )
+            else:
+                input_config_files = [inconfig_arg.path]
 
         elif self.settings is None:
             raise AssertionError(
@@ -464,8 +497,14 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
                         "input .config does not exist: {!r}".format(missing)
                     )
             # --
+        # --
 
-            config.read_config_files(*input_config_files)
+        return input_config_files
+    # --- end of do_main_get_configuration_basis (...) ---
+
+    def do_main_load_input_config(self, arg_config, config):
+        input_config_files = self.do_main_get_configuration_basis(arg_config)
+        config.read_config_files(*input_config_files)
     # ---
 
     def do_main_get_modules_dir(self, arg_config):
