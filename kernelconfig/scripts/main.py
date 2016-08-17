@@ -12,13 +12,14 @@ import sys
 __all__ = ["KernelConfigMainScript"]
 
 import kernelconfig.scripts._base
-import kernelconfig.util.argutil
+
 import kernelconfig.installinfo
 import kernelconfig.kernel.info
 import kernelconfig.kernel.hwdetection.modalias.cachedir
 import kernelconfig.kernel.hwdetection.modalias.modulesdir
 import kernelconfig.kconfig.config.gen
 import kernelconfig.pm.portagevdb
+import kernelconfig.util.argutil
 import kernelconfig.util.fileio
 import kernelconfig.util.fs
 import kernelconfig.util.misc
