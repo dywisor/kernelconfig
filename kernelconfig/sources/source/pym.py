@@ -16,7 +16,7 @@ from .. import pymenv
 from . import _sourcebase
 
 
-__all__ = ["PymConfigurationSource"]
+__all__ = ["PymConfigurationSource", "PymConfigurationSourceModule"]
 
 
 class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
@@ -44,6 +44,15 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
            env.add_config_file(env.download_file("http://the/config/file"))
 
     See pymenv (kernelconfig.sources.pymenv) for details about 'env'.
+
+    @ivar pym_file:           path to the Python module file  (readonly)
+    @type pym_file:           C{str} or C{None}
+    @ivar pym_name:           'sanitized' name of the Python module  (readonly)
+    @type pym_name:           C{str} or C{None}
+    @ivar pym:                interface to the Python module
+    @type pym:                L{PymConfigurationSourceModule}
+    @ivar sourcedef_config:   "[config]" section from the source def file
+    @type sourcedef_config:   C{dict} :: C{str} => C{str}
     """
 
     @property
@@ -60,11 +69,13 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
         self.sourcedef_config = None
 
     def check_source_valid(self):
+        # a Python module must have been added
         if self.pym is None:
             raise exc.ConfigurationSourceInvalidError(
                 "python module has not been set up"
             )
 
+        # ... with an existing py file
         pym_file = self.pym.filepath
         if not pym_file:
             raise exc.ConfigurationSourceInvalidError(
@@ -81,6 +92,7 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
                 "python module file is not readable: {}".format(pym_file)
             )
 
+        # ... and a non-empty name
         pym_name = self.pym.name
         if not pym_name:
             raise exc.ConfigurationSourceInvalidError("pym_name is not set")
@@ -92,10 +104,21 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
     # --- end of check_source_valid (...) ---
 
     def add_auto_var(self, varname, varkey):
+        """No auto vars are supported by this configuration source.
+
+        @return: False
+        """
         return False
     # --- end of add_auto_var (...) ---
 
     def init_from_settings(self, subtype, args, data):
+        """
+        Python-Module configuration sources cannot be created from settings.
+
+        @raises ConfigurationSourceInvalidError:  uncreatable from settings
+
+        @noreturn
+        """
         raise exc.ConfigurationSourceInvalidError(
             "cannot be created from settings"
         )
@@ -106,6 +129,8 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
 
         pym_file = source_data.get("path")
         if pym_file:
+            # create the Python module interface
+            #  the module itself will be loaded during do_prepare()
             self.pym = self.create_loggable(
                 PymConfigurationSourceModule,
                 name=PymConfigurationSourceModule.sanitize_name(
@@ -126,20 +151,26 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
     # --- end of do_parse_source_argv (...) ---
 
     def do_load_pym(self, arg_config):
+        """
+        Loads the Python module and calls its reset() function if it has one.
+
+        @return: None (implicit)
+        """
         # catch ImportError?
         arg_config.pym = self.pym.load()
         arg_config.pym.call_optional("reset")
     # --- end of do_load_pym (...) ---
 
     def do_prepare(self, arg_config):
+        # super(): prepare outfiles
         super().do_prepare(arg_config)
         self.do_load_pym(arg_config)
     # --- end of do_prepare (...) ---
 
     def do_get_conf_basis(self, arg_config):
-        # arg_config.pym should spawn the run_env,
-        #  so that versioning is actually possibly
-        run_env = self.create_loggable(
+        # arg_config.pym should spawn the pym_run_env,
+        #  so that versioning is actually possible
+        pym_run_env = self.create_loggable(
             pymenv.PymConfigurationSourceRunEnv,
             name=self.name,
             conf_source_env=self.senv,
@@ -150,8 +181,8 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
         )
 
         # not really necessary, but enforce cwd=tmpdir for the module
-        with osmisc.Pushd(run_env.get_tmpdir_path()):
-            ret = arg_config.pym.call("run", env=run_env)
+        with osmisc.Pushd(pym_run_env.get_tmpdir_path()):
+            ret = arg_config.pym.call("run", env=pym_run_env)
 
         if not ret and ret is not None:
             raise exc.ConfigurationSourceExecError()
@@ -163,11 +194,42 @@ class PymConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
 
 
 class PymConfigurationSourceModule(loggable.AbstractLoggable):
+    """Configuration source Python module interface,
+    provides module loading and calling methods.
 
-    PYM_NAME_CHARS = string.ascii_letters + string.digits + "_"
+    @cvar PYM_NAME_CHARS:  set of chars allowed in sanitized module names
+                          (or set-like)
+    @type PYM_NAME_CHARS:  C{str} (or C{set} of C{str})
+
+    @ivar name:         'sanitized' module name
+    @ivar filepath:     path to the Python module file
+    @ivar _pym:         None or loaded Python module
+    """
+
+    PYM_NAME_CHARS = frozenset(string.ascii_letters + string.digits + "_")
 
     @classmethod
     def load_module_from_file(cls, name, filepath, *, write_bytecode=False):
+        """
+        Class-wide method that loads a Python module.
+
+        The "interfaced" Python module is loaded in _load().
+
+        @param   name:            'sanitized' name of the Python module
+                                  This does not have to be its real name,
+                                  a dummy name is sufficient.
+                                  kernelconfig uses
+                                  "curated_source_pym_" + <source name>.
+        @type    name:            C{str}
+        @param   filepath:        path to the Python module
+        @type    filepath:        C{str}
+        @keyword write_bytecode:  whether to allow writing the
+                                  byte-compiled module back to ~dir(filepath).
+                                  Defaults to False.
+        @type    write_bytecode:  C{bool}
+
+        @return:  loaded Python module
+        """
         # TODO in Python >= 3.5, use importlib.util:
         # >>> spec   = importlib.util.spec_from_file_location(name, filepath)
         # >>> module = importlib.util.module_from_spec(spec)
@@ -188,6 +250,22 @@ class PymConfigurationSourceModule(loggable.AbstractLoggable):
 
     @classmethod
     def sanitize_name(cls, name):
+        """
+        Sanitizes a name so that it can be used as python module name
+        (name - not qualified name).
+        This removes all chars that are neither ASCII letters, digits nor "_".
+
+        For example, "curated_source_pym_my-source"
+        becomes "curated_source_pym_mysource".
+
+        @param name:  input name,
+                      if it originates from a filesystem path,
+                      it should be its basename only
+        @type  name:  C{str}
+
+        @return:  sanitized module name
+        @rtype:   C{str}
+        """
         pym_name_chars = cls.PYM_NAME_CHARS
         return "".join((c for c in name if c in pym_name_chars))
 
@@ -219,6 +297,22 @@ class PymConfigurationSourceModule(loggable.AbstractLoggable):
     # --- end of load (...) ---
 
     def call_optional(self, name, *args, **kwargs):
+        """
+        Calls the Python module's function named <name>
+        with the given args/kwargs - if it has this function.
+
+        If the module has a non-callable attribute with the requested name,
+        it is assumed that the function does not exist.
+
+        @param name:    name of the function
+        @type  name:    C{str}
+        @param args:    var-args
+        @param kwargs:  var-kwargs
+
+        @return:  None if the module does not have the requested function,
+                  and the function's return value otherwise
+        @rtype:   C{None} or undefined
+        """
         try:
             func = getattr(self._pym, name)
         except AttributeError:
@@ -236,6 +330,23 @@ class PymConfigurationSourceModule(loggable.AbstractLoggable):
     # --- end of call_optional (...) ---
 
     def call(self, name, *args, **kwargs):
+        """
+        Calls the Python module's function named <name>
+        with the given args/kwargs.
+
+        Unlike call_optional(),
+        raises an exception if the function is not provided by the module.
+        @raises ConfigurationSourceExecError:  no such function
+
+        @param name:    name of the function
+        @type  name:    C{str}
+        @param args:    var-args
+        @param kwargs:  var-kwargs
+
+        @return:  None if the module does not have the requested function,
+                  and the function's return value otherwise
+        @rtype:   C{None} or undefined
+        """
         try:
             func = getattr(self._pym, name)
         except AttributeError:
