@@ -358,7 +358,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         genconfig_arg_group.add_argument(
             "-H", "--hwdetect", metavar="<file>", dest="hwdetect_file",
-            type=arg_types.arg_existing_file,
+            type=arg_types.arg_fileref_existing_file,
             default=argparse.SUPPRESS,
             help="enable hardware detection from hwcollect file"
         )
@@ -693,7 +693,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             assert hwdetector is not None
             hwdetect_errors, hwdetect_suggestions = (
                 hwdetector.get_suggestions(
-                    hwdetect_file=arg_config["hwdetect_file"]
+                    hwdetect_file=self.get_fileref(arg_config["hwdetect_file"])
                 )
             )
 
