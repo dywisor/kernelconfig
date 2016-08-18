@@ -1432,6 +1432,8 @@ The following options are recognized in the ``[source]`` section:
     |                 |               |           | * pym                                 |
     |                 |               |           | * command                             |
     |                 |               |           | * make                                |
+    |                 |               |           | * defconfig                           |
+    |                 |               |           |   (*make* with ``Target=defconfig``)  |
     |                 |               |           |                                       |
     |                 |               |           | If not set, kernelconfig tries to     |
     |                 |               |           | autodetect the type:                  |
@@ -1473,6 +1475,9 @@ The following options are recognized in the ``[source]`` section:
     |                 |               |           | ``make`` command.                     |
     +-----------------+---------------+-----------+---------------------------------------+
     | Target          | str           | yes       | Target for make-type sources          |
+    |                 |               |           |                                       |
+    |                 |               |           | Not supported by defconfig-type       |
+    |                 |               |           | sources.                              |
     +-----------------+---------------+-----------+---------------------------------------+
     | Architectures   | str-list      | no        | List of supported architectures       |
     |                 |               |           |                                       |
