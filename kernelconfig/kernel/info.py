@@ -149,17 +149,55 @@ class SourceInfo(loggable.AbstractLoggable):
 
     @abc.abstractmethod
     def check_supports_out_of_tree_build(self):
+        """Returns whether the sources support out-of-tree building.
+
+        Derived classes must implement this method.
+
+        @return:  True if out-of-tree building is supported, else False.
+        @rtype:   C{bool}
+        """
         return False
 
     @abc.abstractmethod
     def iter_out_of_tree_build_make_vars(self, build_dir):
+        """
+        Returns an iterable of varname, value pairs
+        that are relevant for out-of-tree building.
+
+        Whether out-of-tree building is supported, should be checked with
+        check_supports_out_of_tree_build() before calling this method.
+
+        Derived classes must implement this method.
+        They may raise a TypeError if out-of-tree building is not supported.
+
+        @raises TypeError:  if out-of-tree building not supported
+
+        @param build_dir:  path to the build directory
+                           (non-empty, does not have to exist)
+        @type  build_dir:  C{str}
+
+        @return:  iterable|genexpr|iterator of 2-tuples (varname, value)
+        @rtype:   iterable of 2-tuple (C{str}, object)
+        """
         raise TypeError()
 
     @abc.abstractmethod
     def iter_target_arch(self):
+        """
+        @raises TypeError:  if not appropriate for this source info
+
+        @return:  an iterable of target architectures,
+                  ordered from most specific to least specific,
+                  possibly containing duplicates - see iter_target_arch_dedup()
+        @return:  iterable of C{str}  (usually)
+        """
         raise TypeError()
 
     def iter_target_arch_dedup(self):
+        """
+        Same as iter_target_arch(),
+        but deduplicates the target architecture candidates.
+        """
         return misc.iter_dedup(self.iter_target_arch(), key=lambda xv: xv[1])
 
 # --- end of SourceInfo ---
