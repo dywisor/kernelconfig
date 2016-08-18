@@ -210,7 +210,7 @@ class ModaliasCacheBuilder(_base.ModaliasCacheBase):
         # This is not a complete "mrproper" check,
         # it just catches a common error case.
         if os.path.isfile(self.source_info.get_filepath(".config")):
-            raise ModaliasCacheBuildPrepareError(
+            raise exc.ModaliasCacheBuildPrepareError(
                 (
                     '.config file exists in kernel sources directory'
                     ' - run "make mrproper"'
