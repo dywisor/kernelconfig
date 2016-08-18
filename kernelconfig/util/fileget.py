@@ -31,6 +31,10 @@ class GetFile(loggable.AbstractLoggable):
     >>> with GetFile("http://...") as file_getter:
     >>>     file_getter.write_to_file("./file")
     """
+    __slots__ = [
+        "_webh", "block_size", "info",
+        "request_url", "request_data", "request_timeout", "request_kwargs"
+    ]
 
     # TODO: exception handling: some status codes/timeouts are worth a retry
 
