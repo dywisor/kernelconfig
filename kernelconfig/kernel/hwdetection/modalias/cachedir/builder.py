@@ -205,6 +205,19 @@ class ModaliasCacheBuilder(_base.ModaliasCacheBase):
         log_debug = self.logger.debug
         log_info = self.logger.info
 
+        # Abort if a .config file exists in the sources directory,
+        # the make command would fail and request to run "make mrproper".
+        # This is not a complete "mrproper" check,
+        # it just catches a common error case.
+        if os.path.isfile(self.source_info.get_filepath(".config")):
+            raise ModaliasCacheBuildPrepareError(
+                (
+                    '.config file exists in kernel sources directory'
+                    ' - run "make mrproper"'
+                )
+            )
+        # --
+
         # locate the modalias makefile
         mkscript = self._mkscript
         did_set_mkscript = False
