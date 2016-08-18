@@ -125,7 +125,8 @@ class KernelConfigGenerator(_ConfigGenerator):
         )
 
         self._config_choice_modules = self.create_informed(
-            choicemodules.KernelConfigChoiceModules
+            choicemodules.KernelConfigChoiceModules,
+            modules_dir=modules_dir
         )
     # --- end of __init__ (...) ---
 
