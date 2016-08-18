@@ -34,6 +34,7 @@ def run(env):
             ((4, 4), "f22"),
             # ((4, 6), "f23"),
             ((4, 6), "f24"),
+            ((4, 7), "f25"),
         ]
 
         kver = env.kernelversion
