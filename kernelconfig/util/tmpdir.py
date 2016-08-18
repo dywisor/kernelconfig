@@ -21,11 +21,14 @@ class _FileWrapper(object):
         self.fh = fh
         self.path = path
 
+    def close(self):
+        return self.fh.close()
+
     def __enter__(self):
         return self
 
     def __exit__(self, exc_type, exc_value, exc_traceback):
-        self.fh.close()
+        self.close()
 # ---
 
 
