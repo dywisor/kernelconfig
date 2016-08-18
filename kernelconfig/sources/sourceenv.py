@@ -64,24 +64,32 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
     # --- end of get_source_def_files (...) ---
 
     def iter_available_sources_info(self, refresh=False):
-        null_entry = (None, None)
-
         def entry_is_reg_file(entry, *, _isreg=stat.S_ISREG):
-            return entry[1] and _isreg(entry[1].st_mode)
+            return entry.stat_info and _isreg(entry.stat_info.st_mode)
         # ---
 
-        # entries :: name => entry object
+        # Create a list of first-matching fs entries found in any of
+        # config source directory.
+        # Each entry is a named 2-tuple (path, stat info).
+        # entries :: name => EntryInfo
         entries = self.get_files_dir().scandir_flatten(refresh=refresh)
 
-        keys_to_del = set()
+        # entry_names_processed keeps track of which entry names have already
+        # been processed, to avoid modifying entries during iteration
+        entry_names_processed = set()
+
+        # loop over all names that could be source definition files,
+        # process accompanying script files
+        #  (match <name>.def, process <name>.def, <name>)
+        #
         for match in filter(
             None,
             map(self.SOURCE_DEF_FILE_NAME.match, entries)
         ):
             def_entry = entries[match.string]
 
-            # one way or another, this .def entry about to be processed
-            keys_to_del.add(match.string)
+            # one way or another, this .def entry is about to be processed
+            entry_names_processed.add(match.string)
 
             # if stat info available and is a file
             if entry_is_reg_file(def_entry):
@@ -90,35 +98,35 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
                 name = match.group("name")
 
                 # is there also a script for the .def entry?
+                # initially, no
+                script_path = None
+                # but take a peek at entries
                 if name in entries:
                     # then it is processed here
                     #  note that if def_entry is not a file (e.g. a dir),
                     #  "name" can still be a def-less script source
                     script_entry = entries[name]
-                    keys_to_del.add(name)
-                else:
-                    script_entry = null_entry
+                    entry_names_processed.add(name)
 
-                yield (
-                    name,
-                    SourceDefFiles(
-                        def_entry[0],
-                        (
-                            script_entry[0] if entry_is_reg_file(script_entry)
-                            else None
-                        )
-                    )
-                )
+                    # script must be a file,
+                    # but does not have to be executable
+                    if entry_is_reg_file(script_entry):
+                        script_path = script_entry.path
+                # --
+
+                yield (name, SourceDefFiles(def_entry.path, script_path))
             # -- end if
         # -- end for
 
-        for key in keys_to_del:
+        # drop processed names from entries
+        for key in entry_names_processed:
             del entries[key]
 
+        # loop over the remaining entries, they may be script-only sources
         for name, script_entry in entries.items():
             if entry_is_reg_file(script_entry):
                 # could check for executability here
-                yield (name, SourceDefFiles(None, script_entry[0]))
+                yield (name, SourceDefFiles(None, script_entry.path))
     # --- end of iter_available_sources_info (...) ---
 
     def get_tmpdir(self):
