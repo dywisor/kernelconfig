@@ -10,7 +10,10 @@ import stat
 
 from . import fspath
 
-__all__ = ["MultiDirEntry", "MultiDirDequeEntry"]
+__all__ = ["MultiDirEntry", "MultiDirDequeEntry", "EntryInfo"]
+
+
+EntryInfo = collections.namedtuple("EntryInfo", "path stat_info")
 
 
 class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
@@ -307,6 +310,9 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         for all paths of this entry.
 
         path_stat_info may be None if os.stat() failed.
+
+        @return:  entry info, a named 2-tuple (path, stat_info)
+        @rtype:   L{EntryInfo}
         """
         stat_cache = self._stat_cache
 
@@ -320,7 +326,7 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
                     stat_cache[path] = stat_info
             # -- end try
 
-            yield (path, stat_info)
+            yield EntryInfo(path, stat_info)
         # -- end for
     # --- end of iter_paths (...) ---
 
@@ -330,10 +336,16 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         by the given filter_func.
 
         Unlike iter_paths(), returns only paths with a not-None path_stat_info.
+
+        @return:  entry info, a 2-tuple (path, stat info)
+        @rtype:   L{EntryInfo}
         """
-        for path, stat_info in self.iter_paths():
-            if stat_info is not None and filter_func(stat_info.st_mode):
-                yield (path, stat_info)
+        for entry_info in self.iter_paths():
+            if (
+                entry_info.stat_info is not None
+                and filter_func(entry_info.stat_info.st_mode)
+            ):
+                yield entry_info
     # --- end of iter_paths_filter_stat_mode (...) ---
 
     def iter_dir_paths(self):
@@ -365,9 +377,9 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
 
         entries = {}
 
-        for path, _ in self.iter_dir_paths():
+        for entry_info in self.iter_dir_paths():
             try:
-                fnames = os.listdir(path)
+                fnames = os.listdir(entry_info.path)
             except OSError:
                 pass
             else:
@@ -377,8 +389,8 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
                     except KeyError:
                         entries[fname] = entry = self.create_new_sub_entry()
 
-                    entry.add_path(_osp_join(path, fname))
-        # -- end for path
+                    entry.add_path(_osp_join(entry_info.path, fname))
+        # -- end for entry_info
 
         self._scandir_cache = entries
         self._scandir_cache_complete = True
@@ -415,6 +427,9 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
 
         The returned dict is not shared with other instances
         and can be modified freely.
+
+        @return:  dict of first-matching entries
+        @rtype:   C{dict} :: C{str} => L{EntryInfo}
         """
         entries = self.scandir_ref(refresh=refresh)
         return {
