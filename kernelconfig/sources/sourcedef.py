@@ -1040,3 +1040,39 @@ class CuratedSourceDefIniParser(configparser.ConfigParser):
     # --- end of get_source_def_raw_dict (...) ---
 
 # --- end of CuratedSourceDefIniParser (...) ---
+
+
+if __name__ == "__main__":
+    def main():
+        import argparse  # nop
+        import logging
+        import pprint
+        import os.path
+        import sys
+
+        arg_parser = argparse.ArgumentParser(
+            prog="{} -m kernelconfig.sources.sourcedef".format(
+                os.path.basename(sys.executable)
+            ),
+            description=(
+                "parse a source definition file and prints its raw def data"
+            )
+
+        )
+
+        arg_parser.add_argument(
+            "def_file", type=argparse.FileType("r"),
+            help="source definition .ini file"
+        )
+
+        arg_config = arg_parser.parse_args()
+
+        sourcedef_parser = CuratedSourceDefIniParser(logging.getLogger())
+        sourcedef_parser.read_file(arg_config.def_file)
+
+        source_def_raw_dict = sourcedef_parser.get_source_def_raw_dict()
+        pprint.pprint(source_def_raw_dict)
+    # ---
+
+    main()
+# -- end if __main__
