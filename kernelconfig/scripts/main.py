@@ -21,6 +21,8 @@ import kernelconfig.kconfig.config.gen
 import kernelconfig.pm.portagevdb
 import kernelconfig.util.argutil
 import kernelconfig.util.fileio
+import kernelconfig.util.fileref
+import kernelconfig.util.fileuri
 import kernelconfig.util.fs
 import kernelconfig.util.misc
 import kernelconfig.util.multidir
@@ -51,6 +53,40 @@ InconfigArgConfig = collections.namedtuple(
 class KernelConfigArgTypes(kernelconfig.util.argutil.ArgTypes):
 
     NONE_WORDS = frozenset({"none", "_"})
+
+    def __init__(self, *, tmpdir=None, **kwargs):
+        super().__init__(**kwargs)
+        self._tmpdir = tmpdir
+
+    def arg_fileref(self, arg):
+        is_remote_file, file_uri = (
+            kernelconfig.util.fileuri.normalize_file_uri(
+                self.arg_nonempty(arg)
+            )
+        )
+
+        if is_remote_file:
+            return kernelconfig.util.fileref.GetFileReference(
+                file_uri, tmpdir=self._tmpdir
+            )
+        else:
+            # abspath(), expanduser()
+            return kernelconfig.util.fileref.LocalFileReference(
+                self.arg_fspath(file_uri)
+            )
+    # --- end of arg_fileref (...) ---
+
+    def arg_fileref_existing_file(self, arg):
+        fileref = self.arg_fileref(arg)
+
+        if not fileref.is_local():
+            pass
+        elif not kernelconfig.util.fs.is_readable_file(fileref.get_file()):
+            raise self.exc_type("not a file: %s" % arg)
+        # --
+
+        return fileref
+    # --- end of arg_fileref_existing_file (...) ---
 
     def arg_inconfig(self, arg):
         argval = self.arg_nonempty(arg)
@@ -103,6 +139,9 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         self.source_info = None
         self.conf_sources = None
     # --- end of __init__ (...) ---
+
+    def get_fileref(self, fileref):
+        return fileref.get_file(logger=self.logger)
 
     def get_conf_sources(self):
         conf_sources = self.conf_sources
