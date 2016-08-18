@@ -200,6 +200,23 @@ class SourceInfo(loggable.AbstractLoggable):
         """
         return misc.iter_dedup(self.iter_target_arch(), key=lambda xv: xv[1])
 
+    def get_defconfig_target(self, arg=None):
+        """Returns the name of the "best suited" make defconfig target.
+        The optional arg may specify the requested target further.
+
+        Returns None if no defconfig target is known.
+
+        Raises a TypeError if not supported by this source info type.
+        @raises TypeError:
+
+        @keyword arg:  defconfig variant arg, defaults to None
+        @type    arg:  C{str}
+
+        @return:  defconfig target or None
+        @rtype:   C{str} or C{None}
+        """
+        raise TypeError()
+
 # --- end of SourceInfo ---
 
 
@@ -428,5 +445,11 @@ class KernelInfo(SourceInfo):
             ("srcarch",  self.srcarch)
         ]
 
+    def get_defconfig_target(self, arg=None):
+        if arg:
+            raise NotImplementedError("specialized defconfig target")
+
+        return "defconfig"
+    # ---
 
 # --- end of KernelInfo ---
