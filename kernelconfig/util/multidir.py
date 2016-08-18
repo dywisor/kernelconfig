@@ -22,9 +22,9 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
 
     * get_entry():         get multi dir entry for a file
                            (containing all possible paths)
-    * get_file_paths():    get all possible paths to a file,
+    * get_filepaths():     get all possible paths to a file,
                            in the same order as the path list
-    * get_file_path():     get path to file,
+    * get_filepath():      get path to file,
                            in the first directory it appears in
     * glob():              get all pattern matches, as entries
     * iglob():             get pattern matches as filepaths,
@@ -665,7 +665,7 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         return entry if entry.paths else None
     # --- end of get_entry (...) ---
 
-    def get_file_paths(self, filename, check_file_type=stat.S_ISREG):
+    def get_filepaths(self, filename, check_file_type=stat.S_ISREG):
         """Returns a list of all possible paths for the given file,
         and filters out paths that do not have the request file type.
 
@@ -689,14 +689,14 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
                 path for path, stat_info
                 in entry.iter_paths_filter_stat_mode(check_file_type)
             ]
-    # --- end of get_file_paths (...) ---
+    # --- end of get_filepaths (...) ---
 
-    def get_file_path(self, filename, check_file_type=stat.S_ISREG):
+    def get_filepath(self, filename, check_file_type=stat.S_ISREG):
         """
         Returns the first-matching path for the given file
         or None if no path candidate exists.
 
-        Otherwise, identical to get_file_paths(),
+        Otherwise, identical to get_filepaths(),
         but a bit more optimized for the "return first-match" case.
 
         @return:  filesystem path or None
@@ -723,7 +723,7 @@ class MultiDirEntryBase(object, metaclass=abc.ABCMeta):
         # --
 
         return None
-    # --- end of get_file_path (...) ---
+    # --- end of get_filepath (...) ---
 
     def get_child(self, filename, check_exist=False):
         if check_exist:

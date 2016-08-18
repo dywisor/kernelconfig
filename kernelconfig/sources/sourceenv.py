@@ -43,13 +43,13 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
     def get_files_dir(self):
         return self.install_info.get_config_source_dirs()
 
-    def get_file_path(self, name, *additional_relpath_components):
-        return self.get_files_dir().get_file_path(
+    def get_filepath(self, name, *additional_relpath_components):
+        return self.get_files_dir().get_filepath(
             fspath.join_relpaths_v(name, additional_relpath_components)
         )
 
     def get_config_file_path(self, name):
-        return self.get_file_path("files", name)
+        return self.get_filepath("files", name)
 
     def get_source_def_files(self, name):
         sname = name.lower()
@@ -58,8 +58,8 @@ class ConfigurationSourcesEnv(loggable.AbstractLoggable):
 
         files_dir = self.get_files_dir()
         return SourceDefFiles(
-            files_dir.get_file_path(sname + self.SOURCE_DEF_FILE_SUFFIX),
-            files_dir.get_file_path(sname)
+            files_dir.get_filepath(sname + self.SOURCE_DEF_FILE_SUFFIX),
+            files_dir.get_filepath(sname)
         )
     # --- end of get_source_def_files (...) ---
 

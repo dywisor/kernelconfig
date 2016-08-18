@@ -375,7 +375,7 @@ class DefaultInstallInfo(InstallInfoBase):
     # --- end of format_info (...) ---
 
     def get_settings_file(self, filename):
-        return self.settings_dirs.get_file_path(filename)
+        return self.settings_dirs.get_filepath(filename)
 
     def get_include_files(self, filename_pattern):
         return sorted((
@@ -388,7 +388,7 @@ class DefaultInstallInfo(InstallInfoBase):
         return self.conf_source_dirs
 
     def get_script_file(self, filename):
-        return self.data_dirs.get_file_path(
+        return self.data_dirs.get_filepath(
             fspath.join_relpath("scripts", filename)
         )
 
