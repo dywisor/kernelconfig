@@ -11,6 +11,9 @@ __all__ = ["MakeConfigurationSource"]
 class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     """
     Configuration source that creates a .config file with "make <target>".
+
+    The make command is run with a temporary output directory if the sources
+    support it (make O=...), otherwise it is run in the sources directory.
     """
 
     def __init__(self, *args, **kwargs):
@@ -28,31 +31,36 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         self.scan_auto_vars_must_exist(self.base_argv)
     # ---
 
-    def _set_make_target(self, subtype, name):
-        make_target = None
+    def _set_make_target(self, target_name, defconfig_arg=None):
+        """
+        Condition: (!defconfig_arg) || (target_name=="defconfig")
 
-        if subtype == "defconfig":
-            # FIXME: for defconfig,
-            #        this needs some investigation and minor changes
-            #
-            #        If an arch has more than one defconfig,
-            #        it would good to choose the best-fitting one!
-            #
-            if not name:
-                make_target = subtype
+        @raises ConfigurationSourceInvalidError: defconfig_arg is set,
+                                                 but target_name!="defconfig"
 
-            else:
-                raise NotImplementedError("defconfig with variant name")
+        @param   target_name:    name of the make target, e.g. "defconfig"
+        @type    target_name:    C{str}
+        @keyword defconfig_arg:  further specialization of the defconfig
+                                 make target, defaults to None.
+        @type    defconfig_arg:  C{str} or C{None}
 
-        elif subtype:
-            raise exc.ConfigurationSourceInvalidError(
-                "unknown make subtype {!r}".format(subtype)
+        @return:  None (implicit)
+        """
+        if target_name == "defconfig":
+            make_target = (
+                self.senv.source_info.get_defconfig_target(defconfig_arg)
             )
 
-        elif name:
-            make_target = name
+        elif defconfig_arg:
+            raise exc.ConfigurationSourceInvalidError(
+                "defconfig_arg may only be set if target_name==\"defconfig\""
+            )
 
-        # else keep make_target==None
+        elif target_name:
+            make_target = target_name
+
+        else:
+            make_target = None
 
         self.make_target = make_target
         if make_target:
@@ -60,30 +68,28 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     # --- end of _set_make_target (...) ---
 
     def init_from_settings(self, subtype, args, data):
+        """
+        @raises ConfigurationSourceInvalidError: empty subtype, no make target
+
+        @param subtype:  make target
+        @param args:     args, appended to the make command, may be None
+        @param data:     not allowed, must be None/empty
+
+        @return:  None
+        """
         if data:
             raise exc.ConfigurationSourceInvalidError("non-empty data")
         # --
 
-        # FIXME:
-        # if subtype == defconfig or not subtype:
-        #    get defconfig name from source info
-        #     args may contain further specifications of the defconfig
-        #     or a target name
-        #
-        #  else
-        #     error
-        #  end if
-
         if subtype:
-            self._set_make_target(subtype, None)
+            self._set_make_target(subtype)
             args_rem = args
         else:
-            raise NotImplementedError("more advanced make target")
-            args_rem = None
+            raise exc.ConfigurationSourceInvalidError("no make target")
         # --
 
         self._set_base_argv(args_rem)
-        return []
+        return None
     # --- end of init_from_settings (...) ---
 
     def init_from_def(self, source_def):
@@ -91,9 +97,21 @@ class MakeConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
 
         source_type = source_def.get_source_type()
 
-        self._set_make_target(
-            source_type.source_subtype, source_def.get("target")
-        )
+        # subtype and Target= (in .def) cannot be both set at the same time.
+        # As an exception, ignore that if they are equal.
+        source_def_target = source_def.get("target")
+        if (
+            (source_def_target and source_type.source_subtype)
+            and (source_def_target != source_type.source_subtype)
+        ):
+            raise exc.ConfigurationSourceInvalidError(
+                "source def sets Target=, already specified by subtype"
+            )
+        # --
+
+        # check_source_valid() takes care of unset/empty make target
+        self._set_make_target(source_def_target or source_type.source_subtype)
+
         self._set_base_argv(source_def.get("command"))
     # --- end of init_from_def (...) ---
 
