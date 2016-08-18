@@ -50,11 +50,36 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
                                   for the feature argument's long option name.
                                   (and must not be empty)
     @type RE_FEAT_SPLIT:          compiled regexp
+
+
+    @ivar source_params:          parameter group names (readonly property)
+    @type source_params:          iterable of C{str}
+
+    @ivar _source_params:         mapping from parameter group name
+                                  to None or 2-tuple (arg group, mut~arg group)
+
+                                  A parameter group is a group of arguments
+                                  that race for the same dest in the parsed
+                                  args namespace.
+                                  For that reason, they are made mutually
+                                  exclusive. This attr keeps track of
+                                  which protected arg "dests" exist, and
+                                  "dest" name dual as parameter group names.
+
+    @type _source_params:         C{dict} :: C{str}
+                                          => None or 2-tuple (
+                                               argparse arg group,
+                                               argparse mutually exclusive grp
+                                             )
     """
 
     DEFAULT_EXIT_EXC_TYPE = exc.ConfigurationSourceFeatureUsageError
 
     RE_FEAT_SPLIT = re.compile(r'[^a-zA-Z0-9]+')
+
+    @property
+    def source_params(self):
+        return iter(self._source_params)
 
     def __init__(
         self, source_name,
@@ -63,7 +88,7 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
         # keep track of all arch/feature parameters
         #  there are ways to re-use what argparse.ArgumentParser already has,
         #  but this is more explicit and just works
-        self.source_params = {}
+        self._source_params = {}
 
         self.accept_unknown_args = accept_unknown_args
 
@@ -74,13 +99,58 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
             add_help=False,
         )
 
-    def register_param(self, name):
-        if name in self.source_params:
+    def register_empty_source_parameter_group(self, name):
+        """
+        Registers a new parameter group that contains exactly one argument,
+        and therefore does not need to keep track of its argument group
+        (and likely there is no group anyway).
+
+        @raises KeyError:  name already registered
+
+        @param name:  parameter group name
+        @type  name:  C{str}
+
+        @return:  None (implicit)
+        """
+        if name in self._source_params:
             raise KeyError("duplicate entry for {}".format(name))
 
         # empty group
-        self.source_params[name] = None
-    # ---
+        self._source_params[name] = None
+    # --- end of register_empty_source_parameter_group (...) ---
+
+    def get_source_parameter_group(self, name):
+        """
+        Returns the argparse argument group for the given parameter group.
+        Creates a new group if necessary,
+        otherwise the existing group is returned.
+
+        An exception is raised if the existing group is a "one argument group".
+        @raises KeyError:  name already registered as single-arg "group"
+
+        @param name:  parameter group name
+        @type  name:  C{str}
+
+        @return:  argparse argument group
+        """
+        if name in self._source_params:
+            source_param_tuple = self._source_params[name]
+
+            if not source_param_tuple:
+                # already registered as single-arg
+                raise KeyError("duplicate entry for {}".format(name))
+
+            return source_param_tuple[-1]
+
+        else:
+            arg_group = self.add_argument_group(
+                title="{} options".format(name)
+            )
+            arg_mut_group = arg_group.add_mutually_exclusive_group()
+
+            self._source_params[name] = (arg_group, arg_mut_group)
+            return arg_mut_group
+    # --- end of get_source_parameter_group (...) ---
 
     def parse_args(self, argv, **kwargs):
         if self.accept_unknown_args:
@@ -233,35 +303,11 @@ class CuratedSourceArgParser(argutil.NonExitingArgumentParser):
         # --
 
         feat_args = sorted(feat_opts, key=len)
-        return self._add_feauture_argument(
-            feat_name, feat_dest, feat_args, feat_kwargs
-        )
-    # --- end of add_feature_argument (...) ---
 
-    def _add_feauture_argument(
-        self, feat_name, feat_dest, feat_args, feat_kwargs
-    ):
         # TODO: check for conflicting defaults in group
-
-        if feat_dest in self.source_params:
-            feat_entry = self.source_params[feat_dest]
-            if not feat_entry:
-                raise KeyError("duplicate entry for {}".format(feat_dest))
-
-            return feat_entry[-1].add_argument(*feat_args, **feat_kwargs)
-        # --
-
-        feat_grp = self.add_argument_group(
-            title="{} options".format(feat_dest)
-        )
-
-        feat_mut_grp = feat_grp.add_mutually_exclusive_group()
-        arg = feat_mut_grp.add_argument(*feat_args, **feat_kwargs)
-
-        self.source_params[feat_dest] = (feat_grp, feat_mut_grp)
-        return arg
-    # --- end of _add_feauture_argument (...) ---
-
+        feat_group = self.get_source_parameter_group(feat_dest)
+        return feat_group.add_argument(*feat_args, **feat_kwargs)
+    # --- end of add_feature_argument (...) ---
 
 # --- end of CuratedSourceArgParser ---
 
@@ -368,7 +414,7 @@ class CuratedSourceDef(loggable.AbstractLoggable, collections.abc.Mapping):
         )
         if arch_value:
             parser.set_defaults(arch=arch_value)
-            parser.register_param("arch")
+            parser.register_empty_source_parameter_group("arch")
 
         active_features = set(self.feat) if self.feat else set()
         for feat_name, feat_node in self.data["features"].items():
