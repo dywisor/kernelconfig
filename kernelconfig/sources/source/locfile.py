@@ -44,6 +44,7 @@ class LocalFileConfigurationSource(_sourcebase.ConfigurationSourceBase):
     # --- end of check_source_valid (...) ---
 
     def add_auto_var(self, varname, varkey):
+        # automatic vars are not supported by this class
         return False
 
     def _set_file_uri(self, file_uri_arg, allow_dynamic_uri):

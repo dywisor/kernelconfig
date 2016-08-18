@@ -23,6 +23,19 @@ class CommandConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
     # --- end of _set_cmdv (...) ---
 
     def init_from_settings(self, subtype, args, data):
+        """
+        @raises ConfigurationSourceInvalidError:   non-empty data,
+                                                   non-empty subtype,
+                                                   or empty command
+
+        @param subtype:  no subtype is supported for command-type sources
+        @param args:     non-empty command
+        @type  args:     C{list} of C{str}
+        @param data:     command-type sources do not accept data
+
+        @return:  None
+        """
+
         if data:
             raise exc.ConfigurationSourceInvalidError("non-empty data")
         # --
@@ -36,7 +49,7 @@ class CommandConfigurationSource(_sourcebase.CommandConfigurationSourceBase):
         # --
 
         self._set_cmdv(args)
-        return []
+        return None
     # --- end of init_from_settings (...) ---
 
     def init_from_def(self, source_def):
