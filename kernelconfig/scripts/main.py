@@ -111,13 +111,16 @@ class KernelConfigArgTypes(kernelconfig.util.argutil.ArgTypes):
                 return ModulesDirArgConfig(True, True)
 
             else:
-                fpath = self.arg_fspath(arg)
+                fileref = self.arg_fileref(arg)
 
-                if os.path.isdir(fpath):
-                    return ModulesDirArgConfig(fpath, False)
+                if not fileref.is_local():
+                    return ModulesDirArgConfig(fileref, False)
 
-                elif os.path.isfile(fpath):
-                    return ModulesDirArgConfig(fpath, False)
+                elif fileref.is_dir():
+                    return ModulesDirArgConfig(fileref, False)
+
+                elif fileref.is_file():
+                    return ModulesDirArgConfig(fileref, False)
 
                 else:
                     raise self.exc_type(
@@ -606,7 +609,8 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         else:
             modules_dir = self.create_loggable(
-                modulesdir_pym.ModulesDir, mod_dir_config.path
+                modulesdir_pym.ModulesDir,
+                self.get_fileref(mod_dir_config.path)
             )
         # --
 
