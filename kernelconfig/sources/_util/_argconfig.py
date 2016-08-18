@@ -423,7 +423,7 @@ class ConfigurationSourceArgConfig(object):
         @return:  path to tmpdir
         @rtype:   C{str}
         """
-        self.get_tmpdir().get_path()  # pylint: disable=E1101
+        return self.get_tmpdir().get_path()  # pylint: disable=E1101
     # ---
 
     tmpdir_path = property(get_tmpdir_path)
