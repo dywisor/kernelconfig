@@ -2,7 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import os.path
-import urllib.parse
+
+from ...util import fileuri as _fileuri  # !! name conflict
 
 from . import _sourcebase
 from ..abc import exc
@@ -71,8 +72,7 @@ class FileConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
         # --
 
         #  urllib.parse.urlparse on format str?
-        file_uri_parsed = urllib.parse.urlparse(file_uri)
-        file_uri_scheme = file_uri_parsed.scheme
+        file_uri_scheme, norm_file_uri = _fileuri.normalize_file_uri(file_uri)
 
         if file_uri_is_dynamic:
             if file_uri_scheme and any((c in "{}" for c in file_uri_scheme)):
@@ -83,22 +83,8 @@ class FileConfigurationSource(_sourcebase.PhasedConfigurationSourceBase):
         # --
 
         self.file_uri_is_dynamic = file_uri_is_dynamic
-
-        if not file_uri_scheme:
-            # local file
-            self.file_uri = os.path.normpath(file_uri)
-            self.file_uri_scheme = None
-
-        elif file_uri_scheme == "file":
-            # local file #2
-            self.file_uri = os.path.normpath("".join(file_uri_parsed[1:]))
-            # self.file_uri = file_uri[0].partition("://")[-1]
-            self.file_uri_scheme = None
-
-        else:
-            # (probably) remote file
-            self.file_uri = file_uri
-            self.file_uri_scheme = file_uri_scheme
+        self.file_uri = norm_file_uri
+        self.file_uri_scheme = file_uri_scheme
     # --- end of _set_file_uri (...) ---
 
     def init_from_settings(self, subtype, args, data):
