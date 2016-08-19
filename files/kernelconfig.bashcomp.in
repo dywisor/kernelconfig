@@ -22,20 +22,20 @@ _kernelconfig_confdir_find() {
 
     search_roots=()
     if [[ ("${1}" == "-A") || ("${1}" == "-C") ]]; then
-        # COULDFIX: use @sysconfdir@ and sed-edit .in file
         search_roots+=(
             "${HOME}/.config/kernelconfig"
-            "/etc/kernelconfig"
+            "@prj_sysconfdir@"
+            "@prj_localconfdir@"
         )
     fi
 
     if [[ ("${1}" == "-A") || ("${1}" == "-D") ]]; then
-        # COULDFIX: use @datadir@ and sed-edit .in file
         search_roots+=(
-            "/usr/share/kernelconfig"
+            "@prj_datadir@"
+            "@prj_localdatadir@"
         )
     fi
-    # search_roots cannot be empty
+    # search_roots cannot be empty ("${HOME}/...")
     shift
 
     case "${1-}" in
@@ -45,7 +45,7 @@ _kernelconfig_confdir_find() {
     [[ ${#} -eq 0 ]] || shift
 
     for iter in "${search_roots[@]}"; do
-        search_dirs+=( "${iter}${subdir_relpath}" )
+        [[ -z "${iter}" ]] || search_dirs+=( "${iter}${subdir_relpath}" )
     done
 
     # search_dirs cannot be empty (<<-- non-empty search_roots)
