@@ -136,7 +136,10 @@ _kernelconfig_comp() {
         -h --help --usage -V --print-version -q --quiet -v --verbose
     )
 
-    OPTS_COMMON=( -a --arch -k --kernel )
+    # --config-kver is listed as generate-config/get-config option,
+    # but does affect all modes that involve config sources,
+    # therefore it is a "common" opt here
+    OPTS_COMMON=( -a --arch -k --kernel --config-kver )
 
     OPTS_GETCONFIG=( -s --settings --config -O --outconfig )
 
@@ -214,6 +217,10 @@ _kernelconfig_comp() {
         ;;
         -j|--jobs)
             # <int>
+            true
+        ;;
+        --config-kver)
+            # <kernel version>
             true
         ;;
         --config)
