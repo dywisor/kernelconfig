@@ -201,9 +201,16 @@ _kernelconfig_comp() {
             # <dir>
             _filedir -d
         ;;
-        -I|-O|--outconfig|-H|--hwdetect)
+        -I|-O|--outconfig)
             # various options followed by a <file> arg
             _filedir
+        ;;
+        -H|--hwdetect)
+            # various options followed by a <file> or <remote file> arg
+            case "${cur}" in
+                *://*) : ;;
+                *) _filedir ;;
+            esac
         ;;
         -j|--jobs)
             # <int>
@@ -291,9 +298,18 @@ _kernelconfig_comp() {
             esac
         ;;
         -m|--modules-dir)
-            # <dir> or one of none,auto,optional
-            _filedir -d
-            COMPREPLY+=( $( compgen -W "none auto optional" -- "${cur}" ) )
+            # <remote file> or <file>|<dir> or one of none,auto,optional
+            case "${cur}" in
+                *://*)
+                    :
+                ;;
+                *)
+                    _filedir -d
+                    COMPREPLY+=(
+                        $( compgen -W "none auto optional" -- "${cur}" )
+                    )
+                ;;
+            esac
         ;;
         --script-mode)
             # followed by a script mode name
