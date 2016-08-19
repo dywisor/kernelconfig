@@ -15,7 +15,7 @@ and which command line options changed.
 
 | The evaluation is based on kernelconfig,
 | *v0* as of Aug 2016, commit ``21022840c613919ad3a5fa0e05b6b709710834f2``
-| and *v1* as of Aug 2016, commit ``1ad56f25738895b8616a24077391a208fd28a8b7``.
+| and *v1* as of Aug 2016, commit ``824d93b45c2168f7b91d4d02775cb2f301172cc6``.
 
 Paragraphs marked with ``INTEND-TO-FIX`` denote
 that compatibility with *v0* will be restored,
@@ -25,13 +25,10 @@ and ``UNSURE-IF-FIX`` means that the discrepancy could be fixed.
 Running kernelconfig
 --------------------
 
-* *v1* does not support the ``-v``, ``--version`` option.
+* The ``-v``, ``--version`` option has been renamed to ``--config-kver``,
+  no short option exists.
 
-    ``-v`` is accepted, but it increases the log verbosity.
-
-    | ``UNSURE-IF-FIX``: reintroduce as renamed option: ``--fake-kver``, ``--source-kver``?
-    | Not all config sources follow the kernel versioning scheme, see e.g. CentOS.
-
+  *v1* does accept a ``-v`` option, but it increases the log verbosity.
 
 * In *v0*, ``-a``, ``--arch`` accepts arbitrary target architectures,
   and is only relevant to curated sources.
