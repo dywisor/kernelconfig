@@ -15,6 +15,7 @@ import kernelconfig.scripts._base
 
 import kernelconfig.installinfo
 import kernelconfig.kernel.info
+import kernelconfig.kernel.kversion
 import kernelconfig.kernel.hwdetection.modalias.cachedir
 import kernelconfig.kernel.hwdetection.modalias.modulesdir
 import kernelconfig.kconfig.config.gen
@@ -57,6 +58,19 @@ class KernelConfigArgTypes(kernelconfig.util.argutil.ArgTypes):
     def __init__(self, *, tmpdir=None, **kwargs):
         super().__init__(**kwargs)
         self._tmpdir = tmpdir
+
+    def arg_kernelversion(self, arg):
+        kv_constructor = (
+            kernelconfig.kernel.kversion.KernelVersion.new_from_version_str
+        )
+        nonempty_arg = self.arg_nonempty(arg)
+        try:
+            kver = kv_constructor(nonempty_arg)
+        except ValueError:
+            raise self.exc_type("invalid kernel version: %s" % nonempty_arg)
+        else:
+            return kver
+    # ---
 
     def arg_fileref(self, arg):
         is_remote_file, file_uri = (
