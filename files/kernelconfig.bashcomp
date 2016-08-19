@@ -92,6 +92,7 @@ _kernelconfig_comp() {
     local -a LONGOPTS_SCRIPT_MODE
     local -a OPTS_BASIC
     local -a OPTS_COMMON
+    local -a OPTS_GETCONFIG
     local -a OPTS_GENCONFIG
     local -a OPTS_GENMODALIAS
 
@@ -137,10 +138,9 @@ _kernelconfig_comp() {
 
     OPTS_COMMON=( -a --arch -k --kernel )
 
-    OPTS_GENCONFIG=(
-        -s --settings --config -O --outconfig -H --hwdetect
-        -m --modules-dir --{,un}safe-modalias -I
-    )
+    OPTS_GETCONFIG=( -s --settings --config -O --outconfig )
+
+    OPTS_GENCONFIG=( -H --hwdetect -m --modules-dir --{,un}safe-modalias -I )
 
     OPTS_GENMODALIAS=( -j --jobs --modalias-build-dir )
 
@@ -316,7 +316,10 @@ _kernelconfig_comp() {
             #  the default mode is "generate-config"
             case "${script_mode}" in
                 ""|"generate-config")
-                    words+=( "${OPTS_GENCONFIG[@]}" )
+                    words+=( "${OPTS_GETCONFIG[@]}" "${OPTS_GENCONFIG[@]}" )
+                ;;
+                "get-config")
+                    words+=( "${OPTS_GETCONFIG[@]}" )
                 ;;
                 "generate-modalias")
                     words+=( "${OPTS_GENMODALIAS[@]}" )
