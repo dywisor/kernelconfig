@@ -222,6 +222,20 @@ class SourceInfo(loggable.AbstractLoggable):
 
 class KernelInfo(SourceInfo):
     """
+    Kernel sources information object - srctree, arch, kernelversion.
+
+    After creating the object, its attributes need to be read
+    from the kernel srctree with prepare():
+
+       >>> kinfo = KernelInfo("/usr/src/linux")
+       >>> kinfo.prepare()
+
+       >>> kinfo.kernelversion
+       KernelVersion('4.7.1')
+       >>> kinfo.name
+       'Psychotic Stoned Sheep'
+
+
     @cvar SRCARCH_MAP:  a partial arch to srcarch mapping
     @type SRCARCH_MAP:  C{dict} :: C{str} => C{str}
 
@@ -230,8 +244,12 @@ class KernelInfo(SourceInfo):
     @type karch:          C{str} or C{None}
     @ivar srcarch:        target (kconfig) source architecture
     @type srcarch:        C{str} or C{None}
-    @ivar kernelversion:  version of the kernel sources
+    @ivar kernelversion:  (real) version of the kernel sources,
+                          read from <srctree>/Makefile
     @type kernelversion:  L{kversion.KernelVersion} or C{None}
+
+    @ivar name:           Linux kernel name (readonly property)
+    @type name:           C{str} or C{None}
     """
 
     SRCARCH_MAP = {
@@ -343,6 +361,12 @@ class KernelInfo(SourceInfo):
         else:
             return march
     # --- end of calculate_subarch (...) ---
+
+    @property
+    def name(self):
+        kver = self.kernelversion
+        return kver.name if kver is not None else None
+    # --- end of property name (...) ---
 
     def __init__(self, srctree, arch=None, karch=None, srcarch=None, **kwargs):
         """Constructor.
