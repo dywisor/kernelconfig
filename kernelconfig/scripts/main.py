@@ -146,7 +146,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
     def get_fileref(self, fileref):
         return fileref.get_file(logger=self.logger)
 
-    def get_conf_sources(self):
+    def get_conf_sources(self, arg_config):
         conf_sources = self.conf_sources
         if conf_sources is None:
             conf_sources = self.create_loggable(
@@ -531,7 +531,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         if inconfig_arg:
             if inconfig_arg.is_curated_source:
-                conf_sources = self.get_conf_sources()
+                conf_sources = self.get_conf_sources(arg_config)
 
                 input_config_files = (
                     conf_sources.get_configuration_basis(
@@ -547,7 +547,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             )
 
         else:
-            conf_sources = self.get_conf_sources()
+            conf_sources = self.get_conf_sources(arg_config)
 
             input_config_files = (
                 conf_sources.get_configuration_basis_from_settings(
@@ -818,7 +818,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         # FIXME: drop this requirement:
         self.do_main_setup_source_info(arg_config)
 
-        conf_sources = self.get_conf_sources()
+        conf_sources = self.get_conf_sources(arg_config)
         sources_info = conf_sources.get_available_sources_info()
 
         if not sources_info:
@@ -843,7 +843,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         self.do_main_setup_logging(arg_config)
         self.do_main_setup_source_info(arg_config)
 
-        conf_sources = self.get_conf_sources()
+        conf_sources = self.get_conf_sources(arg_config)
         conf_sources.load_available_sources()   # retval ignored
 
         if not conf_sources:
@@ -881,7 +881,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
         outstream_write = sys.stdout.write
 
-        conf_sources = self.get_conf_sources()
+        conf_sources = self.get_conf_sources(arg_config)
         conf_source, conf_source_exc = conf_sources.load_source(source_name)
 
         if conf_source_exc:
