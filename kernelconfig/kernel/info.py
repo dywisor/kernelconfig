@@ -13,6 +13,10 @@ from . import kversion
 __all__ = ["SourceInfo", "KernelInfo"]
 
 
+class ProxiedMethodNotAvailable(TypeError):
+    pass
+
+
 class SourceInfo(loggable.AbstractLoggable):
     """
     An object that provides information about the source files being processed.
@@ -485,4 +489,79 @@ class KernelInfo(SourceInfo):
         return "defconfig"
     # ---
 
+    def pretend_kernelversion(self, kernelversion):
+        """
+        Creates a kernel info proxy object that pretends
+        to have a different kernel version.
+
+        It provides a subset of the attributes and methods of this object,
+        the "kernelversion" attribute returns the fake version
+        and the "real_kernelversion" attribute returns the original version.
+
+        Methods that involve the kernel version of the original object
+        are either overridden or raise a ProxiedMethodNotAvailable exception
+        (sub-of TypeError).
+
+        Attribute access is rerouted via __getattr__() and does not get cached.
+        Thus, attribute updates are propagated to the proxy,
+        but there is some overhead on each and every attr access.
+
+        Also, isinstance, issubclass will not work,
+        and dir(<proxy obj>) will not return a complete attr list.
+
+        @param kernelversion:  fake kernelversion,
+                               either a kernel version object,
+                               a version string ("4.7.1"),
+                               or a version code int (0x40701).
+                               Version code strings are not supported.
+        @type  kernelversion:  L{KernelVersion} | C{str} | C{int}
+
+        @return:  kernel info w/ fake kernelversion (proxy object)
+        @rtype:   L{KernelInfoVersionOverrideProxy}
+        """
+        return KernelInfoVersionOverrideProxy(self, kernelversion)
+
 # --- end of KernelInfo ---
+
+
+class KernelInfoVersionOverrideProxy(object):
+    __slots__ = ["_kernel_info", "_kernelversion"]
+
+    @property
+    def name(self):
+        return self._kernelversion.name  # which is probably None
+    # --- end of property name (...) ---
+
+    @property
+    def kernelversion(self):
+        return self._kernelversion
+
+    @property
+    def real_kernelversion(self):
+        return self._kernel_info.kernelversion
+
+    def __getattr__(self, attr_name):
+        if attr_name and attr_name[0] != "_":
+            return getattr(self._kernel_info, attr_name)
+        else:
+            return super().__getattr__(self, attr_name)  # AttributeError
+    # ---
+
+    def __init__(self, kernel_info, kernelversion):
+        super().__init__()
+        self._kernel_info = kernel_info
+        self._kernelversion = kversion.get_kernelversion(kernelversion)
+    # ---
+
+    def prepare(self):
+        # Would be OK to call if KernelInfo.prepare() did not call setenv(),
+        # the set default kernelversion code does not affect the proxy.
+        raise ProxiedMethodNotAvailable()
+
+    def iter_env_vars(self):
+        # the env vars are needed for lkc functionality only
+        # (mostly kconfig parsing), this shouldn't affect the use case of
+        # this proxy, which is currently "configuration sources" only
+        raise ProxiedMethodNotAvailable()
+
+# --- end of KernelInfoVersionOverrideProxy ---
