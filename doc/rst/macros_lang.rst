@@ -433,7 +433,7 @@ Load-File Instructions
 
         include pkg/* if exists
 
-    Files are not loaded directly when the ``include`` statements gets
+    Files are not loaded directly when the ``include`` statement gets
     processed, but instead are accumulated and loaded after processing all
     other commands.
 
