@@ -140,14 +140,6 @@ Overall, the following conditions can be checked:
     builtin D if kmaj == 4 && kmin != 3   # the "sublevel" of the kernel version
     builtin E if kpatch == 0              # the "patchlevel" of the version
 
-
-* hardware modalias match with the ``hardware-match``, ``hw`` keywords
-
-  .. Note::
-
-     Future extension. Recognized, but the interpreter will complain about it.
-
-
 * ``true``/``false``
 
 
