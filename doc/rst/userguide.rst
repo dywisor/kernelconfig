@@ -1810,17 +1810,18 @@ The class-level documentation gives a quick reference over what is offered:
         they should all be treated as readonly except where noted otherwise,
         see the @property in-code doc for details:
 
-        * logger:         logger, can also be accessed via log_*() methods
+        * logger:              logger, can also be accessed via log_*() methods
 
-        * name:           conf source name
-        * exc_types:      exception types (namespace object/module)
-        * parameters:     arg parse result (namespace object)
-        * environ:        extra-env vars dict
-        * str_formatter:  string formatter
-        * format_vars:    string formatter's vars dict
-        * kernelversion:  kernel version object
-        * tmpdir:         temporary dir object
-        * tmpdir_path:    path to temporary dir
+        * name:                conf source name
+        * exc_types:           exception types (namespace object/module)
+        * parameters:          arg parse result (namespace object)
+        * environ:             extra-env vars dict
+        * str_formatter:       string formatter
+        * format_vars:         string formatter's vars dict
+        * kernelversion:       fake kernel version (object)
+        * real_kernelversion:  real kernel version (object)
+        * tmpdir:              temporary dir object
+        * tmpdir_path:         path to temporary dir
 
         The following methods can be used for communicating with kernelconfig:
 
