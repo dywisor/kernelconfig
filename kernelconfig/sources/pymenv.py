@@ -58,18 +58,19 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
     they should all be treated as readonly except where noted otherwise,
     see the @property in-code doc for details:
 
-    @ivar logger:         logger, can also be accessed via log_*() methods
+    @ivar logger:              logger, can also be accessed via log_*() methods
     @type logger:
 
-    @ivar name:           conf source name
-    @ivar exc_types:      exception types (namespace object/module)
-    @ivar parameters:     arg parse result (namespace object)
-    @ivar environ:        extra-env vars dict
-    @ivar str_formatter:  string formatter
-    @ivar format_vars:    string formatter's vars dict
-    @ivar kernelversion:  kernel version object
-    @ivar tmpdir:         temporary dir object
-    @ivar tmpdir_path:    path to temporary dir
+    @ivar name:                conf source name
+    @ivar exc_types:           exception types (namespace object/module)
+    @ivar parameters:          arg parse result (namespace object)
+    @ivar environ:             extra-env vars dict
+    @ivar str_formatter:       string formatter
+    @ivar format_vars:         string formatter's vars dict
+    @ivar kernelversion:       fake kernel version (object)
+    @ivar real_kernelversion:  real kernel version (object)
+    @ivar tmpdir:              temporary dir object
+    @ivar tmpdir_path:         path to temporary dir
 
     The following methods can be used for communicating with kernelconfig:
 
@@ -263,9 +264,8 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
 
         The kernel version object must not be modified in any way.
 
-        Note that, although currently not implemented,
-        this version is not necessarily the actual version of the sources,
-        but instead may be overridden via command line args.
+        Note that this version is not necessarily the actual version of the
+        sources, but instead may have been overridden via command line args.
 
         @raises AttributeError:  when not processing a kernel source
 
@@ -273,6 +273,18 @@ class PymConfigurationSourceRunEnv(loggable.AbstractLoggable):
         @rtype:   L{KernelVersion}
         """
         return self._senv.source_info.kernelversion
+
+    @property
+    def real_kernelversion(self):
+        """
+        Real version of the sources for which a kernel config is being created.
+
+        See kernelversion for details.
+
+        @return:  kernel version object
+        @rtype:   L{KernelVersion}
+        """
+        return self._senv.source_info.real_kernelversion
 
     @property
     def tmpdir(self):
