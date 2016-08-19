@@ -36,24 +36,23 @@
    :backlinks: top
 
 
-kernelconfig
+Introduction
 ============
 
 Generate Linux kernel configuration files from curated sources,
 detected hardware, installed packages and user input.
 
+.. N.B:
 
-Introduction
-------------
-
+    ==comment== that's the project's description, add an introduction here
 
 
 Installing kernelconfig
------------------------
+=======================
 
 
 Dependencies
-++++++++++++
+------------
 
 Required:
 
@@ -94,7 +93,7 @@ Optional:
 
 
 via emerge (Gentoo)
-+++++++++++++++++++
+-------------------
 
 A live ebuild for ``sys-kernel/kernelconfig``
 is available in the `kernelconfig-portage`_ overlay.
@@ -114,7 +113,7 @@ It can then be installed with::
 
 
 Manual Installation
-+++++++++++++++++++
+-------------------
 
 First, make sure to install the `dependencies`_.
 
@@ -199,7 +198,7 @@ Similarly, to create the PDF documentation files in ``doc/pdf``, run::
 .. _standalone mode:
 
 Running kernelconfig without installing it
-++++++++++++++++++++++++++++++++++++++++++
+------------------------------------------
 
 kernelconfig can be run in *standalone* mode from the project's sources.
 For this purpose, it offers a wrapper script named ``kernelconfig.py``
@@ -277,7 +276,7 @@ The wrapper accepts all of the `usual options`_, and additionally:
 
 
 Running kernelconfig
---------------------
+====================
 
 In the simplest case,
 run :code:`kernelconfig` without any arguments
@@ -350,6 +349,9 @@ e.g. for Fedora, run::
 
 
 .. _usual options:
+
+Command Line Options
+--------------------
 
 kernelconfig accepts a number of options:
 
@@ -616,7 +618,7 @@ kernelconfig accepts a number of options:
 .. _settings:
 
 Settings File
--------------
+=============
 
 The settings file is kernelconfig's main configuration file.
 It is an ``.ini``-like file consisting of several sections.
@@ -642,7 +644,7 @@ a quick overview of all sections and their respective format:
 
 
 Settings Directories
-++++++++++++++++++++
+--------------------
 
 Settings files are usually given by name and are searched for in some
 standard directories. The list of these directories varies depending
@@ -668,7 +670,7 @@ these names are reserved for other purposes.
 
 
 \[source\]
-++++++++++
+----------
 
 The ``[source]`` section is used to declare
 the input kernel configuration file.
@@ -713,7 +715,7 @@ Only script-type configuration sources accept non-empty data.
 
 
 Using a curated source
-^^^^^^^^^^^^^^^^^^^^^^
+++++++++++++++++++++++
 
 Example::
 
@@ -831,7 +833,7 @@ Ubuntu
 
 
 Using defconfig as configuration source
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
++++++++++++++++++++++++++++++++++++++++
 
 Run ``make defconfig`` with a temporary directory
 as output directory, and use the generated file as input config file::
@@ -844,7 +846,7 @@ The type keyword is ``defconfig``, and no parameters are accepted.
 
 
 Using a file as configuration source
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+++++++++++++++++++++++++++++++++++++
 
 Use a local file named ``config_<arch>`` found in the ``sources/files``
 subdirectory of the settings directories::
@@ -871,7 +873,7 @@ The path is subject to basic `string formatting`_.
 
 
 Using a command as configuration source
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
++++++++++++++++++++++++++++++++++++++++
 
 Example::
 
@@ -895,7 +897,7 @@ creates a ``config`` file in the temporary directory.
 
 
 Using a script as configuration source
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+++++++++++++++++++++++++++++++++++++++
 
 Download a tarball,
 extract it to a temporary directory,
@@ -936,7 +938,7 @@ creates a ``config`` file in the temporary directory.
 .. _config source environment variables:
 
 Configuration Source Environment Variables
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+++++++++++++++++++++++++++++++++++++++++++
 
 Commands, including scripts,
 have access to the following environment variables:
@@ -993,7 +995,7 @@ have access to the following environment variables:
 .. _string formatting:
 
 Configuration Source Format Variables
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
++++++++++++++++++++++++++++++++++++++
 
 All basic source types are subject to Python string formatting.
 
@@ -1044,7 +1046,7 @@ The following variables exist:
 
 
 \[options\]
-+++++++++++
+-----------
 
 The ``[options]`` section should contain a list of config-modifying commands::
 
@@ -1105,7 +1107,7 @@ See `macros file format`_ for a more detailed explanation of the format.
 
 
 Hardware Detection
-------------------
+==================
 
 kernelconfig is able to determine which hardware is present on the system
 and enable config options accordingly.
@@ -1149,7 +1151,7 @@ but requires a *modalias information source*.
 
 
 Modalias Information Source
-+++++++++++++++++++++++++++
+---------------------------
 
 A *modalias information source* is, basically, a very reduced variant
 of a modules directory that would normally be installed to ``/lib/modules``.
@@ -1197,7 +1199,7 @@ which are covered in `--generate-modalias`_.
 .. _hwcollector:
 
 Collecting Hardware Information on a Different Machine
-++++++++++++++++++++++++++++++++++++++++++++++++++++++
+------------------------------------------------------
 
 Hardware detection is not limited to the machine running kernelconfig,
 it is also possible to scan for hardware identifiers on another machine.
@@ -1244,7 +1246,7 @@ target machine to the build machine.
 
 
 hwinfo file
-^^^^^^^^^^^
++++++++++++
 
 The hardware information file is a JSON object with dummy null-terminates
 that lists which kernel modules and module alias identifiers have been
@@ -1286,7 +1288,7 @@ with a small file size overhead of one dummy item per list/object.
 
 
 Package Management Integration
-------------------------------
+==============================
 
 Installed packages can serve as source for config option recommendations.
 This feature relies on packages being managed by portage,
@@ -1334,7 +1336,7 @@ Unknown config options listed in ``CONFIG_CHECK`` are ignored.
 
 
 Curated Sources
----------------
+===============
 
 This section covers how to add new *curated sources* to kernelconfig.
 
@@ -1358,7 +1360,7 @@ A curated source consists of
 
 
 Script-Only Curated Sources
-+++++++++++++++++++++++++++
+---------------------------
 
 The simplest case is *script only*,
 which is limited to single-file configuration bases.
@@ -1404,7 +1406,7 @@ in the same directory with the following content::
 
 
 Source Definition File
-++++++++++++++++++++++
+----------------------
 
 Curated sources that are not script-type sources,
 or sources that want to benefit from argument parsing,
@@ -1696,7 +1698,7 @@ which options are recognized is therefore up to the source.
 
 
 Python-Module Configuration Sources
-+++++++++++++++++++++++++++++++++++
+-----------------------------------
 
 Python-Module Configuration Sources gain access
 to kernelconfig's functionality such as error reporting and logging,
