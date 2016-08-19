@@ -8,3 +8,4 @@ LN = ln
 LNS = $(LN) -s
 MV = mv
 MVF = $(MV) -f
+SED = sed

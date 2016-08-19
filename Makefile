@@ -68,6 +68,36 @@ build-py: $(_BUILD_DIR:/=)/installinfo.py
 	$(PYTHON) $(_SETUP_PY) build
 
 
+PHONY += bashcomp
+bashcomp: $(_BUILD_DIR)/$(PN).bashcomp
+
+SRC_BASHCOMP_FILE := $(SRC_FILESDIR)/kernelconfig.bashcomp.in
+
+$(_BUILD_DIR)/$(PN).bashcomp: $(SRC_BASHCOMP_FILE)
+	$(MKDIRP) -- '$(@D)'
+	$(SED) -r \
+		-e s=@prj_sysconfdir@=$(PRJ_SYSCONFDIR)=g \
+		-e s=@prj_datadir@=$(PRJ_DATADIR)=g \
+		-e /@prj_localconfdir@/d \
+		-e /@prj_localdatadir@/d \
+		< '$(<)' > '$(@).make_tmp'
+	$(MVF) -- '$(@).make_tmp' '$(@)'
+
+PHONY += bashcomp-standalone
+bashcomp-standalone: $(PRJ_LOCALDIR)/$(PN).bashcomp
+
+$(PRJ_LOCALDIR)/$(PN).bashcomp: $(SRC_BASHCOMP_FILE)
+	$(MKDIRP) -- '$(@D)'
+# dup of <filesdir>/installinfo/standalone.py
+	$(SED) -r \
+		-e s=@prj_sysconfdir@=$(_PRJROOT:/=)/config=g \
+		-e s=@prj_datadir@=$(_PRJROOT:/=)/files/data=g \
+		-e s=@prj_localconfdir@=$(PRJ_LOCALDIR:/=)/config=g \
+		-e s=@prj_localdatadir@=$(PRJ_LOCALDIR:/=)/data=g \
+		< '$(<)' > '$(@).make_tmp'
+	$(MVF) -- '$(@).make_tmp' '$(@)'
+
+
 PHONY += clean
 clean::
 	true
@@ -325,6 +355,13 @@ help:
 	@echo  '  build-py                   - run PYTHON setup.py build,'
 	@echo  '                               create installinfo if necessary'
 	@echo  '                                 (PYTHON: $(PYTHON))'
+	@echo  '  *** bash completion:'
+	@echo  '  bashcomp                   - create the bash completion file'
+	@echo  '                               for install mode'
+	@echo  '                               (build/$(PN).bashcomp)'
+	@echo  '  bashcomp-standalone        - create the bash completion file'
+	@echo  '                               for standalone mode'
+	@echo  '                               (local/$(PN).bashcomp)'
 	@echo  ''
 	@echo 'Install Targets:'
 	@echo  '  install-data               - install data files'

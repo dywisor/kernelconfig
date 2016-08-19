@@ -25,6 +25,8 @@ _PYMOD_DIRS := $(addprefix $(S:/=)/,$(_PRJNAME))
 _SETUP_PY := $(S:/=)/setup.py
 _EPYDOC_DIR = $(SRC_DOCDIR:/=)/epydoc
 
+PRJ_LOCALDIR := $(_PRJROOT:/=)/local
+
 PYSETUP_RECORD_FILE := $(_BUILD_DIR)/$(PN)_pysetup_files.list
 
 f_subst_srcdir = $(patsubst $(S:/=)/%,./%,$(strip $(1)))
