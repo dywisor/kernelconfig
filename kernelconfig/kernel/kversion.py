@@ -9,6 +9,7 @@ from ..util import fileio
 
 __all__ = [
     "kver_sort_key",
+    "get_kernelversion",
     "KernelVersion", "KernelExtraVersion",
     "KernelVersionMkVarRedefinition"
 ]
@@ -18,6 +19,21 @@ def kver_sort_key(kver_obj):
     """Returns the sort key of a kernel version object."""
     return kver_obj.get_sort_key()
 # --- end of kver_sort_key (...) ---
+
+
+def get_kernelversion(kver_input):
+    if isinstance(kver_input, KernelVersion):
+        return kver_input
+
+    elif isinstance(kver_input, int):
+        return KernelVersion.new_from_version_code(kver_input)
+
+    elif isinstance(kver_input, str):
+        return KernelVersion.new_from_version_str(kver_input)
+
+    else:
+        raise ValueError(kver_input)
+# --- end of get_kernelversion (...) ---
 
 
 class KernelVersionMkVarRedefinition(AssertionError):
