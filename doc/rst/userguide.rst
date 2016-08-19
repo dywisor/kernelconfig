@@ -4,6 +4,9 @@
 .. _ply:
     https://pypi.python.org/pypi/ply/
 
+.. _rst2pdf:
+    https://pypi.python.org/pypi/rst2pdf
+
 .. _Python String Formatting:
     https://docs.python.org/3/library/string.html#format-string-syntax
 
@@ -86,6 +89,9 @@ Optional:
 * Linux kernel sources for copying certain files from ``scripts/kconfig``,
   a bundled copy is used otherwise
 
+* docutils, `rst2pdf`_ for generating the documentation files
+
+
 
 via emerge (Gentoo)
 +++++++++++++++++++
@@ -167,6 +173,28 @@ follow the `GNU Coding Standards\: Directory Variables`_,
 except that the names are in uppercase.
 See ``mk/install.mk`` for a list of variables.
 
+The bash completion file, ``build/kernelconfig.bashcomp``,
+can be created with ``make``, but has to be installed manually::
+
+    make bashcomp PREFIX="${PREFIX}" SYSCONFDIR="${SYSCONFDIR}"
+
+
+To generate the HTML documentation files in ``doc/html``, run::
+
+    make htmldoc
+
+
+Similarly, to create the PDF documentation files in ``doc/pdf``, run::
+
+    make pdf
+
+.. Warning::
+
+    The generated PDF files contain information about filesystem paths
+    of the system that created the files, making them less ideal for sharing.
+
+    The HTML files do not have this issue.
+
 
 .. _standalone mode:
 
@@ -187,9 +215,7 @@ The wrapper can be run directly::
 
     $ ~/git/kernelconfig/kernelconfig.py
 
-
-It can also be *installed* by creating a symlink to it in one of the
-``PATH`` directories.
+or *installed* by creating a symlink in one of the ``PATH`` directories.
 
 For example, if ``~/bin`` is in your ``PATH``::
 
@@ -197,10 +223,19 @@ For example, if ``~/bin`` is in your ``PATH``::
     $ kernelconfig
 
 
+Bash completion is also available, but has to be created first::
+
+    $ make -C ~/git/kernelconfig bashcomp-standalone
+
+Then, add the following line to ``~/.bash_completion``::
+
+    source ~/git/kernelconfig/local/kernelconfig.bashcomp
+
+
 Throughout the following sections,
 ``<prjroot>`` will be used to refer to the project's source directory.
 
-It accepts all of the `usual options`_, and additionally:
+The wrapper accepts all of the `usual options`_, and additionally:
 
 --wrapper-help
 
@@ -373,6 +408,10 @@ kernelconfig accepts a number of options:
     An input configuration file that should be used
     instead of the source configured in the settings file.
 
+    The file can be gzip, bzip2 or xz-compressed,
+    provided that its file suffix indicates the compression format
+    (e.g. ``/proc/config.gz``).
+
     Not set by default.
 
 --config <source>
@@ -393,6 +432,17 @@ kernelconfig accepts a number of options:
     sources, and ``--help-source <name>`` for parameters supported by
     a particular source.
 
+--config-kver <kernelversion>
+    Force a specific kernel version for the input configuration.
+
+    Useful if the chosen configuration source does not offer a configuration
+    for the version of the kernel sources being processed.
+
+    This is primarily meaningful for *curated sources* only.
+    Some configuration sources ignore this option completely,
+    for example ``--config /proc/config.gz``, and others try to find
+    a configuration whose version does not differ "too much".
+
 -I <file>
 
     File with additional kernel configuration modifications.
@@ -410,7 +460,10 @@ kernelconfig accepts a number of options:
 -H <file>, --hwdetect <file>
 
     Enable hardware detection and read the information from a *hwinfo* file
-    as created by `hwcollector`_.
+    that has previously been created with the `hwcollector`_ script.
+
+    The ``<file>`` can also point to a remote file,
+    e.g. ``http://192.168.1.1/hwdetect_info.txt``.
 
     Disables any other hardware detection,
     in particular ``hwdetect`` instructions in the `\[options\]`_ section
@@ -427,6 +480,8 @@ kernelconfig accepts a number of options:
     * a path to a directory, e.g. ``/lib/$(uname -r)/modules``
 
     * a path to a tarball file
+
+    * a http(s)/ftp uri to a tarball file
 
     * ``none``,
       which disables modalias-based hardware detection completely
@@ -798,7 +853,7 @@ subdirectory of the settings directories::
     file config_{arch}
 
 
-It is also possible to download file via http/https/ftp, for example::
+It is also possible to download a file via http/https/ftp, for example::
 
     [source]
     http://.../{kv}/config.{arch}
