@@ -325,7 +325,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         # -- end common_arg_group
 
         genconfig_arg_group = parser.add_argument_group(
-            title="optional arguments for generate-config"
+            title="optional arguments for generate-config and get-config"
         )
 
         genconfig_arg_group.add_argument(
