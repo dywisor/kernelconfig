@@ -248,6 +248,10 @@ class KernelInfo(SourceInfo):
                           read from <srctree>/Makefile
     @type kernelversion:  L{kversion.KernelVersion} or C{None}
 
+    @ivar real_kernelversion:  readonly alias to kernelversion
+                               (KernelInfoVersionOverrideProxy compatibility)
+    @type real_kernelversion:  L{kversion.KernelVersion} or C{None}
+
     @ivar name:           Linux kernel name (readonly property)
     @type name:           C{str} or C{None}
     """
@@ -367,6 +371,11 @@ class KernelInfo(SourceInfo):
         kver = self.kernelversion
         return kver.name if kver is not None else None
     # --- end of property name (...) ---
+
+    @property
+    def real_kernelversion(self):
+        return self.kernelversion
+    # --- end of property real_kernelversion (...) ---
 
     def __init__(self, srctree, arch=None, karch=None, srcarch=None, **kwargs):
         """Constructor.
