@@ -452,12 +452,6 @@ builtin D if kmaj == 4 &amp;&amp; kmin != 3   # the &quot;sublevel&quot; of the 
 builtin E if kpatch == 0              # the &quot;patchlevel&quot; of the version
 </pre>
 </li>
-<li><p class="first">hardware modalias match with the <tt class="docutils literal"><span class="pre">hardware-match</span></tt>, <tt class="docutils literal">hw</tt> keywords</p>
-<div class="note">
-<p class="first admonition-title">Note</p>
-<p class="last">Future extension. Recognized, but the interpreter will complain about it.</p>
-</div>
-</li>
 <li><p class="first"><tt class="docutils literal">true</tt>/<tt class="docutils literal">false</tt></p>
 </li>
 <li><p class="first">the truth value of the previous instruction's condition can be
@@ -770,7 +764,7 @@ If that is not desired, an <tt class="docutils literal">exists</tt> condition sh
 <pre class="literal-block">
 include pkg/* if exists
 </pre>
-<p>Files are not loaded directly when the <tt class="docutils literal">include</tt> statements gets
+<p>Files are not loaded directly when the <tt class="docutils literal">include</tt> statement gets
 processed, but instead are accumulated and loaded after processing all
 other commands.</p>
 <div class="note last">
@@ -784,7 +778,7 @@ This might change in future.</p>
 </div>
 <div class="footer">
 <hr class="footer" />
-Generated on: 2016-08-15.
+Generated on: 2016-08-19.
 
 </div>
 </body>

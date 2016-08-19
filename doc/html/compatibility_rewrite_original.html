@@ -351,7 +351,7 @@ and which command line options changed.</p>
 <div class="line-block">
 <div class="line">The evaluation is based on kernelconfig,</div>
 <div class="line"><em>v0</em> as of Aug 2016, commit <tt class="docutils literal">21022840c613919ad3a5fa0e05b6b709710834f2</tt></div>
-<div class="line">and <em>v1</em> as of Aug 2016, commit <tt class="docutils literal">1ad56f25738895b8616a24077391a208fd28a8b7</tt>.</div>
+<div class="line">and <em>v1</em> as of Aug 2016, commit <tt class="docutils literal">824d93b45c2168f7b91d4d02775cb2f301172cc6</tt>.</div>
 </div>
 <p>Paragraphs marked with <tt class="docutils literal"><span class="pre">INTEND-TO-FIX</span></tt> denote
 that compatibility with <em>v0</em> will be restored,
@@ -359,14 +359,9 @@ and <tt class="docutils literal"><span class="pre">UNSURE-IF-FIX</span></tt> mea
 <div class="section" id="running-kernelconfig">
 <h1>Running kernelconfig</h1>
 <ul>
-<li><p class="first"><em>v1</em> does not support the <tt class="docutils literal"><span class="pre">-v</span></tt>, <tt class="docutils literal"><span class="pre">--version</span></tt> option.</p>
-<blockquote>
-<p><tt class="docutils literal"><span class="pre">-v</span></tt> is accepted, but it increases the log verbosity.</p>
-<div class="line-block">
-<div class="line"><tt class="docutils literal"><span class="pre">UNSURE-IF-FIX</span></tt>: reintroduce as renamed option: <tt class="docutils literal"><span class="pre">--fake-kver</span></tt>, <tt class="docutils literal"><span class="pre">--source-kver</span></tt>?</div>
-<div class="line">Not all config sources follow the kernel versioning scheme, see e.g. CentOS.</div>
-</div>
-</blockquote>
+<li><p class="first">The <tt class="docutils literal"><span class="pre">-v</span></tt>, <tt class="docutils literal"><span class="pre">--version</span></tt> option has been renamed to <tt class="docutils literal"><span class="pre">--config-kver</span></tt>,
+no short option exists.</p>
+<p><em>v1</em> does accept a <tt class="docutils literal"><span class="pre">-v</span></tt> option, but it increases the log verbosity.</p>
 </li>
 <li><p class="first">In <em>v0</em>, <tt class="docutils literal"><span class="pre">-a</span></tt>, <tt class="docutils literal"><span class="pre">--arch</span></tt> accepts arbitrary target architectures,
 and is only relevant to curated sources.</p>
@@ -538,7 +533,7 @@ It also offers argument parsing.</p>
 </div>
 <div class="footer">
 <hr class="footer" />
-Generated on: 2016-08-15.
+Generated on: 2016-08-19.
 
 </div>
 </body>

@@ -344,61 +344,62 @@ ul.auto-toc {
 <div class="contents topic" id="contents">
 <p class="topic-title first">Contents</p>
 <ul class="auto-toc simple">
-<li><a class="reference internal" href="#id1" id="id4">1&nbsp;&nbsp;&nbsp;kernelconfig</a><ul class="auto-toc">
-<li><a class="reference internal" href="#introduction" id="id5">1.1&nbsp;&nbsp;&nbsp;Introduction</a></li>
-<li><a class="reference internal" href="#installing-kernelconfig" id="id6">1.2&nbsp;&nbsp;&nbsp;Installing kernelconfig</a><ul class="auto-toc">
-<li><a class="reference internal" href="#dependencies" id="id7">1.2.1&nbsp;&nbsp;&nbsp;Dependencies</a></li>
-<li><a class="reference internal" href="#via-emerge-gentoo" id="id8">1.2.2&nbsp;&nbsp;&nbsp;via emerge (Gentoo)</a></li>
-<li><a class="reference internal" href="#manual-installation" id="id9">1.2.3&nbsp;&nbsp;&nbsp;Manual Installation</a></li>
-<li><a class="reference internal" href="#running-kernelconfig-without-installing-it" id="id10">1.2.4&nbsp;&nbsp;&nbsp;Running kernelconfig without installing it</a></li>
+<li><a class="reference internal" href="#introduction" id="id3">1&nbsp;&nbsp;&nbsp;Introduction</a></li>
+<li><a class="reference internal" href="#installing-kernelconfig" id="id4">2&nbsp;&nbsp;&nbsp;Installing kernelconfig</a><ul class="auto-toc">
+<li><a class="reference internal" href="#dependencies" id="id5">2.1&nbsp;&nbsp;&nbsp;Dependencies</a></li>
+<li><a class="reference internal" href="#via-emerge-gentoo" id="id6">2.2&nbsp;&nbsp;&nbsp;via emerge (Gentoo)</a></li>
+<li><a class="reference internal" href="#manual-installation" id="id7">2.3&nbsp;&nbsp;&nbsp;Manual Installation</a></li>
+<li><a class="reference internal" href="#running-kernelconfig-without-installing-it" id="id8">2.4&nbsp;&nbsp;&nbsp;Running kernelconfig without installing it</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#running-kernelconfig" id="id11">1.3&nbsp;&nbsp;&nbsp;Running kernelconfig</a></li>
-<li><a class="reference internal" href="#settings-file" id="id12">1.4&nbsp;&nbsp;&nbsp;Settings File</a><ul class="auto-toc">
-<li><a class="reference internal" href="#settings-directories" id="id13">1.4.1&nbsp;&nbsp;&nbsp;Settings Directories</a></li>
-<li><a class="reference internal" href="#source" id="id14">1.4.2&nbsp;&nbsp;&nbsp;[source]</a><ul class="auto-toc">
-<li><a class="reference internal" href="#using-a-curated-source" id="id15">1.4.2.1&nbsp;&nbsp;&nbsp;Using a curated source</a></li>
-<li><a class="reference internal" href="#using-defconfig-as-configuration-source" id="id16">1.4.2.2&nbsp;&nbsp;&nbsp;Using defconfig as configuration source</a></li>
-<li><a class="reference internal" href="#using-a-file-as-configuration-source" id="id17">1.4.2.3&nbsp;&nbsp;&nbsp;Using a file as configuration source</a></li>
-<li><a class="reference internal" href="#using-a-command-as-configuration-source" id="id18">1.4.2.4&nbsp;&nbsp;&nbsp;Using a command as configuration source</a></li>
-<li><a class="reference internal" href="#using-a-script-as-configuration-source" id="id19">1.4.2.5&nbsp;&nbsp;&nbsp;Using a script as configuration source</a></li>
-<li><a class="reference internal" href="#configuration-source-environment-variables" id="id20">1.4.2.6&nbsp;&nbsp;&nbsp;Configuration Source Environment Variables</a></li>
-<li><a class="reference internal" href="#configuration-source-format-variables" id="id21">1.4.2.7&nbsp;&nbsp;&nbsp;Configuration Source Format Variables</a></li>
+<li><a class="reference internal" href="#running-kernelconfig" id="id9">3&nbsp;&nbsp;&nbsp;Running kernelconfig</a><ul class="auto-toc">
+<li><a class="reference internal" href="#command-line-options" id="id10">3.1&nbsp;&nbsp;&nbsp;Command Line Options</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#options" id="id22">1.4.3&nbsp;&nbsp;&nbsp;[options]</a></li>
+<li><a class="reference internal" href="#settings-file" id="id11">4&nbsp;&nbsp;&nbsp;Settings File</a><ul class="auto-toc">
+<li><a class="reference internal" href="#settings-directories" id="id12">4.1&nbsp;&nbsp;&nbsp;Settings Directories</a></li>
+<li><a class="reference internal" href="#source" id="id13">4.2&nbsp;&nbsp;&nbsp;[source]</a><ul class="auto-toc">
+<li><a class="reference internal" href="#using-a-curated-source" id="id14">4.2.1&nbsp;&nbsp;&nbsp;Using a curated source</a></li>
+<li><a class="reference internal" href="#using-defconfig-as-configuration-source" id="id15">4.2.2&nbsp;&nbsp;&nbsp;Using defconfig as configuration source</a></li>
+<li><a class="reference internal" href="#using-a-file-as-configuration-source" id="id16">4.2.3&nbsp;&nbsp;&nbsp;Using a file as configuration source</a></li>
+<li><a class="reference internal" href="#using-a-command-as-configuration-source" id="id17">4.2.4&nbsp;&nbsp;&nbsp;Using a command as configuration source</a></li>
+<li><a class="reference internal" href="#using-a-script-as-configuration-source" id="id18">4.2.5&nbsp;&nbsp;&nbsp;Using a script as configuration source</a></li>
+<li><a class="reference internal" href="#configuration-source-environment-variables" id="id19">4.2.6&nbsp;&nbsp;&nbsp;Configuration Source Environment Variables</a></li>
+<li><a class="reference internal" href="#configuration-source-format-variables" id="id20">4.2.7&nbsp;&nbsp;&nbsp;Configuration Source Format Variables</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#hardware-detection" id="id23">1.5&nbsp;&nbsp;&nbsp;Hardware Detection</a><ul class="auto-toc">
-<li><a class="reference internal" href="#modalias-information-source" id="id24">1.5.1&nbsp;&nbsp;&nbsp;Modalias Information Source</a></li>
-<li><a class="reference internal" href="#collecting-hardware-information-on-a-different-machine" id="id25">1.5.2&nbsp;&nbsp;&nbsp;Collecting Hardware Information on a Different Machine</a><ul class="auto-toc">
-<li><a class="reference internal" href="#hwinfo-file" id="id26">1.5.2.1&nbsp;&nbsp;&nbsp;hwinfo file</a></li>
+<li><a class="reference internal" href="#options" id="id21">4.3&nbsp;&nbsp;&nbsp;[options]</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#hardware-detection" id="id22">5&nbsp;&nbsp;&nbsp;Hardware Detection</a><ul class="auto-toc">
+<li><a class="reference internal" href="#modalias-information-source" id="id23">5.1&nbsp;&nbsp;&nbsp;Modalias Information Source</a></li>
+<li><a class="reference internal" href="#collecting-hardware-information-on-a-different-machine" id="id24">5.2&nbsp;&nbsp;&nbsp;Collecting Hardware Information on a Different Machine</a><ul class="auto-toc">
+<li><a class="reference internal" href="#hwinfo-file" id="id25">5.2.1&nbsp;&nbsp;&nbsp;hwinfo file</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a class="reference internal" href="#package-management-integration" id="id27">1.6&nbsp;&nbsp;&nbsp;Package Management Integration</a></li>
-<li><a class="reference internal" href="#curated-sources" id="id28">1.7&nbsp;&nbsp;&nbsp;Curated Sources</a><ul class="auto-toc">
-<li><a class="reference internal" href="#script-only-curated-sources" id="id29">1.7.1&nbsp;&nbsp;&nbsp;Script-Only Curated Sources</a></li>
-<li><a class="reference internal" href="#source-definition-file" id="id30">1.7.2&nbsp;&nbsp;&nbsp;Source Definition File</a></li>
-<li><a class="reference internal" href="#python-module-configuration-sources" id="id31">1.7.3&nbsp;&nbsp;&nbsp;Python-Module Configuration Sources</a></li>
-</ul>
-</li>
+<li><a class="reference internal" href="#package-management-integration" id="id26">6&nbsp;&nbsp;&nbsp;Package Management Integration</a></li>
+<li><a class="reference internal" href="#curated-sources" id="id27">7&nbsp;&nbsp;&nbsp;Curated Sources</a><ul class="auto-toc">
+<li><a class="reference internal" href="#script-only-curated-sources" id="id28">7.1&nbsp;&nbsp;&nbsp;Script-Only Curated Sources</a></li>
+<li><a class="reference internal" href="#source-definition-file" id="id29">7.2&nbsp;&nbsp;&nbsp;Source Definition File</a></li>
+<li><a class="reference internal" href="#python-module-configuration-sources" id="id30">7.3&nbsp;&nbsp;&nbsp;Python-Module Configuration Sources</a></li>
 </ul>
 </li>
 </ul>
 </div>
-<div class="section" id="id1">
-<h1><a class="toc-backref" href="#contents">1&nbsp;&nbsp;&nbsp;kernelconfig</a></h1>
+<div class="section" id="introduction">
+<h1><a class="toc-backref" href="#contents">1&nbsp;&nbsp;&nbsp;Introduction</a></h1>
 <p>Generate Linux kernel configuration files from curated sources,
 detected hardware, installed packages and user input.</p>
-<div class="section" id="introduction">
-<h2><a class="toc-backref" href="#contents">1.1&nbsp;&nbsp;&nbsp;Introduction</a></h2>
+<!-- N.B:
+
+==comment== that's the project's description, add an introduction here -->
 </div>
 <div class="section" id="installing-kernelconfig">
-<h2><a class="toc-backref" href="#contents">1.2&nbsp;&nbsp;&nbsp;Installing kernelconfig</a></h2>
+<h1><a class="toc-backref" href="#contents">2&nbsp;&nbsp;&nbsp;Installing kernelconfig</a></h1>
 <div class="section" id="dependencies">
-<h3><a class="toc-backref" href="#contents">1.2.1&nbsp;&nbsp;&nbsp;Dependencies</a></h3>
+<h2><a class="toc-backref" href="#contents">2.1&nbsp;&nbsp;&nbsp;Dependencies</a></h2>
 <p>Required:</p>
 <ul class="simple">
 <li>Python &gt;= 3.4, or Python 3.3 with backports: enum</li>
@@ -422,10 +423,11 @@ for the Fedora configuration source</li>
 <ul class="simple">
 <li>Linux kernel sources for copying certain files from <tt class="docutils literal">scripts/kconfig</tt>,
 a bundled copy is used otherwise</li>
+<li>docutils, <a class="reference external" href="https://pypi.python.org/pypi/rst2pdf">rst2pdf</a> for generating the documentation files</li>
 </ul>
 </div>
 <div class="section" id="via-emerge-gentoo">
-<h3><a class="toc-backref" href="#contents">1.2.2&nbsp;&nbsp;&nbsp;via emerge (Gentoo)</a></h3>
+<h2><a class="toc-backref" href="#contents">2.2&nbsp;&nbsp;&nbsp;via emerge (Gentoo)</a></h2>
 <p>A live ebuild for <tt class="docutils literal"><span class="pre">sys-kernel/kernelconfig</span></tt>
 is available in the <a class="reference external" href="https://github.com/dywisor/tlp-portage">kernelconfig-portage</a> overlay.</p>
 <p>To add it with <a class="reference external" href="https://wiki.gentoo.org/wiki/Layman">layman</a>, run:</p>
@@ -443,7 +445,7 @@ $ emerge -a sys-kernel/kernelconfig
 </pre>
 </div>
 <div class="section" id="manual-installation">
-<h3><a class="toc-backref" href="#contents">1.2.3&nbsp;&nbsp;&nbsp;Manual Installation</a></h3>
+<h2><a class="toc-backref" href="#contents">2.3&nbsp;&nbsp;&nbsp;Manual Installation</a></h2>
 <p>First, make sure to install the <a class="reference internal" href="#dependencies">dependencies</a>.</p>
 <p>After that, clone the <a class="reference external" href="https://github.com/dywisor/kernelconfig">git repo</a> and
 change to working directory to kernelconfig's sources:</p>
@@ -495,9 +497,28 @@ make install-data install-config DESTDIR=&quot;${DESTDIR}&quot; PREFIX=&quot;${P
 follow the <a class="reference external" href="https://www.gnu.org/prep/standards/html_node/Directory-Variables.html">GNU Coding Standards: Directory Variables</a>,
 except that the names are in uppercase.
 See <tt class="docutils literal">mk/install.mk</tt> for a list of variables.</p>
+<p>The bash completion file, <tt class="docutils literal">build/kernelconfig.bashcomp</tt>,
+can be created with <tt class="docutils literal">make</tt>, but has to be installed manually:</p>
+<pre class="literal-block">
+make bashcomp PREFIX=&quot;${PREFIX}&quot; SYSCONFDIR=&quot;${SYSCONFDIR}&quot;
+</pre>
+<p>To generate the HTML documentation files in <tt class="docutils literal">doc/html</tt>, run:</p>
+<pre class="literal-block">
+make htmldoc
+</pre>
+<p>Similarly, to create the PDF documentation files in <tt class="docutils literal">doc/pdf</tt>, run:</p>
+<pre class="literal-block">
+make pdf
+</pre>
+<div class="warning">
+<p class="first admonition-title">Warning</p>
+<p>The generated PDF files contain information about filesystem paths
+of the system that created the files, making them less ideal for sharing.</p>
+<p class="last">The HTML files do not have this issue.</p>
+</div>
 </div>
 <div class="section" id="running-kernelconfig-without-installing-it">
-<span id="standalone-mode"></span><h3><a class="toc-backref" href="#contents">1.2.4&nbsp;&nbsp;&nbsp;Running kernelconfig without installing it</a></h3>
+<span id="standalone-mode"></span><h2><a class="toc-backref" href="#contents">2.4&nbsp;&nbsp;&nbsp;Running kernelconfig without installing it</a></h2>
 <p>kernelconfig can be run in <em>standalone</em> mode from the project's sources.
 For this purpose, it offers a wrapper script named <tt class="docutils literal">kernelconfig.py</tt>
 that takes care of running <tt class="docutils literal">setup.py</tt> and invoking the main script.</p>
@@ -510,16 +531,23 @@ $ git clone git://github.com/dywisor/kernelconfig.git ~/git/kernelconfig
 <pre class="literal-block">
 $ ~/git/kernelconfig/kernelconfig.py
 </pre>
-<p>It can also be <em>installed</em> by creating a symlink to it in one of the
-<tt class="docutils literal">PATH</tt> directories.</p>
+<p>or <em>installed</em> by creating a symlink in one of the <tt class="docutils literal">PATH</tt> directories.</p>
 <p>For example, if <tt class="docutils literal">~/bin</tt> is in your <tt class="docutils literal">PATH</tt>:</p>
 <pre class="literal-block">
 $ ln -s ~/git/kernelconfig/kernelconfig.py ~/bin/kernelconfig
 $ kernelconfig
 </pre>
+<p>Bash completion is also available, but has to be created first:</p>
+<pre class="literal-block">
+$ make -C ~/git/kernelconfig bashcomp-standalone
+</pre>
+<p>Then, add the following line to <tt class="docutils literal"><span class="pre">~/.bash_completion</span></tt>:</p>
+<pre class="literal-block">
+source ~/git/kernelconfig/local/kernelconfig.bashcomp
+</pre>
 <p>Throughout the following sections,
 <tt class="docutils literal">&lt;prjroot&gt;</tt> will be used to refer to the project's source directory.</p>
-<p>It accepts all of the <a class="reference internal" href="#usual-options">usual options</a>, and additionally:</p>
+<p>The wrapper accepts all of the <a class="reference internal" href="#usual-options">usual options</a>, and additionally:</p>
 <table class="docutils option-list" frame="void" rules="none">
 <col class="option" />
 <col class="description" />
@@ -564,7 +592,7 @@ if this option is not given.</td></tr>
 </div>
 </div>
 <div class="section" id="running-kernelconfig">
-<h2><a class="toc-backref" href="#contents">1.3&nbsp;&nbsp;&nbsp;Running kernelconfig</a></h2>
+<h1><a class="toc-backref" href="#contents">3&nbsp;&nbsp;&nbsp;Running kernelconfig</a></h1>
 <p>In the simplest case,
 run <code>kernelconfig</code> without any arguments
 from within the kernel sources directory.
@@ -621,7 +649,9 @@ e.g. for Fedora, run:</p>
 <pre class="literal-block">
 $ kernelconfig --help-source Fedora -a mips
 </pre>
-<p id="usual-options">kernelconfig accepts a number of options:</p>
+<div class="section" id="command-line-options">
+<span id="usual-options"></span><h2><a class="toc-backref" href="#contents">3.1&nbsp;&nbsp;&nbsp;Command Line Options</a></h2>
+<p>kernelconfig accepts a number of options:</p>
 <table class="docutils option-list" frame="void" rules="none">
 <col class="option" />
 <col class="description" />
@@ -675,6 +705,9 @@ or a relative path starting with <tt class="docutils literal">./</tt>.</p>
 </tr>
 <tr><td>&nbsp;</td><td><p class="first">An input configuration file that should be used
 instead of the source configured in the settings file.</p>
+<p>The file can be gzip, bzip2 or xz-compressed,
+provided that its file suffix indicates the compression format
+(e.g. <tt class="docutils literal">/proc/config.gz</tt>).</p>
 <p class="last">Not set by default.</p>
 </td></tr>
 <tr><td class="option-group" colspan="2">
@@ -694,6 +727,17 @@ that are passed as-is to the configuration source.</p>
 sources, and <tt class="docutils literal"><span class="pre">--help-source</span> &lt;name&gt;</tt> for parameters supported by
 a particular source.</p>
 </td></tr>
+<tr><td class="option-group" colspan="2">
+<kbd><span class="option">--config-kver <var>&lt;kernelversion&gt;</var></span></kbd></td>
+</tr>
+<tr><td>&nbsp;</td><td><p class="first">Force a specific kernel version for the input configuration.</p>
+<p>Useful if the chosen configuration source does not offer a configuration
+for the version of the kernel sources being processed.</p>
+<p class="last">This is primarily meaningful for <em>curated sources</em> only.
+Some configuration sources ignore this option completely,
+for example <tt class="docutils literal"><span class="pre">--config</span> /proc/config.gz</tt>, and others try to find
+a configuration whose version does not differ &quot;too much&quot;.</p>
+</td></tr>
 <tr><td class="option-group">
 <kbd><span class="option">-I <var>&lt;file&gt;</var></span></kbd></td>
 <td><p class="first">File with additional kernel configuration modifications.
@@ -711,7 +755,9 @@ of the settings file, which also allows <tt class="docutils literal">.config</tt
 <kbd><span class="option">-H <var>&lt;file&gt;</var></span>, <span class="option">--hwdetect <var>&lt;file&gt;</var></span></kbd></td>
 </tr>
 <tr><td>&nbsp;</td><td><p class="first">Enable hardware detection and read the information from a <em>hwinfo</em> file
-as created by <a class="reference internal" href="#hwcollector">hwcollector</a>.</p>
+that has previously been created with the <a class="reference internal" href="#hwcollector">hwcollector</a> script.</p>
+<p>The <tt class="docutils literal">&lt;file&gt;</tt> can also point to a remote file,
+e.g. <tt class="docutils literal"><span class="pre">http://192.168.1.1/hwdetect_info.txt</span></tt>.</p>
 <p>Disables any other hardware detection,
 in particular <tt class="docutils literal">hwdetect</tt> instructions in the <a class="reference internal" href="#options">[options]</a> section
 of the settings file.</p>
@@ -726,6 +772,7 @@ It can be</p>
 <ul class="simple">
 <li>a path to a directory, e.g. <tt class="docutils literal"><span class="pre">/lib/$(uname</span> <span class="pre">-r)/modules</span></tt></li>
 <li>a path to a tarball file</li>
+<li>a http(s)/ftp uri to a tarball file</li>
 <li><tt class="docutils literal">none</tt>,
 which disables modalias-based hardware detection completely</li>
 <li><tt class="docutils literal">auto</tt>,
@@ -860,8 +907,9 @@ the script mode can be given via this option.</p>
 </tbody>
 </table>
 </div>
+</div>
 <div class="section" id="settings-file">
-<span id="settings"></span><h2><a class="toc-backref" href="#contents">1.4&nbsp;&nbsp;&nbsp;Settings File</a></h2>
+<span id="settings"></span><h1><a class="toc-backref" href="#contents">4&nbsp;&nbsp;&nbsp;Settings File</a></h1>
 <p>The settings file is kernelconfig's main configuration file.
 It is an <tt class="docutils literal">.ini</tt>-like file consisting of several sections.</p>
 <p>Comment lines start with a <tt class="docutils literal">#</tt> char,
@@ -896,7 +944,7 @@ a quick overview of all sections and their respective format:</p>
 </tbody>
 </table>
 <div class="section" id="settings-directories">
-<h3><a class="toc-backref" href="#contents">1.4.1&nbsp;&nbsp;&nbsp;Settings Directories</a></h3>
+<h2><a class="toc-backref" href="#contents">4.1&nbsp;&nbsp;&nbsp;Settings Directories</a></h2>
 <p>Settings files are usually given by name and are searched for in some
 standard directories. The list of these directories varies depending
 on whether kernelconfig has been installed or is run in standalone mode.</p>
@@ -917,7 +965,7 @@ and searching stops immediately if a file with the requested name is found.</p>
 these names are reserved for other purposes.</p>
 </div>
 <div class="section" id="source">
-<h3><a class="toc-backref" href="#contents">1.4.2&nbsp;&nbsp;&nbsp;[source]</a></h3>
+<h2><a class="toc-backref" href="#contents">4.2&nbsp;&nbsp;&nbsp;[source]</a></h2>
 <p>The <tt class="docutils literal">[source]</tt> section is used to declare
 the input kernel configuration file.
 If a config file has been specified with the <tt class="docutils literal"><span class="pre">--config</span></tt> option,
@@ -953,20 +1001,20 @@ Whether the data subsection is subject to string formatting or not depends on
 the configuration source type.
 Only script-type configuration sources accept non-empty data.</p>
 <div class="section" id="using-a-curated-source">
-<h4><a class="toc-backref" href="#contents">1.4.2.1&nbsp;&nbsp;&nbsp;Using a curated source</a></h4>
+<h3><a class="toc-backref" href="#contents">4.2.1&nbsp;&nbsp;&nbsp;Using a curated source</a></h3>
 <p>Example:</p>
 <pre class="literal-block">
 [source]
 ubuntu --lowlatency
 </pre>
 <p>Curated sources are referenced by their name,
-which is case-insensitive <a class="footnote-reference" href="#id3" id="id2">[*]</a>.
+which is case-insensitive <a class="footnote-reference" href="#id2" id="id1">[*]</a>.
 Their type keyword is <tt class="docutils literal">source</tt>, it can be omitted
 unless the source's name itself is a keyword.</p>
-<table class="docutils footnote" frame="void" id="id3" rules="none">
+<table class="docutils footnote" frame="void" id="id2" rules="none">
 <colgroup><col class="label" /><col /></colgroup>
 <tbody valign="top">
-<tr><td class="label"><a class="fn-backref" href="#id2">[*]</a></td><td>names are converted to lowercase before searching for the source</td></tr>
+<tr><td class="label"><a class="fn-backref" href="#id1">[*]</a></td><td>names are converted to lowercase before searching for the source</td></tr>
 </tbody>
 </table>
 <p>Curated sources usually accept a few parameters
@@ -1107,7 +1155,7 @@ Large Physical Address Extensions (arm only)</td></tr>
 </blockquote>
 </div>
 <div class="section" id="using-defconfig-as-configuration-source">
-<h4><a class="toc-backref" href="#contents">1.4.2.2&nbsp;&nbsp;&nbsp;Using defconfig as configuration source</a></h4>
+<h3><a class="toc-backref" href="#contents">4.2.2&nbsp;&nbsp;&nbsp;Using defconfig as configuration source</a></h3>
 <p>Run <tt class="docutils literal">make defconfig</tt> with a temporary directory
 as output directory, and use the generated file as input config file:</p>
 <pre class="literal-block">
@@ -1117,14 +1165,14 @@ defconfig
 <p>The type keyword is <tt class="docutils literal">defconfig</tt>, and no parameters are accepted.</p>
 </div>
 <div class="section" id="using-a-file-as-configuration-source">
-<h4><a class="toc-backref" href="#contents">1.4.2.3&nbsp;&nbsp;&nbsp;Using a file as configuration source</a></h4>
+<h3><a class="toc-backref" href="#contents">4.2.3&nbsp;&nbsp;&nbsp;Using a file as configuration source</a></h3>
 <p>Use a local file named <tt class="docutils literal">config_&lt;arch&gt;</tt> found in the <tt class="docutils literal">sources/files</tt>
 subdirectory of the settings directories:</p>
 <pre class="literal-block">
 [source]
 file config_{arch}
 </pre>
-<p>It is also possible to download file via http/https/ftp, for example:</p>
+<p>It is also possible to download a file via http/https/ftp, for example:</p>
 <pre class="literal-block">
 [source]
 http://.../{kv}/config.{arch}
@@ -1138,7 +1186,7 @@ but not for relative file paths as that interferes with curated sources.</p>
 The path is subject to basic <a class="reference internal" href="#string-formatting">string formatting</a>.</p>
 </div>
 <div class="section" id="using-a-command-as-configuration-source">
-<h4><a class="toc-backref" href="#contents">1.4.2.4&nbsp;&nbsp;&nbsp;Using a command as configuration source</a></h4>
+<h3><a class="toc-backref" href="#contents">4.2.4&nbsp;&nbsp;&nbsp;Using a command as configuration source</a></h3>
 <p>Example:</p>
 <pre class="literal-block">
 [source]
@@ -1158,7 +1206,7 @@ kernelconfig expects that the command
 creates a <tt class="docutils literal">config</tt> file in the temporary directory.</p>
 </div>
 <div class="section" id="using-a-script-as-configuration-source">
-<h4><a class="toc-backref" href="#contents">1.4.2.5&nbsp;&nbsp;&nbsp;Using a script as configuration source</a></h4>
+<h3><a class="toc-backref" href="#contents">4.2.5&nbsp;&nbsp;&nbsp;Using a script as configuration source</a></h3>
 <p>Download a tarball,
 extract it to a temporary directory,
 and pick some of its files as input config:</p>
@@ -1192,7 +1240,7 @@ kernelconfig expects that the script
 creates a <tt class="docutils literal">config</tt> file in the temporary directory.</p>
 </div>
 <div class="section" id="configuration-source-environment-variables">
-<span id="config-source-environment-variables"></span><h4><a class="toc-backref" href="#contents">1.4.2.6&nbsp;&nbsp;&nbsp;Configuration Source Environment Variables</a></h4>
+<span id="config-source-environment-variables"></span><h3><a class="toc-backref" href="#contents">4.2.6&nbsp;&nbsp;&nbsp;Configuration Source Environment Variables</a></h3>
 <p>Commands, including scripts,
 have access to the following environment variables:</p>
 <table border="1" class="docutils">
@@ -1264,7 +1312,7 @@ e.g. <tt class="docutils literal">0</tt>, <tt class="docutils literal">0</tt>, <
 </table>
 </div>
 <div class="section" id="configuration-source-format-variables">
-<span id="string-formatting"></span><h4><a class="toc-backref" href="#contents">1.4.2.7&nbsp;&nbsp;&nbsp;Configuration Source Format Variables</a></h4>
+<span id="string-formatting"></span><h3><a class="toc-backref" href="#contents">4.2.7&nbsp;&nbsp;&nbsp;Configuration Source Format Variables</a></h3>
 <p>All basic source types are subject to Python string formatting.</p>
 <p>The available format variables are identical to the environment variables,
 except for <tt class="docutils literal">TMPDIR</tt> (not set) and  <tt class="docutils literal">T</tt> (special, see below).
@@ -1305,7 +1353,7 @@ If used with an identifier, creates a new directory.</p>
 </div>
 </div>
 <div class="section" id="options">
-<h3><a class="toc-backref" href="#contents">1.4.3&nbsp;&nbsp;&nbsp;[options]</a></h3>
+<h2><a class="toc-backref" href="#contents">4.3&nbsp;&nbsp;&nbsp;[options]</a></h2>
 <p>The <tt class="docutils literal">[options]</tt> section should contain a list of config-modifying commands:</p>
 <pre class="literal-block">
 disable            A
@@ -1360,7 +1408,7 @@ from all directories, but with the usual order of preference.</p>
 </div>
 </div>
 <div class="section" id="hardware-detection">
-<h2><a class="toc-backref" href="#contents">1.5&nbsp;&nbsp;&nbsp;Hardware Detection</a></h2>
+<h1><a class="toc-backref" href="#contents">5&nbsp;&nbsp;&nbsp;Hardware Detection</a></h1>
 <p>kernelconfig is able to determine which hardware is present on the system
 and enable config options accordingly.</p>
 <p>This feature can be requested with <tt class="docutils literal">hwdetect</tt> in the <a class="reference internal" href="#options">[options]</a> section
@@ -1392,7 +1440,7 @@ and a kernel configuration is being created for the same machine.</p>
 selection of config options that also includes options for unknown devices,
 but requires a <em>modalias information source</em>.</p>
 <div class="section" id="modalias-information-source">
-<h3><a class="toc-backref" href="#contents">1.5.1&nbsp;&nbsp;&nbsp;Modalias Information Source</a></h3>
+<h2><a class="toc-backref" href="#contents">5.1&nbsp;&nbsp;&nbsp;Modalias Information Source</a></h2>
 <p>A <em>modalias information source</em> is, basically, a very reduced variant
 of a modules directory that would normally be installed to <tt class="docutils literal">/lib/modules</tt>.
 The most important file provided by this source is <tt class="docutils literal">modules.alias</tt>,
@@ -1429,7 +1477,7 @@ or copied to the cache directory manually.</p>
 which are covered in <a class="reference internal" href="#generate-modalias">--generate-modalias</a>.</p>
 </div>
 <div class="section" id="collecting-hardware-information-on-a-different-machine">
-<span id="hwcollector"></span><h3><a class="toc-backref" href="#contents">1.5.2&nbsp;&nbsp;&nbsp;Collecting Hardware Information on a Different Machine</a></h3>
+<span id="hwcollector"></span><h2><a class="toc-backref" href="#contents">5.2&nbsp;&nbsp;&nbsp;Collecting Hardware Information on a Different Machine</a></h2>
 <p>Hardware detection is not limited to the machine running kernelconfig,
 it is also possible to scan for hardware identifiers on another machine.</p>
 <div class="note">
@@ -1467,7 +1515,7 @@ with hardware detection would be:</p>
 <tt class="docutils literal">/sys</tt> and <tt class="docutils literal">/proc</tt> mounted, and a way to transfer files from the
 target machine to the build machine.</p>
 <div class="section" id="hwinfo-file">
-<h4><a class="toc-backref" href="#contents">1.5.2.1&nbsp;&nbsp;&nbsp;hwinfo file</a></h4>
+<h3><a class="toc-backref" href="#contents">5.2.1&nbsp;&nbsp;&nbsp;hwinfo file</a></h3>
 <p>The hardware information file is a JSON object with dummy null-terminates
 that lists which kernel modules and module alias identifiers have been
 detected on the <em>target</em> machine:</p>
@@ -1502,7 +1550,7 @@ with a small file size overhead of one dummy item per list/object.</p>
 </div>
 </div>
 <div class="section" id="package-management-integration">
-<h2><a class="toc-backref" href="#contents">1.6&nbsp;&nbsp;&nbsp;Package Management Integration</a></h2>
+<h1><a class="toc-backref" href="#contents">6&nbsp;&nbsp;&nbsp;Package Management Integration</a></h1>
 <p>Installed packages can serve as source for config option recommendations.
 This feature relies on packages being managed by portage,
 and can be requested with <tt class="docutils literal">packages</tt> in the <a class="reference internal" href="#options">[options]</a> section
@@ -1541,7 +1589,7 @@ especially when using <em>dynamic pm-integration</em>!</li>
 </div>
 </div>
 <div class="section" id="curated-sources">
-<h2><a class="toc-backref" href="#contents">1.7&nbsp;&nbsp;&nbsp;Curated Sources</a></h2>
+<h1><a class="toc-backref" href="#contents">7&nbsp;&nbsp;&nbsp;Curated Sources</a></h1>
 <p>This section covers how to add new <em>curated sources</em> to kernelconfig.</p>
 <p>As previously noted,
 the purpose of configuration sources is to provide a <em>configuration basis</em>,
@@ -1558,7 +1606,7 @@ plus a script <tt class="docutils literal"><span class="pre">sources/&lt;name&gt
 or a Python module <tt class="docutils literal"><span class="pre">sources/&lt;name&gt;</span></tt> (<em>sourcedef with pym</em>)</li>
 </ul>
 <div class="section" id="script-only-curated-sources">
-<h3><a class="toc-backref" href="#contents">1.7.1&nbsp;&nbsp;&nbsp;Script-Only Curated Sources</a></h3>
+<h2><a class="toc-backref" href="#contents">7.1&nbsp;&nbsp;&nbsp;Script-Only Curated Sources</a></h2>
 <p>The simplest case is <em>script only</em>,
 which is limited to single-file configuration bases.
 Just put a script in <tt class="docutils literal"><span class="pre">&lt;settings&gt;/source</span></tt>, e.g.
@@ -1599,7 +1647,7 @@ Description = my source is ...
 </pre>
 </div>
 <div class="section" id="source-definition-file">
-<h3><a class="toc-backref" href="#contents">1.7.2&nbsp;&nbsp;&nbsp;Source Definition File</a></h3>
+<h2><a class="toc-backref" href="#contents">7.2&nbsp;&nbsp;&nbsp;Source Definition File</a></h2>
 <p>Curated sources that are not script-type sources,
 or sources that want to benefit from argument parsing,
 need to be described in a source definition file.</p>
@@ -1692,6 +1740,8 @@ which can be</p>
 <li>pym</li>
 <li>command</li>
 <li>make</li>
+<li>defconfig
+(<em>make</em> with <tt class="docutils literal">Target=defconfig</tt>)</li>
 </ul>
 <p>If not set, kernelconfig tries to
 autodetect the type:</p>
@@ -1742,7 +1792,10 @@ additional arguments to the
 <tr><td>Target</td>
 <td>str</td>
 <td>yes</td>
-<td>Target for make-type sources</td>
+<td><p class="first">Target for make-type sources</p>
+<p class="last">Not supported by defconfig-type
+sources.</p>
+</td>
 </tr>
 <tr><td><p class="first">Architectures</p>
 <p class="last"><em>also</em>: Arch</p>
@@ -1952,7 +2005,7 @@ It can be accessed by the source via <tt class="docutils literal"><span class="p
 which options are recognized is therefore up to the source.</p>
 </div>
 <div class="section" id="python-module-configuration-sources">
-<h3><a class="toc-backref" href="#contents">1.7.3&nbsp;&nbsp;&nbsp;Python-Module Configuration Sources</a></h3>
+<h2><a class="toc-backref" href="#contents">7.3&nbsp;&nbsp;&nbsp;Python-Module Configuration Sources</a></h2>
 <p>Python-Module Configuration Sources gain access
 to kernelconfig's functionality such as error reporting and logging,
 and also temporary files/directories, file downloading and git repo handling.</p>
@@ -2051,17 +2104,18 @@ which can be read with <tt class="docutils literal">pydoc kernelconfig.sources.p
     they should all be treated as readonly except where noted otherwise,
     see the &#64;property in-code doc for details:
 
-    * logger:         logger, can also be accessed via log_*() methods
+    * logger:              logger, can also be accessed via log_*() methods
 
-    * name:           conf source name
-    * exc_types:      exception types (namespace object/module)
-    * parameters:     arg parse result (namespace object)
-    * environ:        extra-env vars dict
-    * str_formatter:  string formatter
-    * format_vars:    string formatter's vars dict
-    * kernelversion:  kernel version object
-    * tmpdir:         temporary dir object
-    * tmpdir_path:    path to temporary dir
+    * name:                conf source name
+    * exc_types:           exception types (namespace object/module)
+    * parameters:          arg parse result (namespace object)
+    * environ:             extra-env vars dict
+    * str_formatter:       string formatter
+    * format_vars:         string formatter's vars dict
+    * kernelversion:       fake kernel version (object)
+    * real_kernelversion:  real kernel version (object)
+    * tmpdir:              temporary dir object
+    * tmpdir_path:         path to temporary dir
 
     The following methods can be used for communicating with kernelconfig:
 
@@ -2104,10 +2158,9 @@ which can be read with <tt class="docutils literal">pydoc kernelconfig.sources.p
 </div>
 </div>
 </div>
-</div>
 <div class="footer">
 <hr class="footer" />
-Generated on: 2016-08-17.
+Generated on: 2016-08-19.
 
 </div>
 </body>
