@@ -163,10 +163,19 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
     def get_conf_sources(self, arg_config):
         conf_sources = self.conf_sources
         if conf_sources is None:
+            kv_override = arg_config.get("config_source_kver")
+            if kv_override is not None:
+                conf_sources_source_info = (
+                    self.source_info.pretend_kernelversion(kv_override)
+                )
+            else:
+                conf_sources_source_info = self.source_info
+            # --
+
             conf_sources = self.create_loggable(
                 kernelconfig.sources._sources.ConfigurationSources,
                 install_info=self.install_info,
-                source_info=self.source_info
+                source_info=conf_sources_source_info
             )
             self.conf_sources = conf_sources
         return conf_sources
@@ -349,6 +358,16 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
             default=argparse.SUPPRESS,
             help=with_default(
                 "input kernel configuration file", "\"<srctree>/.config\""
+            )
+        )
+
+        genconfig_arg_group.add_argument(
+            "--config-kver", dest="config_source_kver", metavar="<kver>",
+            type=arg_types.arg_kernelversion,
+            default=argparse.SUPPRESS,
+            help=with_default(
+                "force the kernel configuration version",
+                "read from <srctree>"
             )
         )
 
