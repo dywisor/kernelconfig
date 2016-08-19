@@ -86,6 +86,14 @@ class ConfigurationSourcesEnv(informed.AbstractInformed):
         self._fmt_vars = None
         self._env_vars = None
 
+    def get_kernelversion(self):
+        source_info = self.source_info
+        try:
+            return source_info.kernelversion
+        except AttributeError:
+            return None
+    # ---
+
     def get_files_dir(self):
         """
         Returns a multi directory view of all directories where
@@ -281,12 +289,13 @@ class ConfigurationSourcesEnv(informed.AbstractInformed):
         base_vars["srctree"] = source_info.srctree
         base_vars["s"] = source_info.srctree
 
-        if hasattr(source_info, "kernelversion"):
-            base_vars["kver"] = source_info.kernelversion
-            base_vars["kmaj"] = source_info.kernelversion.version
-            base_vars["kmin"] = source_info.kernelversion.sublevel
-            base_vars["kpatch"] = source_info.kernelversion.patchlevel
-            base_vars["kv"] = source_info.kernelversion.kv
+        kver = self.get_kernelversion()
+        if kver is not None:
+            base_vars["kver"] = kver
+            base_vars["kmaj"] = kver.version
+            base_vars["kmin"] = kver.sublevel
+            base_vars["kpatch"] = kver.patchlevel
+            base_vars["kv"] = kver.kv
         # --
 
         for attr_name in {"subarch", "arch", "karch", "srcarch"}:
