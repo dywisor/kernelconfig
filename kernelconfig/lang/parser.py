@@ -39,8 +39,7 @@ class KernelConfigOp(enum.IntEnum):
         condop_operator_star_func,
         condop_operator_cmp_func,
         condop_exists,
-        condop_hwmatch,
-    ) = range(23)
+    ) = range(22)
 
     @classmethod
     def is_op(cls, value):
@@ -526,10 +525,6 @@ class KernelConfigLangParser(loggable.AbstractLoggable):
         '''cond_expr : KW_EXISTS
                      | KW_EXISTS KW_PLACEHOLDER'''
         p[0] = self.build_cond_expr(KernelConfigOp.condop_exists, None, None)
-
-    def p_conditional_expr_hwmatch(self, p):
-        '''cond_expr : KW_HWMATCH str_list'''
-        p[0] = self.build_cond_expr(KernelConfigOp.condop_hwmatch, None, p[2])
 
     def p_conditional_expr_in_parens(self, p):
         '''cond_expr : LPAREN cond_expr RPAREN'''

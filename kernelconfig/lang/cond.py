@@ -63,9 +63,6 @@ class BaseConditionContext(collections.abc.Mapping):
     def __call__(self, cond_type, cond_func, cond_args):
         return self._evaluators[cond_type](cond_func, cond_args)
 
-    def eval_condop_hwmatch(self, cond_func, args):
-        return True
-
 # --- end of BaseConditionContext ---
 
 
@@ -73,7 +70,6 @@ class ConfigOptionConditionContext(BaseConditionContext):
 
     COND_OPS = [
         parser.KernelConfigOp.condop_exists,
-        # parser.KernelConfigOp.condop_hwmatch,
     ]
 
     def get_context_desc(self):
@@ -110,7 +106,6 @@ class IncludeFileConditionContext(BaseConditionContext):
 
     COND_OPS = [
         parser.KernelConfigOp.condop_exists,
-        # # parser.KernelConfigOp.condop_hwmatch,
     ]
 
     def get_context_desc(self):

@@ -67,8 +67,6 @@ class KernelConfigLangLexer(object):
 
         "exist":             "KW_EXISTS",
         "exists":            "KW_EXISTS",
-        "hardware-match":    "KW_HWMATCH",
-        "hw":                "KW_HWMATCH",
 
         "true":              "KW_TRUE",
         "false":             "KW_FALSE",
