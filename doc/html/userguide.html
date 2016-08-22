@@ -371,19 +371,24 @@ ul.auto-toc {
 <li><a class="reference internal" href="#options" id="id21">4.3&nbsp;&nbsp;&nbsp;[options]</a></li>
 </ul>
 </li>
-<li><a class="reference internal" href="#hardware-detection" id="id22">5&nbsp;&nbsp;&nbsp;Hardware Detection</a><ul class="auto-toc">
-<li><a class="reference internal" href="#modalias-information-source" id="id23">5.1&nbsp;&nbsp;&nbsp;Modalias Information Source</a></li>
-<li><a class="reference internal" href="#collecting-hardware-information-on-a-different-machine" id="id24">5.2&nbsp;&nbsp;&nbsp;Collecting Hardware Information on a Different Machine</a><ul class="auto-toc">
-<li><a class="reference internal" href="#hwinfo-file" id="id25">5.2.1&nbsp;&nbsp;&nbsp;hwinfo file</a></li>
+<li><a class="reference internal" href="#configuration-language" id="id22">5&nbsp;&nbsp;&nbsp;Configuration Language</a><ul class="auto-toc">
+<li><a class="reference internal" href="#kconfig-instructions" id="id23">5.1&nbsp;&nbsp;&nbsp;Kconfig Instructions</a></li>
+<li><a class="reference internal" href="#load-file-instructions" id="id24">5.2&nbsp;&nbsp;&nbsp;Load-File Instructions</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#hardware-detection" id="id25">6&nbsp;&nbsp;&nbsp;Hardware Detection</a><ul class="auto-toc">
+<li><a class="reference internal" href="#modalias-information-source" id="id26">6.1&nbsp;&nbsp;&nbsp;Modalias Information Source</a></li>
+<li><a class="reference internal" href="#collecting-hardware-information-on-a-different-machine" id="id27">6.2&nbsp;&nbsp;&nbsp;Collecting Hardware Information on a Different Machine</a><ul class="auto-toc">
+<li><a class="reference internal" href="#hwinfo-file" id="id28">6.2.1&nbsp;&nbsp;&nbsp;hwinfo file</a></li>
 </ul>
 </li>
 </ul>
 </li>
-<li><a class="reference internal" href="#package-management-integration" id="id26">6&nbsp;&nbsp;&nbsp;Package Management Integration</a></li>
-<li><a class="reference internal" href="#curated-sources" id="id27">7&nbsp;&nbsp;&nbsp;Curated Sources</a><ul class="auto-toc">
-<li><a class="reference internal" href="#script-only-curated-sources" id="id28">7.1&nbsp;&nbsp;&nbsp;Script-Only Curated Sources</a></li>
-<li><a class="reference internal" href="#source-definition-file" id="id29">7.2&nbsp;&nbsp;&nbsp;Source Definition File</a></li>
-<li><a class="reference internal" href="#python-module-configuration-sources" id="id30">7.3&nbsp;&nbsp;&nbsp;Python-Module Configuration Sources</a></li>
+<li><a class="reference internal" href="#package-management-integration" id="id29">7&nbsp;&nbsp;&nbsp;Package Management Integration</a></li>
+<li><a class="reference internal" href="#curated-sources" id="id30">8&nbsp;&nbsp;&nbsp;Curated Sources</a><ul class="auto-toc">
+<li><a class="reference internal" href="#script-only-curated-sources" id="id31">8.1&nbsp;&nbsp;&nbsp;Script-Only Curated Sources</a></li>
+<li><a class="reference internal" href="#source-definition-file" id="id32">8.2&nbsp;&nbsp;&nbsp;Source Definition File</a></li>
+<li><a class="reference internal" href="#python-module-configuration-sources" id="id33">8.3&nbsp;&nbsp;&nbsp;Python-Module Configuration Sources</a></li>
 </ul>
 </li>
 </ul>
@@ -1404,11 +1409,449 @@ Basically, settings files can be viewed as extended <em>feature set</em> files.<
 of the <a class="reference internal" href="#settings-directories">settings directories</a>.
 Globbing is supported and expands to a combined list of glob matches
 from all directories, but with the usual order of preference.</p>
-<p>See <a class="reference external" href="macros_lang.rst">macros file format</a> for a more detailed explanation of the format.</p>
+<p>See the next chapter, <a class="reference internal" href="#configuration-language">Configuration Language</a>,
+for a more detailed explanation of the format.</p>
+</div>
+</div>
+<div class="section" id="configuration-language">
+<span id="macros-file-format"></span><h1><a class="toc-backref" href="#contents">5&nbsp;&nbsp;&nbsp;Configuration Language</a></h1>
+<p>The kernel configuration itself is configured via <em>kconfig instructions</em>
+in the <tt class="docutils literal">[options]</tt> section of the settings file,
+or in separate <em>feature set</em> files.</p>
+<p>Instructions that operate on Kconfig symbols:</p>
+<pre class="code text literal-block">
+module             KCONFIG_OPTION [KCONFIG_OPTION...]
+builtin            KCONFIG_OPTION [KCONFIG_OPTION...]
+builtin-or-module  KCONFIG_OPTION [KCONFIG_OPTION...]
+disable            KCONFIG_OPTION [KCONFIG_OPTION...]
+
+m                  KCONFIG_OPTION [KCONFIG_OPTION...]
+y                  KCONFIG_OPTION [KCONFIG_OPTION...]
+ym                 KCONFIG_OPTION [KCONFIG_OPTION...]
+n                  KCONFIG_OPTION [KCONFIG_OPTION...]
+
+set                KCONFIG_OPTION  STR
+append             KCONFIG_OPTION  STR
+add                KCONFIG_OPTION  STR
+
+hardware-detect
+hwdetect
+
+packages           [build-time|re-eval]
+pkg                [build-time|re-eval]
+</pre>
+<p>The language is case-insensitive and ignores whitespace.
+String values should be quoted.</p>
+<p>To refer to module names instead of config options,
+put the <tt class="docutils literal">driver</tt> keyword after the command and before the module names:</p>
+<pre class="code text literal-block">
+module             driver  MODULE_NAME [MODULE_NAME...]
+builtin            driver  MODULE_NAME [MODULE_NAME...]
+builtin-or-module  driver  MODULE_NAME [MODULE_NAME...]
+disable            driver  MODULE_NAME [MODULE_NAME...]
+
+# likewise for m, y, ym, n
+
+# not supported for set, append, add
+
+# not supported for hardware-detect
+
+# not supported for packages
+</pre>
+<p>The <tt class="docutils literal">modalias</tt> allows to specify module aliases,
+its usage is identical to <tt class="docutils literal">driver</tt>.</p>
+<p>There is an alternative syntax
+that is more in line with the original format of <tt class="docutils literal">.config</tt> files,
+which can be used interchangeably, but supports config option names only:</p>
+<pre class="code text literal-block">
+KCONFIG_OPTION=m            # module
+KCONFIG_OPTION=y            # builtin
+KCONFIG_OPTION=ym           # builtin-or-module
+KCONFIG_OPTION=n            # disable
+
+KCONFIG_OPTION=&quot;STR&quot;        # set
+KCONFIG_OPTION+=&quot;STR&quot;       # append
+KCONFIG_OPTION|=&quot;STR&quot;       # add
+</pre>
+<p>Spaces around the assignment operators are ignored.</p>
+<p>For compatibility with the original project,
+the following syntax is also accepted:</p>
+<pre class="code text literal-block">
+enable KCONFIG_OPTION [KCONFIG_OPTION...]   # builtin
+
+set KCONFIG_OPTION=m                        # module
+set KCONFIG_OPTION=y                        # builtin
+set KCONFIG_OPTION=ym                       # builtin-or-module
+set KCONFIG_OPTION=n                        # disable
+
+set KCONFIG_OPTION=&quot;STR&quot;                    # set
+</pre>
+<p>Additional instructions for loading other files:</p>
+<pre class="code text literal-block">
+include            FILE
+</pre>
+<p>Each statement may be followed by a <tt class="docutils literal">if</tt>-condition,
+which disables the entire statement if the condition is not met,
+or a <tt class="docutils literal">unless</tt>-condition with the opposite meaning.</p>
+<p>Overall, the following conditions can be checked:</p>
+<ul>
+<li><p class="first">existence of config options or include files with the <tt class="docutils literal">exists</tt> or <tt class="docutils literal">exist</tt>
+keyword</p>
+<p>It accepts up to one arg. The meaning of this condition
+depends on whether the command it appears in is
+a <em>kconfig instruction</em> or a <em>load-file instruction</em>.</p>
+<p>If used with no arg or the placeholder arg <tt class="docutils literal">_</tt>,
+it checks for existence of the config option
+or the file currently being processed.</p>
+<p>Otherwise, existence of the supplied arg is checked.</p>
+<p>A statement of the form</p>
+<pre class="code text literal-block">
+builtin A B C if exists
+</pre>
+<p>would enable any or all of the config options <cite>A</cite>, <cite>B</cite> and/or <cite>C</cite> if
+they exist, and is equivalent to the longer and overly explicit variant:</p>
+<pre class="code text literal-block">
+builtin A if exists A
+builtin B if exists B
+builtin C if exists C
+</pre>
+</li>
+<li><p class="first">kernel version</p>
+<p>The kernelversion can be compared, either as a whole, or partially:</p>
+<pre class="code text literal-block">
+builtin B if kver == 4.7.0            # full kernel version (a.b.c...)
+builtin A if kver &gt;= 4.2              #  can also be given partially
+builtin C if kmaj &lt; 5                 # the &quot;version&quot; of the kernel version
+builtin D if kmaj == 4 &amp;&amp; kmin != 3   # the &quot;sublevel&quot; of the kernel version
+builtin E if kpatch == 0              # the &quot;patchlevel&quot; of the version
+</pre>
+</li>
+<li><p class="first"><tt class="docutils literal">true</tt>/<tt class="docutils literal">false</tt></p>
+</li>
+<li><p class="first">the truth value of the previous instruction's condition can be
+accessed with the placeholder expression <tt class="docutils literal">_</tt></p>
+<pre class="code text literal-block">
+builtin A if false       # Disabled, sets _ to false
+                         #
+builtin B unless _       # Enabled, because &quot;unless false&quot; is true.
+                         # However, the value of the condition is false
+                         # and thus _ is set to false.
+                         #
+builtin D E if exists    # This sets _ twice,
+                         # once to &quot;exists D&quot;, and then to &quot;exists E&quot;.
+</pre>
+</li>
+</ul>
+<p>Conditions can be negated or combined with:</p>
+<pre class="code text literal-block">
+! COND
+COND &amp;&amp; COND
+COND || COND
+
+not COND
+COND and COND
+COND or  COND
+</pre>
+<div class="section" id="kconfig-instructions">
+<h2><a class="toc-backref" href="#contents">5.1&nbsp;&nbsp;&nbsp;Kconfig Instructions</a></h2>
+<dl class="docutils">
+<dt><tt class="docutils literal"><span class="pre">hardware-detect</span></tt></dt>
+<dd><p class="first">Scans <tt class="docutils literal">/sys</tt> for kernel modules that are currently used by any device,
+and enables corresponding config options as builtin or module.</p>
+<p>Modules for which no config options can be found are ignored,
+but get logged.</p>
+<p class="last">Alternative names: <tt class="docutils literal">hwdetect</tt>.</p>
+</dd>
+<dt><tt class="docutils literal">packages <span class="pre">[build-time|re-eval]</span></tt></dt>
+<dd><p class="first">Query portage for a list of installed packages that use
+<tt class="docutils literal"><span class="pre">linux-info.eclass</span></tt> and get their build-time value of the
+<tt class="docutils literal">CONFIG_CHECK</tt> variable or re-evaluate config recommendations
+against the kernel sources for which a configuration is being created.</p>
+<p>Recommended config options are enabled as builtin or module (<tt class="docutils literal">OPTION</tt>),
+or disabled (<tt class="docutils literal">!OPTION</tt>), respectively.</p>
+<p>If the modifier is omitted, <tt class="docutils literal"><span class="pre">re-eval</span></tt> is assumed.</p>
+<p class="last">Alternative names: <tt class="docutils literal">pkg</tt>.</p>
+</dd>
+<dt><tt class="docutils literal">module KCONFIG_OPTION <span class="pre">[KCONFIG_OPTION...]</span></tt></dt>
+<dd><p class="first">Enable one or more kernel config options as module.</p>
+<p class="last">The modified options must be of <em>tristate</em> type.</p>
+</dd>
+<dt><tt class="docutils literal">builtin KCONFIG_OPTION <span class="pre">[KCONFIG_OPTION...]</span></tt></dt>
+<dd><p class="first">Enable one or more kernel config options as builtin.</p>
+<p class="last">The modified options must be of <em>tristate</em> or <em>boolean</em> type.</p>
+</dd>
+<dt><tt class="docutils literal"><span class="pre">builtin-or-module</span> KCONFIG_OPTION <span class="pre">[KCONFIG_OPTION...]</span></tt></dt>
+<dd><p class="first">Enable one or more kernel config options as builtin or module.</p>
+<p class="last">The modified options must be of <em>tristate</em> or <em>boolean</em> type.
+The effective value is <tt class="docutils literal">y</tt> or <tt class="docutils literal">m</tt>, out of which <tt class="docutils literal">m</tt> gets preferred.</p>
+</dd>
+<dt><tt class="docutils literal">disable KCONFIG_OPTION <span class="pre">[KCONFIG_OPTION...]</span></tt></dt>
+<dd>Disable one or more kernel config options.</dd>
+<dt><tt class="docutils literal">set KCONFIG_OPTION VALUE</tt></dt>
+<dd><p class="first">Set the value of a kernel config option to <tt class="docutils literal">VALUE</tt>.</p>
+<p class="last">The modified option may be of any type,
+and the <tt class="docutils literal">VALUE</tt> must match that type.</p>
+</dd>
+<dt><tt class="docutils literal">append KCONFIG_OPTION VALUE</tt></dt>
+<dd>Add a value to the end of a list-like, <em>string</em>-type option.</dd>
+<dt><tt class="docutils literal">add KCONFIG_OPTION VALUE</tt></dt>
+<dd>Add a value to the end of a list-like, <em>string</em>-type option
+if it is not already part of that list.</dd>
+</dl>
+<p>Some of the instructions also accept kernel module names,
+which must be explicitly requested
+by putting the <tt class="docutils literal">driver</tt> keyword in front of the module name list.
+The module names get expanded to a list of config options
+to which the instruction is then applied.
+Alternative names for the <tt class="docutils literal">driver</tt> keyword are <tt class="docutils literal">drv</tt> and <tt class="docutils literal">module</tt>.</p>
+<dl class="docutils">
+<dt><tt class="docutils literal">module driver MODULE_NAME <span class="pre">[MODULE_NAME...]</span></tt></dt>
+<dd><p class="first">Determine which config options correspond to the given modules
+and enable them as module.</p>
+<p class="last">The modified options must be of <em>tristate</em> type.</p>
+</dd>
+<dt><tt class="docutils literal">builtin driver MODULE_NAME <span class="pre">[MODULE_NAME...]</span></tt></dt>
+<dd><p class="first">Determine which config options correspond to the given modules
+and enable them as builtin.</p>
+<p class="last">The modified options must be of <em>tristate</em> or <em>boolean</em> type.</p>
+</dd>
+<dt><tt class="docutils literal"><span class="pre">builtin-or-module</span> driver MODULE_NAME <span class="pre">[MODULE_NAME...]</span></tt></dt>
+<dd><p class="first">Determine which config options correspond to the given modules
+and enable them as builtin or module.</p>
+<p class="last">The modified options must be of <em>tristate</em> or <em>boolean</em> type.
+The effective value is <tt class="docutils literal">y</tt> or <tt class="docutils literal">m</tt>, out of which <tt class="docutils literal">m</tt> gets preferred.</p>
+</dd>
+<dt><tt class="docutils literal">disable driver MODULE_NAME <span class="pre">[MODULE_NAME...]</span></tt></dt>
+<dd>Determine which config options correspond to the given modules
+and disable them.</dd>
+</dl>
+<p>Module aliases are also accepted by these commands by means of the
+<tt class="docutils literal">modalias</tt> keyword.
+Module aliases are expanded to module names and then to config options.</p>
+<dl class="docutils">
+<dt><tt class="docutils literal">module modalias MODULE_ALIAS <span class="pre">[MODULE_ALIAS...]</span></tt></dt>
+<dd><p class="first">Determine which config options correspond to the given module aliases
+and enable them as module.</p>
+<p class="last">Unmatched module aliases are ignored,
+but at least one alias must resolve to a config option.</p>
+</dd>
+</dl>
+<p>The table below gives a quick overview of the instructions
+that modify the value of kernel config options:</p>
+<table border="1" class="docutils">
+<caption>kconfig instructions</caption>
+<colgroup>
+<col width="14%" />
+<col width="18%" />
+<col width="15%" />
+<col width="53%" />
+</colgroup>
+<thead valign="bottom">
+<tr><th class="head">keyword</th>
+<th class="head">symbol type</th>
+<th class="head"><tt class="docutils literal">driver</tt>,
+<tt class="docutils literal">mod</tt><tt class="docutils literal">alias</tt>?</th>
+<th class="head">description</th>
+</tr>
+</thead>
+<tbody valign="top">
+<tr><td rowspan="5">builtin</td>
+<td>tristate</td>
+<td rowspan="5">yes</td>
+<td>set option to <tt class="docutils literal">y</tt></td>
+</tr>
+<tr><td>boolean</td>
+<td>set option to <tt class="docutils literal">y</tt></td>
+</tr>
+<tr><td>string</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>int</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>hex</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td rowspan="5">module</td>
+<td>tristate</td>
+<td rowspan="5">yes</td>
+<td>set option to <tt class="docutils literal">m</tt> or <tt class="docutils literal">y</tt></td>
+</tr>
+<tr><td>boolean</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>string</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>int</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>hex</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td rowspan="5">builtin-or-module</td>
+<td>tristate</td>
+<td rowspan="5">yes</td>
+<td>set option to <tt class="docutils literal">y</tt> or <tt class="docutils literal">m</tt></td>
+</tr>
+<tr><td>boolean</td>
+<td>set option to <tt class="docutils literal">y</tt></td>
+</tr>
+<tr><td>string</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>int</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>hex</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td rowspan="5">disable</td>
+<td>tristate</td>
+<td rowspan="5">yes</td>
+<td rowspan="5">set option to <tt class="docutils literal">n</tt> (<tt class="docutils literal"># ... is not set</tt>)</td>
+</tr>
+<tr><td>boolean</td>
+</tr>
+<tr><td>string</td>
+</tr>
+<tr><td>int</td>
+</tr>
+<tr><td>hex</td>
+</tr>
+<tr><td rowspan="6">set</td>
+<td>&nbsp;</td>
+<td rowspan="6">no</td>
+<td>set option to any value,
+provided that the symbol accepts this value</td>
+</tr>
+<tr><td>tristate</td>
+<td><tt class="docutils literal">y</tt>, <tt class="docutils literal">m</tt> or <tt class="docutils literal">n</tt></td>
+</tr>
+<tr><td>boolean</td>
+<td><tt class="docutils literal">y</tt> or <tt class="docutils literal">n</tt></td>
+</tr>
+<tr><td>string</td>
+<td><tt class="docutils literal">&lt;str&gt;</tt></td>
+</tr>
+<tr><td>int</td>
+<td><tt class="docutils literal">&lt;int&gt;</tt></td>
+</tr>
+<tr><td>hex</td>
+<td><tt class="docutils literal">&lt;hex&gt;</tt></td>
+</tr>
+<tr><td rowspan="5">append</td>
+<td>tristate</td>
+<td rowspan="5">no</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>boolean</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>string</td>
+<td><p class="first">add <tt class="docutils literal">&lt;str&gt;</tt> to the end of the existing
+value, preceeded by a separator
+(whitespace)</p>
+<p class="last">Same as <tt class="docutils literal">set</tt> if no value defined.</p>
+</td>
+</tr>
+<tr><td>int</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>hex</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td rowspan="5">add</td>
+<td>tristate</td>
+<td rowspan="5">no</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>boolean</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>string</td>
+<td>same as <tt class="docutils literal">append</tt>,
+but set-like operation (membership test)</td>
+</tr>
+<tr><td>int</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>hex</td>
+<td><em>illegal</em></td>
+</tr>
+<tr><td>hardware-detect</td>
+<td><em>n/a</em></td>
+<td><em>n/a</em></td>
+<td>scan <tt class="docutils literal">/sys</tt> for hardware identifiers and
+enable config options accordingly</td>
+</tr>
+<tr><td>packages</td>
+<td><em>n/a</em></td>
+<td><em>n/a</em></td>
+<td>scan portage's vdb for installed packages,
+get their <tt class="docutils literal">CONFIG_CHECK</tt> value
+and enable config options accordingly</td>
+</tr>
+</tbody>
+</table>
+</div>
+<div class="section" id="load-file-instructions">
+<h2><a class="toc-backref" href="#contents">5.2&nbsp;&nbsp;&nbsp;Load-File Instructions</a></h2>
+<dl class="docutils">
+<dt><tt class="docutils literal">include FILE</tt></dt>
+<dd><p class="first">Load and process instructions from another file.</p>
+<p>The <tt class="docutils literal">FILE</tt> may be an absolute or relative filesystem path.
+Absolute paths are processed as-is,
+whereas relative paths are looked up in the include-file directories.</p>
+<p>Relative paths can contain wildcard characters <cite>*</cite>, <cite>?</cite>,
+and are subject to non-recursive glob expansion over all directories.</p>
+<p>A statement of the form:</p>
+<pre class="literal-block">
+include pkg/*
+</pre>
+<p>would load all files that are in <em>any</em> <tt class="docutils literal">pkg</tt> subdirectory
+of <em>any</em> include-file directory.</p>
+<p>Assuming the default include-file directories
+and the following files structure,
+above command would  load <tt class="docutils literal">B</tt> and <tt class="docutils literal">C</tt> from the home directory,
+and <tt class="docutils literal">E</tt> from <tt class="docutils literal">/etc</tt>:</p>
+<pre class="literal-block">
+/home/user/.config/kernelconfig/include/A
+/home/user/.config/kernelconfig/include/pkg/B
+/home/user/.config/kernelconfig/include/pkg/C
+/etc/kernelconfig/include/D
+/etc/kernelconfig/include/pkg/B
+/etc/kernelconfig/include/pkg/E
+/etc/kernelconfig/include/pkg/F/G
+</pre>
+<ul class="simple">
+<li>neither <tt class="docutils literal">A</tt> nor <tt class="docutils literal">D</tt>,
+because they are not matched by the pattern</li>
+<li>not <tt class="docutils literal">B</tt> from <tt class="docutils literal">/etc</tt>,
+because it is overshadowed by the file in <tt class="docutils literal">/home</tt></li>
+<li>not <tt class="docutils literal">F</tt>, because it is a directory</li>
+<li>not <tt class="docutils literal">F/G</tt>, because the glob-expansion is non-recursive
+and therefore it is not matched by the pattern</li>
+</ul>
+<p>If there are no files matching <tt class="docutils literal">pkg/*</tt>, the command would fail.
+If that is not desired, an <tt class="docutils literal">exists</tt> condition should be appended:</p>
+<pre class="literal-block">
+include pkg/* if exists
+</pre>
+<p>Files are not loaded directly when the <tt class="docutils literal">include</tt> statement gets
+processed, but instead are accumulated and loaded after processing all
+other commands.</p>
+<div class="note last">
+<p class="first admonition-title">Note</p>
+<p class="last">Absolute filesystem paths do not get glob-expanded.
+This might change in future.</p>
+</div>
+</dd>
+</dl>
 </div>
 </div>
 <div class="section" id="hardware-detection">
-<h1><a class="toc-backref" href="#contents">5&nbsp;&nbsp;&nbsp;Hardware Detection</a></h1>
+<h1><a class="toc-backref" href="#contents">6&nbsp;&nbsp;&nbsp;Hardware Detection</a></h1>
 <p>kernelconfig is able to determine which hardware is present on the system
 and enable config options accordingly.</p>
 <p>This feature can be requested with <tt class="docutils literal">hwdetect</tt> in the <a class="reference internal" href="#options">[options]</a> section
@@ -1440,7 +1883,7 @@ and a kernel configuration is being created for the same machine.</p>
 selection of config options that also includes options for unknown devices,
 but requires a <em>modalias information source</em>.</p>
 <div class="section" id="modalias-information-source">
-<h2><a class="toc-backref" href="#contents">5.1&nbsp;&nbsp;&nbsp;Modalias Information Source</a></h2>
+<h2><a class="toc-backref" href="#contents">6.1&nbsp;&nbsp;&nbsp;Modalias Information Source</a></h2>
 <p>A <em>modalias information source</em> is, basically, a very reduced variant
 of a modules directory that would normally be installed to <tt class="docutils literal">/lib/modules</tt>.
 The most important file provided by this source is <tt class="docutils literal">modules.alias</tt>,
@@ -1477,7 +1920,7 @@ or copied to the cache directory manually.</p>
 which are covered in <a class="reference internal" href="#generate-modalias">--generate-modalias</a>.</p>
 </div>
 <div class="section" id="collecting-hardware-information-on-a-different-machine">
-<span id="hwcollector"></span><h2><a class="toc-backref" href="#contents">5.2&nbsp;&nbsp;&nbsp;Collecting Hardware Information on a Different Machine</a></h2>
+<span id="hwcollector"></span><h2><a class="toc-backref" href="#contents">6.2&nbsp;&nbsp;&nbsp;Collecting Hardware Information on a Different Machine</a></h2>
 <p>Hardware detection is not limited to the machine running kernelconfig,
 it is also possible to scan for hardware identifiers on another machine.</p>
 <div class="note">
@@ -1515,7 +1958,7 @@ with hardware detection would be:</p>
 <tt class="docutils literal">/sys</tt> and <tt class="docutils literal">/proc</tt> mounted, and a way to transfer files from the
 target machine to the build machine.</p>
 <div class="section" id="hwinfo-file">
-<h3><a class="toc-backref" href="#contents">5.2.1&nbsp;&nbsp;&nbsp;hwinfo file</a></h3>
+<h3><a class="toc-backref" href="#contents">6.2.1&nbsp;&nbsp;&nbsp;hwinfo file</a></h3>
 <p>The hardware information file is a JSON object with dummy null-terminates
 that lists which kernel modules and module alias identifiers have been
 detected on the <em>target</em> machine:</p>
@@ -1550,7 +1993,7 @@ with a small file size overhead of one dummy item per list/object.</p>
 </div>
 </div>
 <div class="section" id="package-management-integration">
-<h1><a class="toc-backref" href="#contents">6&nbsp;&nbsp;&nbsp;Package Management Integration</a></h1>
+<h1><a class="toc-backref" href="#contents">7&nbsp;&nbsp;&nbsp;Package Management Integration</a></h1>
 <p>Installed packages can serve as source for config option recommendations.
 This feature relies on packages being managed by portage,
 and can be requested with <tt class="docutils literal">packages</tt> in the <a class="reference internal" href="#options">[options]</a> section
@@ -1589,7 +2032,7 @@ especially when using <em>dynamic pm-integration</em>!</li>
 </div>
 </div>
 <div class="section" id="curated-sources">
-<h1><a class="toc-backref" href="#contents">7&nbsp;&nbsp;&nbsp;Curated Sources</a></h1>
+<h1><a class="toc-backref" href="#contents">8&nbsp;&nbsp;&nbsp;Curated Sources</a></h1>
 <p>This section covers how to add new <em>curated sources</em> to kernelconfig.</p>
 <p>As previously noted,
 the purpose of configuration sources is to provide a <em>configuration basis</em>,
@@ -1606,7 +2049,7 @@ plus a script <tt class="docutils literal"><span class="pre">sources/&lt;name&gt
 or a Python module <tt class="docutils literal"><span class="pre">sources/&lt;name&gt;</span></tt> (<em>sourcedef with pym</em>)</li>
 </ul>
 <div class="section" id="script-only-curated-sources">
-<h2><a class="toc-backref" href="#contents">7.1&nbsp;&nbsp;&nbsp;Script-Only Curated Sources</a></h2>
+<h2><a class="toc-backref" href="#contents">8.1&nbsp;&nbsp;&nbsp;Script-Only Curated Sources</a></h2>
 <p>The simplest case is <em>script only</em>,
 which is limited to single-file configuration bases.
 Just put a script in <tt class="docutils literal"><span class="pre">&lt;settings&gt;/source</span></tt>, e.g.
@@ -1647,7 +2090,7 @@ Description = my source is ...
 </pre>
 </div>
 <div class="section" id="source-definition-file">
-<h2><a class="toc-backref" href="#contents">7.2&nbsp;&nbsp;&nbsp;Source Definition File</a></h2>
+<h2><a class="toc-backref" href="#contents">8.2&nbsp;&nbsp;&nbsp;Source Definition File</a></h2>
 <p>Curated sources that are not script-type sources,
 or sources that want to benefit from argument parsing,
 need to be described in a source definition file.</p>
@@ -2005,7 +2448,7 @@ It can be accessed by the source via <tt class="docutils literal"><span class="p
 which options are recognized is therefore up to the source.</p>
 </div>
 <div class="section" id="python-module-configuration-sources">
-<h2><a class="toc-backref" href="#contents">7.3&nbsp;&nbsp;&nbsp;Python-Module Configuration Sources</a></h2>
+<h2><a class="toc-backref" href="#contents">8.3&nbsp;&nbsp;&nbsp;Python-Module Configuration Sources</a></h2>
 <p>Python-Module Configuration Sources gain access
 to kernelconfig's functionality such as error reporting and logging,
 and also temporary files/directories, file downloading and git repo handling.</p>
@@ -2160,7 +2603,7 @@ which can be read with <tt class="docutils literal">pydoc kernelconfig.sources.p
 </div>
 <div class="footer">
 <hr class="footer" />
-Generated on: 2016-08-19.
+Generated on: 2016-08-22.
 
 </div>
 </body>
