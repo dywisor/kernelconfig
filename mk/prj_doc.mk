@@ -41,9 +41,6 @@ PRJ_DOCS += userguide
 PRJ_DOC_TITLE_userguide := Generate Linux kernel configuration files
 RST2PDF_OPTS_userguide := --break-level 2
 
-PRJ_DOCS += macros_lang
-PRJ_DOC_TITLE_macros_lang := Configuration Language
-
 PRJ_DOCS += devguide
 PRJ_DOC_TITLE_devguide := Dev Guide
 
