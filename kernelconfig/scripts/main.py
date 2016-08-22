@@ -532,22 +532,88 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         self.get_settings().read_file(settings_file)
     # --- end of do_main_load_settings (...) ---
 
-    def do_main_setup_source_info(self, arg_config):
+    def do_main_setup_source_info(self, arg_config, *, null_fallback=False):
+        """
+        Initializes the sources info object (self.source_info).
+
+        By default, a kernel sources directory is required and this method
+        instructs the arg parser to exit if the dir does not exist.
+
+        However, if null_fallback is set (and true),
+        a srctree-less "null" info object will be created.
+        It is then the caller's responsibility to handle "null" objects
+        appropriately (i.e. do not use them for operations on srctree).
+
+        @keyword null_fallback:  whether to create a "null" info object
+                                 if sources dir does not exist,
+                                 or errors occurred during its initialization
+                                 Defaults to False.
+        @type    null_fallback:  C{bool}
+
+        @return:  source info object
+                  or "null" source info (only if null_fallback)
+        @rtype:   L{KernelInfo} or L{NullKernelInfo}
+        """
         source_info = self.create_loggable(
             kernelconfig.kernel.info.KernelInfo,
             (arg_config.get("srctree") or self.initial_working_dir),
             arch=arg_config.get("arch")
         )
 
-        if not source_info.check_srctree():
+        if source_info.check_srctree():
+            # Specially "crafted" directories may pass check_srctree(),
+            # but could fail when reading the kernelversion from the Makefile.
+            #
+            # When "null_fallback" is set, failure is tolerated.
+            #
+            try:
+                source_info.prepare()
+            except (
+                KeyError, ValueError, TypeError,
+                AssertionError, NotImplementedError
+            ):
+                if null_fallback:
+                    self.logger.debug(
+                        (
+                            "Failed to prepare regular source info,"
+                            " falling back to 'null' sources info"
+                        ),
+                        exc_info=True
+                    )
+                    self.do_main_setup_null_source_info(arg_config)
+                else:
+                    raise
+            else:
+                self.source_info = source_info
+
+        elif null_fallback:
+            self.logger.debug(
+                (
+                    "%r does not appear to be a kernel sources directory,"
+                    " falling back to 'null' sources info"
+                ),
+                source_info.srctree
+            )
+            self.do_main_setup_null_source_info(arg_config)
+
+        else:
             self.arg_parser.error(
                 "%r does not appear to be a kernel sources directory."
                 % source_info.srctree
             )
-
-        source_info.prepare()
-        self.source_info = source_info
+        # --
     # --- end of do_main_setup_source_info (...) ---
+
+    def do_main_setup_null_source_info(self, arg_config):
+        null_source_info = self.create_loggable(
+            kernelconfig.kernel.info.NullKernelInfo,
+            arch=arg_config.get("arch"),
+            kernelversion=arg_config.get("config_source_kver")
+        )
+
+        null_source_info.prepare()
+        self.source_info = null_source_info
+    # --- end of do_main_setup_null_source_info (...) ---
 
     def do_main_get_configuration_basis(self, arg_config):
         """
@@ -848,8 +914,9 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
         # ---
 
         self.do_main_setup_logging(arg_config)
-        # FIXME: drop this requirement:
-        self.do_main_setup_source_info(arg_config)
+        # Always use a "null" sources info
+        # for --list-sources, --list-sources (which is plain file search).
+        self.do_main_setup_null_source_info(arg_config)
 
         conf_sources = self.get_conf_sources(arg_config)
         sources_info = conf_sources.get_available_sources_info()
@@ -874,7 +941,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
     def do_main_script_help_sources(self, arg_config):
         self.do_main_setup_logging(arg_config)
-        self.do_main_setup_source_info(arg_config)
+        self.do_main_setup_source_info(arg_config, null_fallback=True)
 
         conf_sources = self.get_conf_sources(arg_config)
         conf_sources.load_available_sources()   # retval ignored
@@ -910,7 +977,7 @@ class KernelConfigMainScript(kernelconfig.scripts._base.MainScriptBase):
 
     def do_main_script_help_source(self, arg_config, source_name):
         self.do_main_setup_logging(arg_config)
-        self.do_main_setup_source_info(arg_config)
+        self.do_main_setup_source_info(arg_config, null_fallback=True)
 
         outstream_write = sys.stdout.write
 
