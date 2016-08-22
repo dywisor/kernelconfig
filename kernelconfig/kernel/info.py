@@ -314,6 +314,60 @@ class KernelInfo(srcinfo.SourceInfo):
 # --- end of KernelInfo ---
 
 
+class NullKernelInfo(KernelInfo):
+    """A kernel info object that has no srctree.
+
+    Its use is limited, but sufficient for initializing configuration sources,
+    which need to know about the target architecture but not the srctree.
+
+    Methods unavailable due to the missing sources directory
+    return False where appropriate (check_*()), or raise a TypeError.
+
+    @cvar NO_SRCTREE:  "has no srctree" message
+    @type NO_SRCTREE:  C{str}
+    """
+
+    NO_SRCTREE = "null kernel info has no srctree"
+
+    def __init__(
+        self, *, arch=None, karch=None, srcarch=None, kernelversion=None,
+        **kwargs
+    ):
+        super().__init__(
+            srctree=None, arch=arch, karch=karch, srcarch=srcarch, **kwargs
+        )
+        if kernelversion is not None:
+            self.kernelversion = kversion.get_kernelversion(kernelversion)
+    # --
+
+    def prepare_read_kernelversion(self):
+        return kversion.KernelVersion.new_from_version_str(os.uname().release)
+
+    def get_path(self):
+        raise TypeError(self.NO_SRCTREE)
+
+    def get_filepath(self):
+        raise TypeError(self.NO_SRCTREE)
+
+    def check_srctree(self):
+        return False
+
+    def iter_env_vars(self):
+        # super returns list, mirror that behavior
+        return [
+            (k, v) for k, v in super().iter_env_vars() if (k != "srctree")
+        ]
+
+    def check_supports_out_of_tree_build(self):
+        # ^ not applicable: null src info should never make it that far
+        raise TypeError()
+
+    def iter_out_of_tree_build_make_vars(self):
+        raise TypeError()
+
+# ---
+
+
 class KernelInfoVersionOverrideProxy(srcinfo.SourceInfoProxy):
     __slots__ = ["_kernelversion"]  # and _source_info from super
 
