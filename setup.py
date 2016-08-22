@@ -78,6 +78,7 @@ class ProjectSetup(object):
             packages    = cls.pym_names(
                 None,
                 "abc",
+                "_base",
                 "installinfo",
                 "kernel",
                 "kernel.hwdetection",
