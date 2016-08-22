@@ -201,6 +201,11 @@ class KernelInfo(srcinfo.SourceInfo):
         self.kernelversion = None
     # --- end of __init__ (...) ---
 
+    def prepare_read_kernelversion(self):
+        return kversion.KernelVersion.new_from_makefile(
+            self.get_filepath("Makefile")
+        )
+
     def prepare(self):
         if not self.arch:
             self.arch = self.calculate_arch()
@@ -223,9 +228,7 @@ class KernelInfo(srcinfo.SourceInfo):
         # --
 
         if not self.kernelversion:
-            self.kernelversion = kversion.KernelVersion.new_from_makefile(
-                self.get_filepath("Makefile")
-            )
+            self.kernelversion = self.prepare_read_kernelversion()
             self.logger.debug("detected KERNELVERSION=%s", self.kernelversion)
         # --
 
