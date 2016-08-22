@@ -7,9 +7,6 @@
 .. _mrueg-kernel-config-check:
    https://gist.github.com/mrueg/cd19a20d2e712f61d2ea
 
-.. _macros file format:
-    ../macros_lang.rst
-
 .. sectnum::
 
 .. contents::
@@ -347,7 +344,8 @@ Retrieval of Recommended Options
 -------------------
 
 As outlined before, the idea here is to distribute files
-written in the `macros file format`_.
+written in kernelconfig's configuration language (see userguide,
+`Configuration Language`).
 This can range from ``.config`` file snippets to conditional instructions.
 
 
