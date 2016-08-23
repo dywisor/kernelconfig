@@ -65,10 +65,10 @@ Required:
 
 * C compiler, ...
 
+* portage for *package management integration*
+
 
 Optional, but recommended:
-
-* portage for *package management integration*
 
 * kmod with Python bindings
   for hardware detection based on module aliases
@@ -85,6 +85,8 @@ Optional:
 * Linux kernel sources for copying certain files from ``scripts/kconfig``,
   a bundled copy is used otherwise
 
+* docutils for generating manpages
+
 * docutils, `rst2pdf`_ for generating the documentation files
 
 
@@ -96,6 +98,12 @@ A live ebuild for ``sys-kernel/kernelconfig``
 is available in the `kernelconfig-portage`_ overlay.
 
 To add it with `layman`_, run::
+
+    $ mkdir -p /etc/layman/overlays
+    $ wget -O /etc/layman/overlays/kernelconfig.xml "https://raw.githubusercontent.com/dywisor/kernelconfig-portage/master/layman.xml"
+    $ layman -a kernelconfig
+
+or::
 
     $ layman -o "https://raw.githubusercontent.com/dywisor/kernelconfig-portage/master/layman.xml" -f -a kernelconfig
 
@@ -169,6 +177,10 @@ follow the `GNU Coding Standards\: Directory Variables`_,
 except that the names are in uppercase.
 See ``mk/install.mk`` for a list of variables.
 
+The man page(s) can be built with::
+
+    make man PREFIX="${PREFIX}" SYSCONFDIR="${SYSCONFDIR}"
+
 The bash completion file, ``build/kernelconfig.bashcomp``,
 can be created with ``make``, but has to be installed manually::
 
@@ -186,7 +198,7 @@ Similarly, to create the PDF documentation files in ``doc/pdf``, run::
 
 .. Warning::
 
-    The generated PDF files contain information about filesystem paths
+    The generated PDF files may contain information about filesystem paths
     of the system that created the files, making them less ideal for sharing.
 
     The HTML files do not have this issue.
@@ -369,9 +381,8 @@ kernelconfig accepts a number of options:
     Decrease the console log level.
 
     This option can be given multiple times,
-    each time it decreases the log level by 1,
-    and the effective log level is calculated using
-    ``WARNING + (quiet - verbose)`` (higher level means less verbosity).
+    each time it decreases the log verbosity by one level.
+    By default, only warning messages are shown.
 
 -v, --verbose
 
@@ -703,7 +714,7 @@ especially for shell scripts.
 ``${var}`` needs to be written as ``${{var}}``, for instance.
 
 Line continuation can be used to split long commands over multiple lines,
-with a backslash ``\\`` at the end each line except for the last one.
+with a backslash ``\\`` at the end of each line except for the last one.
 
 Subsequent non-comment lines form the source's data.
 Whether the data subsection is subject to string formatting or not depends on
@@ -1927,8 +1938,6 @@ The following options are recognized in the ``[source]`` section:
     |                 |               |           | * pym                                 |
     |                 |               |           | * command                             |
     |                 |               |           | * make                                |
-    |                 |               |           | * defconfig                           |
-    |                 |               |           |   (*make* with ``Target=defconfig``)  |
     |                 |               |           |                                       |
     |                 |               |           | If not set, kernelconfig tries to     |
     |                 |               |           | autodetect the type:                  |
@@ -1971,8 +1980,6 @@ The following options are recognized in the ``[source]`` section:
     +-----------------+---------------+-----------+---------------------------------------+
     | Target          | str           | yes       | Target for make-type sources          |
     |                 |               |           |                                       |
-    |                 |               |           | Not supported by defconfig-type       |
-    |                 |               |           | sources.                              |
     +-----------------+---------------+-----------+---------------------------------------+
     | Architectures   | str-list      | no        | List of supported architectures       |
     |                 |               |           |                                       |
