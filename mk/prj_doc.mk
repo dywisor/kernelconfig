@@ -58,6 +58,8 @@ RST2PDF_OPTS_compatibility_rewrite_original := --break-level 0
 PRJ_MANPAGES :=
 MANPAGE_BUILD_DIR := $(_BUILD_DIR)/man
 
+PRJ_MANPAGES += $(PN).1
+
 
 # f_get_doc_title(name)
 f_get_doc_title = $(strip $(PRJ_DOC_TITLE_$(1)))

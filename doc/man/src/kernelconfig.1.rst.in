@@ -1,0 +1,288 @@
+==============
+ kernelconfig
+==============
+
+--------------------------------------
+ generate Linux kernel configurations
+--------------------------------------
+
+:Author:            Andre Erdmann <dywi@mailerd.de>
+:Date:              Aug 2016
+:Copyright:         GPL-2
+:Version:           1.0_alpha1
+:Manual Section:    1
+:Manual Group:      kernelconfig
+
+
+SYNOPSIS
+========
+
+``kernelconfig`` [options] [``--generate-config``]
+
+``kernelconfig`` [options] ``--get-config``
+
+``kernelconfig`` [options] ``--generate-modalias``
+
+``kernelconfig`` [options] ``--list-source-names``
+
+``kernelconfig`` [options] ``--list-sources``
+
+``kernelconfig`` [options] ``--help-sources``
+
+``kernelconfig`` [options] ``--help-source`` name
+
+``kernelconfig`` ``--help``
+
+
+DESCRIPTION
+===========
+
+kernelconfig is a tool for generating Linux kernel configurations.
+It consists of two major parts,
+*configuration sources* and *config generation*.
+
+*Config generation* takes a .config file as input,
+applies user-requested modifications and creates the output .config file.
+
+The kernel configuration is modified via a micro-language
+with support for conditional expressions.
+
+Modification requests can be direct - enable a specific option,
+or indirect - *hardware detection*, *package management integration*.
+For a given config option, kernelconfig knows whether it exists,
+and is able to find out which other options need to be set
+so that the modification request is effective
+and does not disappear during the next "make oldconfig" run.
+
+*Hardware detection* scans /sys for drivers and modalias information
+and enables config options accordingly.
+While driver-based detection is always available,
+it works for known devices only.
+In contrast, modalias-based detection can handle unknown devices,
+but relies on *modalias information source* files, which have to be created
+in a lengthy "make allmodconfig && make modules" run. These files are shareable
+and can be created with the ``--generate-modalias`` script mode.
+The scanning itself can be offloaded to the **hwcollect** shell script, which
+has minimal dependencies and can be run on a different machine, e.g. a
+live system.
+
+*Package management integration* reuses the CONFIG_CHECK mechanism from
+linux-info.eclass. It queries portage for a list of installed packages
+and either uses their build-time value or re-runs the relevant ebuild phases
+in a temporary overlay to get more correct results, based on the version of
+the kernel sources for which a .config is being processed, in particular.
+
+*Configuration sources* are responsible for providing the input .config file.
+A configuration source can be a .config file, a make target,
+a script or command, or a Python module.
+
+
+SCRIPT MODES
+============
+
+--generate-config
+    Get the input configuration and generate the output .config file.
+
+    This is the default mode.
+
+--get-config
+    Get the input .config file, but skip config generation.
+    Instead, write the input configuration to ``--outfile``.
+
+--list-source-names
+    Print a list of all *configuration sources*.
+
+--list-sources
+    Print a list of all *configuration sources*,
+    including their filesystem paths.
+
+--help-sources
+    Print the help message for all *configuration sources*.
+    Useful for ``--config`` and creating a *settings file*.
+
+--help-source name
+    Print the help message for a particular *configuration source*.
+    Useful for ``--config`` and creating a *settings file*.
+
+--generate-modalias
+    Create files necessary for modalias-based *hardware detection*.
+    This takes a while.
+
+--print-installinfo
+    Print directories used by kernelconfig.
+
+
+OPTIONS
+=======
+
+-h, --help
+
+    Print the help message and exit.
+
+--usage
+
+    Print the usage message and exit.
+
+-V, --print-version
+
+    Print the version and exit.
+
+-q, --quiet
+
+    Decrease the console log level.
+
+    This option can be given multiple times,
+    each time it decreases the log verbosity by one level.
+    By default, only warning messages are shown.
+
+-v, --verbose
+
+    Increase the console log level.
+
+    Can be specified more than once, see ``--quiet`` for details.
+
+-a arch, --arch arch
+
+    Target architecture,
+    defaults to the system's architecture as returned by ``uname -m``.
+
+-k srctree, --kernel srctree
+
+    Path to the Linux kernel sources directory.
+
+    Defaults to the current working directory.
+
+-s settings, --settings settings
+
+    Path to or name of the *settings file*.
+
+    Files can be specified with an absolute path
+    or a relative path starting with ``./``.
+
+    Otherwise, *settings* refers to a settings file in one of the
+    *settings directories*.
+
+    Defaults to "default".
+
+--config inconfig
+
+    An input configuration source that should be used
+    instead of the source configured in the *settings file*.
+
+    *inconfig* can be a file, optionally gzip, bzip2 or xz-compressed,
+    or the name of a *configuration source* prefixed with an at-sign ``@``,
+    optionally followed by parameters separated with whitespace.
+
+    If parameters are specified, the *inconfig* must be quoted.
+
+    Examples::
+
+            --config /proc/config.gz
+            --config @ubuntu
+            --config "@fedora --pae --release f23"
+
+    See ``--list-sources`` for a complete list of available configuration
+    sources, and ``--help-source <name>`` for parameters supported by
+    a particular source.
+
+--config-kver <kernelversion>
+    Force a specific kernel version for the input configuration.
+
+    Useful if the chosen configuration source does not offer a configuration
+    for the version of the kernel sources being processed.
+
+-I file
+
+    *file* with additional config modification requests.
+
+    Can be specified more than once.
+
+-O file, --outconfig file
+
+    The output .config file.
+
+    Defaults to *srctree*/.config.
+
+-H file, --hwdetect file
+
+    Enable *hardware detection* and read the information from a *hwinfo* file
+    that has previously been created with the **hwcollect** script.
+
+    Instead of a file, a http(s)/ftp uri may also be given.
+
+-m mod_dir, --modules-dir mod_dir
+
+    The *modalias information source*
+    which is used for modaliased-based hardware detection.
+    It can be
+
+    * a path to a directory, e.g. /lib/$(uname -r)/modules
+
+    * a path to a tarball file
+
+    * a http(s)/ftp uri to a tarball file
+
+    * ``none``,
+      which disables modalias-based hardware detection completely
+
+    * ``auto``,
+      which requires a cached *modalias information source*
+      that has previously been created with ``--generate-modalias``.
+
+    * ``optional``,
+      which uses a cached *modalias information source* if there is one
+      available, and otherwise disables modalias-based hardware detection
+
+    Defaults to ``optional``.
+
+--unsafe-modalias
+
+    Controls how strict cache searching is
+    for ``--modules-dir auto`` and ``optional``.
+    If this option is given, less compatible *modalias information sources*
+    are allowed if no better candidates exist.
+
+    The default behavior is ``--safe``.
+
+--safe-modalias
+
+    Forbid use of unsafe *modalias information sources*.
+
+-j numjobs, --jobs numjobs
+
+    Allow up to ``<numjobs>`` build jobs when building modules
+    (``--generate-modalias``).
+
+    Defaults to the number of processor cores.
+
+--modalias-build-dir dir
+
+    Alternative build root directory for *modalias information source*
+    building.
+    kernelconfig creates a temporary subdirectory within this directory,
+    and cleans it up on exit.
+
+    By default, building takes place in /tmp or $TMPDIR, if set.
+    /var/tmp is used as fallback if /tmp does not have enough free space.
+    About 2GiB  is required.
+
+
+FILES
+=====
+
+Settings directories:
+    |
+    | **~/.config/kernelconfig**
+    | **@prj_sysconfdir@**
+
+Configuration sources directories:
+    |
+    | **~/.config/kernelconfig/sources**
+    | **@prj_sysconfdir@/sources**
+    | **@prj_datadir@/sources**
+
+Cache directories:
+    |
+    | **~/.cache/kernelconfig**           -  cache root directory
+    | **~/.cache/kernelconfig/modalias**  -  *modalias information sources*
+    | **~/.cache/kernelconfig/git/0**     -  *configuration sources* git cache
