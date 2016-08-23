@@ -34,3 +34,27 @@ f_install_files_norecur = $(call \
 	_f_install_files_norecur,$(strip $(1)),$(strip $(2)),$(strip $(3)))
 
 doins_norecur = $(call f_install_files_norecur,$(INSMODE),$(1),$(2))
+
+
+SED_EDIT_EXPRV_INSTALL = \
+	-e s=@prj_sysconfdir@=$(PRJ_SYSCONFDIR)=g \
+	-e s=@prj_datadir@=$(PRJ_DATADIR)=g \
+	-e /@prj_localconfdir@/d \
+	-e /@prj_localdatadir@/d
+
+# dup of <filesdir>/installinfo/standalone.py
+SED_EDIT_EXPRV_STANDALONE = \
+	-e s=@prj_sysconfdir@=$(_PRJROOT:/=)/config=g \
+	-e s=@prj_datadir@=$(_PRJROOT:/=)/files/data=g \
+	-e s=@prj_localconfdir@=$(PRJ_LOCALDIR:/=)/config=g \
+	-e s=@prj_localdatadir@=$(PRJ_LOCALDIR:/=)/data=g
+
+# _f_sed_edit_mode (mode_exprv, infile, outfile)
+__f_sed_edit_mode = $(SED) -r $(1) < '$(2)' > '$(3)'
+_f_sed_edit_mode = $(call __f_sed_edit_mode,$(1),$(strip $(2)),$(strip $(3)))
+
+# f_sed_edit_<mode> (infile, outfile)
+#  f_sed_edit_install(...)
+#  f_sed_edit_standalone(...)
+f_sed_edit_install = $(call _f_sed_edit_mode,$(SED_EDIT_EXPRV_INSTALL),$(1),$(2))
+f_sed_edit_standalone = $(call _f_sed_edit_mode,$(SED_EDIT_EXPRV_STANDALONE),$(1),$(2))
