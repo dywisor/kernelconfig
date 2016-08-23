@@ -17,6 +17,7 @@ SRC_DOCDIR := $(S:/=)/doc
 SRC_DOCDIR_RST := $(SRC_DOCDIR)/rst
 SRC_DOCDIR_HTML := $(SRC_DOCDIR)/html
 SRC_DOCDIR_PDF := $(SRC_DOCDIR)/pdf
+SRC_MANDIR := $(SRC_DOCDIR)/man
 SRC_CONFDIR := $(S:/=)/config
 SRC_CONFSOURCEDIR := $(SRC_CONFDIR:/=)/sources
 

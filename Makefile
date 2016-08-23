@@ -401,6 +401,8 @@ endif
 	@echo  '  check-pyflakes             - run pyflakes code check'
 	@echo  ''
 	@echo  'File Generation Targets:'
+	@echo  '  man                        - generate man pages in doc/man'
+# man-<name>  -- omitted here
 	@echo  '  htmldoc                    - generate HTML documentation in doc/html'
 	@echo  '  pdfdoc                     - generate PDF documentation in doc/pdf'
 	@echo  '  htmldoc-<name>             - generate individual HTML/PDF doc files,'

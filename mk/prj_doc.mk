@@ -28,11 +28,17 @@
 # or to build individual doc files with e.g.
 #    $ make htmldoc-userguide
 #
-# There are no targets for installing the files,
-# but they can be picked up from doc/html and doc/pdf, respectively.
+# Similarly, man pages are added to PRJ_MANPAGES,
+# no other per-manpage variables exist.
 #
-# Note that the userguide's link to macros_lang is broken
-# in the generated files.
+# They can be created from doc/man/src/<name>.rst.in with
+#    $ make man
+#
+# This will sed-edit @prj_@ vars in <name>.rst.in
+# and create the man page with rst2man.
+#
+# There are no targets for installing the files,
+# but they can be picked up from doc/man, doc/html and doc/pdf, respectively.
 #
 
 PRJ_DOCS :=
@@ -48,6 +54,10 @@ PRJ_DOCS += compatibility_rewrite_original
 PRJ_DOC_TITLE_compatibility_rewrite_original = \
 	Compatibility with the original project
 RST2PDF_OPTS_compatibility_rewrite_original := --break-level 0
+
+PRJ_MANPAGES :=
+MANPAGE_BUILD_DIR := $(_BUILD_DIR)/man
+
 
 # f_get_doc_title(name)
 f_get_doc_title = $(strip $(PRJ_DOC_TITLE_$(1)))
@@ -111,3 +121,28 @@ $(SRC_DOCDIR_PDF)/%.pdf: $(SRC_DOCDIR_RST)/%.rst | $(SRC_DOCDIR_PDF)
 	$(X_RST2PDF) $(RST2PDF_OPTS) \
 		$(RST2PDF_OPTS_$*) \
 		'$(<)' '$(@)'
+
+
+# man
+X_RST2MAN = rst2man.py
+RST2MAN_OPTS =
+
+_MANPAGE_TARGETS := $(addprefix man-,$(PRJ_MANPAGES))
+
+PHONY += man
+man: $(_MANPAGE_TARGETS)
+
+PHONY += $(_MANPAGE_TARGETS)
+$(_MANPAGE_TARGETS): man-%: $(SRC_MANDIR)/% | $(SRC_MANDIR)
+
+
+# no-target SRC_MANDIR
+$(MANPAGE_BUILD_DIR):
+	$(MKDIRP) -- '$(@)'
+
+$(MANPAGE_BUILD_DIR)/%.rst: $(SRC_MANDIR)/src/%.rst.in | $(MANPAGE_BUILD_DIR)
+	$(call f_sed_edit_install,$(<),$(@).make_tmp)
+	$(MVF) -- '$(@).make_tmp' '$(@)'
+
+$(SRC_MANDIR)/%: $(MANPAGE_BUILD_DIR)/%.rst | $(SRC_MANDIR)
+	$(X_RST2MAN) $(RST2MAN_OPTS) '$(<)' '$(@)'
