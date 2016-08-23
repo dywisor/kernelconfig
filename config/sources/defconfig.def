@@ -1,0 +1,4 @@
+[Source]
+Description = make defconfig
+Type = make
+Target = defconfig
