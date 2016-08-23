@@ -413,10 +413,10 @@ detected hardware, installed packages and user input.</p>
 <li>GNU make</li>
 <li>git for various configuration sources</li>
 <li>C compiler, ...</li>
+<li>portage for <em>package management integration</em></li>
 </ul>
 <p>Optional, but recommended:</p>
 <ul class="simple">
-<li>portage for <em>package management integration</em></li>
 <li>kmod with Python bindings
 for hardware detection based on module aliases</li>
 <li>Python modules: lxml and beautifulsoup (&gt;= 4),
@@ -428,6 +428,7 @@ for the Fedora configuration source</li>
 <ul class="simple">
 <li>Linux kernel sources for copying certain files from <tt class="docutils literal">scripts/kconfig</tt>,
 a bundled copy is used otherwise</li>
+<li>docutils for generating manpages</li>
 <li>docutils, <a class="reference external" href="https://pypi.python.org/pypi/rst2pdf">rst2pdf</a> for generating the documentation files</li>
 </ul>
 </div>
@@ -436,6 +437,12 @@ a bundled copy is used otherwise</li>
 <p>A live ebuild for <tt class="docutils literal"><span class="pre">sys-kernel/kernelconfig</span></tt>
 is available in the <a class="reference external" href="https://github.com/dywisor/tlp-portage">kernelconfig-portage</a> overlay.</p>
 <p>To add it with <a class="reference external" href="https://wiki.gentoo.org/wiki/Layman">layman</a>, run:</p>
+<pre class="literal-block">
+$ mkdir -p /etc/layman/overlays
+$ wget -O /etc/layman/overlays/kernelconfig.xml &quot;https://raw.githubusercontent.com/dywisor/kernelconfig-portage/master/layman.xml&quot;
+$ layman -a kernelconfig
+</pre>
+<p>or:</p>
 <pre class="literal-block">
 $ layman -o &quot;https://raw.githubusercontent.com/dywisor/kernelconfig-portage/master/layman.xml&quot; -f -a kernelconfig
 </pre>
@@ -502,6 +509,10 @@ make install-data install-config DESTDIR=&quot;${DESTDIR}&quot; PREFIX=&quot;${P
 follow the <a class="reference external" href="https://www.gnu.org/prep/standards/html_node/Directory-Variables.html">GNU Coding Standards: Directory Variables</a>,
 except that the names are in uppercase.
 See <tt class="docutils literal">mk/install.mk</tt> for a list of variables.</p>
+<p>The man page(s) can be built with:</p>
+<pre class="literal-block">
+make man PREFIX=&quot;${PREFIX}&quot; SYSCONFDIR=&quot;${SYSCONFDIR}&quot;
+</pre>
 <p>The bash completion file, <tt class="docutils literal">build/kernelconfig.bashcomp</tt>,
 can be created with <tt class="docutils literal">make</tt>, but has to be installed manually:</p>
 <pre class="literal-block">
@@ -517,7 +528,7 @@ make pdf
 </pre>
 <div class="warning">
 <p class="first admonition-title">Warning</p>
-<p>The generated PDF files contain information about filesystem paths
+<p>The generated PDF files may contain information about filesystem paths
 of the system that created the files, making them less ideal for sharing.</p>
 <p class="last">The HTML files do not have this issue.</p>
 </div>
@@ -675,9 +686,8 @@ $ kernelconfig --help-source Fedora -a mips
 <kbd><span class="option">-q</span>, <span class="option">--quiet</span></kbd></td>
 <td><p class="first">Decrease the console log level.</p>
 <p class="last">This option can be given multiple times,
-each time it decreases the log level by 1,
-and the effective log level is calculated using
-<tt class="docutils literal">WARNING + (quiet - verbose)</tt> (higher level means less verbosity).</p>
+each time it decreases the log verbosity by one level.
+By default, only warning messages are shown.</p>
 </td></tr>
 <tr><td class="option-group">
 <kbd><span class="option">-v</span>, <span class="option">--verbose</span></kbd></td>
@@ -1000,7 +1010,7 @@ it also requires to escape <tt class="docutils literal">{</tt> and <tt class="do
 especially for shell scripts.
 <tt class="docutils literal">${var}</tt> needs to be written as <tt class="docutils literal"><span class="pre">${{var}}</span></tt>, for instance.</p>
 <p>Line continuation can be used to split long commands over multiple lines,
-with a backslash <tt class="docutils literal">\\</tt> at the end each line except for the last one.</p>
+with a backslash <tt class="docutils literal">\\</tt> at the end of each line except for the last one.</p>
 <p>Subsequent non-comment lines form the source's data.
 Whether the data subsection is subject to string formatting or not depends on
 the configuration source type.
@@ -2183,8 +2193,6 @@ which can be</p>
 <li>pym</li>
 <li>command</li>
 <li>make</li>
-<li>defconfig
-(<em>make</em> with <tt class="docutils literal">Target=defconfig</tt>)</li>
 </ul>
 <p>If not set, kernelconfig tries to
 autodetect the type:</p>
@@ -2235,10 +2243,7 @@ additional arguments to the
 <tr><td>Target</td>
 <td>str</td>
 <td>yes</td>
-<td><p class="first">Target for make-type sources</p>
-<p class="last">Not supported by defconfig-type
-sources.</p>
-</td>
+<td>Target for make-type sources</td>
 </tr>
 <tr><td><p class="first">Architectures</p>
 <p class="last"><em>also</em>: Arch</p>
@@ -2603,7 +2608,7 @@ which can be read with <tt class="docutils literal">pydoc kernelconfig.sources.p
 </div>
 <div class="footer">
 <hr class="footer" />
-Generated on: 2016-08-22.
+Generated on: 2016-08-23.
 
 </div>
 </body>
